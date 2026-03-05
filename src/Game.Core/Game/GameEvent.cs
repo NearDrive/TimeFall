@@ -10,6 +10,8 @@ public sealed record EnteredCombat : GameEvent;
 
 public sealed record CardDrawn(CardInstance Card) : GameEvent;
 
+public sealed record PlayerStrikePlayed(CardInstance Card, int Damage, int EnemyHpAfterHit) : GameEvent;
+
 public sealed record TurnEnded(TurnOwner NextTurnOwner) : GameEvent;
 
 public sealed record CardDiscarded(CardInstance Card) : GameEvent;

@@ -6,12 +6,16 @@ namespace Game.Core.Game;
 
 public static class GameReducer
 {
+    private static readonly CardId StrikeCardId = new("strike");
+    private const int StrikeDamage = 4;
+
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
         return action switch
         {
             StartRunAction startRunAction => StartRun(state, startRunAction),
             BeginCombatAction beginCombatAction => BeginCombat(state, beginCombatAction),
+            PlayCardAction playCardAction => PlayCard(state, playCardAction),
             EndTurnAction endTurnAction => EndTurn(state, endTurnAction),
             DiscardOverflowAction discardOverflowAction => DiscardOverflow(state, discardOverflowAction),
             _ => (state, Array.Empty<GameEvent>()),
@@ -39,6 +43,45 @@ public static class GameReducer
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
         return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng }, events);
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)
+    {
+        if (state.Phase != GamePhase.Combat || state.Combat is null || state.Combat.NeedsOverflowDiscard)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (state.Combat.TurnOwner != TurnOwner.Player)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (action.HandIndex < 0 || action.HandIndex >= state.Combat.Player.Deck.Hand.Count)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var card = state.Combat.Player.Deck.Hand[action.HandIndex];
+        if (card.DefinitionId != StrikeCardId)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var combatState = Clone(state.Combat);
+        combatState.Player.Deck.Hand.RemoveAt(action.HandIndex);
+        combatState.Player.Deck.DiscardPile.Add(card);
+
+        var hitResult = DamageSystem.ApplyHit(combatState.Enemy, StrikeDamage);
+        combatState = combatState with { Enemy = hitResult.UpdatedEntity };
+
+        var events = new GameEvent[]
+        {
+            new CardDiscarded(card),
+            new PlayerStrikePlayed(card, StrikeDamage, hitResult.UpdatedEntity.HP),
+        };
+
+        return (state with { Combat = combatState }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) EndTurn(GameState state, EndTurnAction action)
@@ -145,5 +188,37 @@ public static class GameReducer
             Deck: new DeckState(enemyDeck, new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
 
         return new CombatState(TurnOwner.Player, 0, player, enemy, false, 0);
+    }
+
+    private static CombatState Clone(CombatState combatState)
+    {
+        var playerDeck = combatState.Player.Deck;
+        var enemyDeck = combatState.Enemy.Deck;
+
+        return combatState with
+        {
+            Player = combatState.Player with
+            {
+                Resources = new Dictionary<ResourceType, int>(combatState.Player.Resources),
+                Deck = playerDeck with
+                {
+                    DrawPile = new List<CardInstance>(playerDeck.DrawPile),
+                    Hand = new List<CardInstance>(playerDeck.Hand),
+                    DiscardPile = new List<CardInstance>(playerDeck.DiscardPile),
+                    BurnPile = new List<CardInstance>(playerDeck.BurnPile),
+                },
+            },
+            Enemy = combatState.Enemy with
+            {
+                Resources = new Dictionary<ResourceType, int>(combatState.Enemy.Resources),
+                Deck = enemyDeck with
+                {
+                    DrawPile = new List<CardInstance>(enemyDeck.DrawPile),
+                    Hand = new List<CardInstance>(enemyDeck.Hand),
+                    DiscardPile = new List<CardInstance>(enemyDeck.DiscardPile),
+                    BurnPile = new List<CardInstance>(enemyDeck.BurnPile),
+                },
+            },
+        };
     }
 }

@@ -19,6 +19,40 @@ public class CombatReducerTests
         Assert.Equal(5, events.Count(e => e is CardDrawn));
     }
 
+
+    [Fact]
+    public void PlayCard_StrikeDamagesEnemyAndDiscardsCard()
+    {
+        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
+        var strikeIndex = stateAfterBegin.Combat!.Player.Deck.Hand.FindIndex(c => c.DefinitionId.Value == "strike");
+
+        Assert.True(strikeIndex >= 0);
+
+        var enemyHpBefore = stateAfterBegin.Combat.Enemy.HP;
+        var discardBefore = stateAfterBegin.Combat.Player.Deck.DiscardPile.Count;
+
+        var (newState, events) = GameReducer.Reduce(stateAfterBegin, new PlayCardAction(strikeIndex));
+
+        Assert.Equal(enemyHpBefore - 4, newState.Combat!.Enemy.HP);
+        Assert.Equal(discardBefore + 1, newState.Combat.Player.Deck.DiscardPile.Count);
+        Assert.Contains(events, e => e is PlayerStrikePlayed { Damage: 4 });
+        Assert.Contains(events, e => e is CardDiscarded);
+    }
+
+    [Fact]
+    public void PlayCard_NonStrikeDoesNothing()
+    {
+        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
+        var nonStrikeIndex = stateAfterBegin.Combat!.Player.Deck.Hand.FindIndex(c => c.DefinitionId.Value != "strike");
+
+        Assert.True(nonStrikeIndex >= 0);
+
+        var result = GameReducer.Reduce(stateAfterBegin, new PlayCardAction(nonStrikeIndex));
+
+        Assert.Equal(stateAfterBegin, result.NewState);
+        Assert.Empty(result.Events);
+    }
+
     [Fact]
     public void EndTurn_DoesNotAutoDiscardHand()
     {
