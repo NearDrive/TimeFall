@@ -13,3 +13,7 @@ public sealed record CardDrawn(CardInstance Card) : GameEvent;
 public sealed record TurnEnded(TurnOwner NextTurnOwner) : GameEvent;
 
 public sealed record CardDiscarded(CardInstance Card) : GameEvent;
+
+public sealed record DeckReshuffled : GameEvent;
+
+public sealed record CardBurned(CardInstance Card) : GameEvent;
