@@ -1,3 +1,4 @@
+using Game.Core.Combat;
 using Game.Core.Game;
 
 namespace Game.Tests.Game;
@@ -53,4 +54,50 @@ public class CombatReducerTests
         Assert.Single(discardEvents);
         Assert.IsType<CardDiscarded>(discardEvents[0]);
     }
+
+
+    [Fact]
+    public void EndTurn_PlayerToPlayer_EnemyDrawsAndAttacks()
+    {
+        var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(123));
+        var (combatState, _) = GameReducer.Reduce(seededState, new BeginCombatAction());
+
+        var playerHpBefore = combatState.Combat!.Player.HP;
+        var (afterEnemyTurn, events) = GameReducer.Reduce(combatState, new EndTurnAction());
+
+        Assert.Equal(TurnOwner.Player, afterEnemyTurn.Combat!.TurnOwner);
+        Assert.Contains(events, e => e is CardDrawn { Card.DefinitionId.Value: "attack" });
+        Assert.Contains(events, e => e is EnemyAttackPlayed);
+        Assert.True(afterEnemyTurn.Combat.Player.HP < playerHpBefore);
+    }
+
+    [Fact]
+    public void EnemyTurn_IsDeterministicAcrossMultipleTurns_WithSameSeed()
+    {
+        var firstRun = SimulatePlayerEnemyTurns(seed: 2024, turns: 3);
+        var secondRun = SimulatePlayerEnemyTurns(seed: 2024, turns: 3);
+
+        Assert.Equal(firstRun.PlayerHp, secondRun.PlayerHp);
+        Assert.Equal(firstRun.EnemyCardsDrawn, secondRun.EnemyCardsDrawn);
+        Assert.Equal(firstRun.EnemyAttacksPlayed, secondRun.EnemyAttacksPlayed);
+    }
+
+    private static (int PlayerHp, int EnemyCardsDrawn, int EnemyAttacksPlayed) SimulatePlayerEnemyTurns(int seed, int turns)
+    {
+        var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(seed));
+        var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction());
+
+        var totalEnemyDraws = 0;
+        var totalEnemyAttacks = 0;
+        for (var i = 0; i < turns; i++)
+        {
+            var result = GameReducer.Reduce(state, new EndTurnAction());
+            state = result.NewState;
+            totalEnemyDraws += result.Events.Count(e => e is CardDrawn { Card.DefinitionId.Value: "attack" or "defend" or "focus" or "strike" });
+            totalEnemyAttacks += result.Events.Count(e => e is EnemyAttackPlayed);
+        }
+
+        return (state.Combat!.Player.HP, totalEnemyDraws, totalEnemyAttacks);
+    }
+
 }
