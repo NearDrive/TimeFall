@@ -3,3 +3,9 @@ namespace Game.Core.Game;
 public abstract record GameAction;
 
 public sealed record StartRunAction(int Seed) : GameAction;
+
+public sealed record BeginCombatAction : GameAction;
+
+public sealed record EndTurnAction : GameAction;
+
+public sealed record DiscardOverflowAction(int[] Indexes) : GameAction;
