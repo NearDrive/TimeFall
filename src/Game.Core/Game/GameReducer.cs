@@ -33,11 +33,12 @@ public static class GameReducer
         _ = action;
 
         var combatState = CreateCombatState();
-        var drawResult = HandManager.Draw(combatState, 5);
+        var drawResult = HandManager.Draw(combatState, state.Rng, 5);
         var events = new List<GameEvent> { new EnteredCombat() };
+        events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState }, events);
+        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) EndTurn(GameState state, EndTurnAction action)
@@ -55,9 +56,12 @@ public static class GameReducer
 
         if (nextOwner == TurnOwner.Player)
         {
-            var drawResult = HandManager.Draw(combatState, 1);
+            var drawResult = HandManager.Draw(combatState, state.Rng, 1);
             combatState = drawResult.CombatState;
+            events.AddRange(drawResult.Events);
             events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
+
+            return (state with { Combat = combatState, Rng = drawResult.Rng }, events);
         }
 
         return (state with { Combat = combatState }, events);

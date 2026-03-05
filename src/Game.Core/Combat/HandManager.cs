@@ -1,24 +1,31 @@
+using Game.Core.Cards;
+using Game.Core.Common;
+using Game.Core.Game;
+
 namespace Game.Core.Combat;
 
 public static class HandManager
 {
-    public static DrawResult Draw(CombatState combatState, int count)
+    public static DrawResult Draw(CombatState combatState, GameRng rng, int count)
     {
         var mutable = Clone(combatState);
+        var currentRng = rng;
         var drawn = new List<CardInstance>();
+        var events = new List<GameEvent>();
 
         for (var i = 0; i < count; i++)
         {
             if (mutable.Player.Deck.DrawPile.Count == 0)
             {
-                if (mutable.Player.Deck.DiscardPile.Count == 0)
+                var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Player.Deck, currentRng, mutable, out var cycleEvents);
+                mutable = cycleResult.CombatState;
+                currentRng = cycleResult.Rng;
+                events.AddRange(cycleEvents);
+
+                if (mutable.Player.Deck.DrawPile.Count == 0)
                 {
                     break;
                 }
-
-                mutable.Player.Deck.DrawPile.AddRange(mutable.Player.Deck.DiscardPile);
-                mutable.Player.Deck.DiscardPile.Clear();
-                mutable = mutable with { ReshuffleCount = mutable.ReshuffleCount + 1 };
             }
 
             var topCard = mutable.Player.Deck.DrawPile[0];
@@ -34,7 +41,7 @@ public static class HandManager
             RequiredOverflowDiscardCount = requiredDiscardCount,
         };
 
-        return new DrawResult(mutable, drawn);
+        return new DrawResult(mutable, currentRng, drawn, events);
     }
 
     public static int RequireOverflowDiscard(CombatState combatState, int maxHand = 7)
@@ -94,4 +101,8 @@ public static class HandManager
     }
 }
 
-public sealed record DrawResult(CombatState CombatState, IReadOnlyList<CardInstance> DrawnCards);
+public sealed record DrawResult(
+    CombatState CombatState,
+    GameRng Rng,
+    IReadOnlyList<CardInstance> DrawnCards,
+    IReadOnlyList<GameEvent> Events);
