@@ -50,21 +50,27 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        var nextOwner = state.Combat.TurnOwner == TurnOwner.Player ? TurnOwner.Enemy : TurnOwner.Player;
-        var combatState = state.Combat with { TurnOwner = nextOwner };
-        var events = new List<GameEvent> { new TurnEnded(nextOwner) };
-
-        if (nextOwner == TurnOwner.Player)
+        if (state.Combat.TurnOwner == TurnOwner.Enemy)
         {
-            var drawResult = HandManager.Draw(combatState, state.Rng, 1);
-            combatState = drawResult.CombatState;
-            events.AddRange(drawResult.Events);
-            events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
-
-            return (state with { Combat = combatState, Rng = drawResult.Rng }, events);
+            return (state, Array.Empty<GameEvent>());
         }
 
-        return (state with { Combat = combatState }, events);
+        var combatState = state.Combat with { TurnOwner = TurnOwner.Enemy };
+        var events = new List<GameEvent> { new TurnEnded(TurnOwner.Enemy) };
+
+        var enemyResult = EnemyController.ExecuteTurn(combatState, state.Rng);
+        combatState = enemyResult.CombatState;
+        events.AddRange(enemyResult.Events);
+
+        combatState = combatState with { TurnOwner = TurnOwner.Player };
+        events.Add(new TurnEnded(TurnOwner.Player));
+
+        var drawResult = HandManager.Draw(combatState, enemyResult.Rng, 1);
+        combatState = drawResult.CombatState;
+        events.AddRange(drawResult.Events);
+        events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
+
+        return (state with { Combat = combatState, Rng = drawResult.Rng }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)
@@ -122,13 +128,21 @@ public static class GameReducer
             Resources: new Dictionary<ResourceType, int> { [ResourceType.Energy] = 3 },
             Deck: new DeckState(drawPile, new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
 
+        var enemyDeck = new List<CardInstance>
+        {
+            new(new CardId("attack")),
+            new(new CardId("attack")),
+            new(new CardId("attack")),
+            new(new CardId("defend")),
+        };
+
         var enemy = new CombatEntity(
             EntityId: "enemy-1",
             HP: 30,
             MaxHP: 30,
             Armor: 0,
             Resources: new Dictionary<ResourceType, int>(),
-            Deck: new DeckState(new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
+            Deck: new DeckState(enemyDeck, new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
 
         return new CombatState(TurnOwner.Player, 0, player, enemy, false, 0);
     }

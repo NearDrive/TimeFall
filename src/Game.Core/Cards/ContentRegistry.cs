@@ -8,5 +8,6 @@ public static class ContentRegistry
             [new CardId("strike")] = new(new CardId("strike"), "Strike", 1),
             [new CardId("defend")] = new(new CardId("defend"), "Defend", 1),
             [new CardId("focus") ] = new(new CardId("focus"), "Focus", 1),
+            [new CardId("attack")] = new(new CardId("attack"), "Attack", 1),
         };
 }

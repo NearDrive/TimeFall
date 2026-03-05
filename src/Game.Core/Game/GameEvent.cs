@@ -17,3 +17,5 @@ public sealed record CardDiscarded(CardInstance Card) : GameEvent;
 public sealed record DeckReshuffled : GameEvent;
 
 public sealed record CardBurned(CardInstance Card) : GameEvent;
+
+public sealed record EnemyAttackPlayed(CardInstance Card, int Damage, int PlayerHpAfterHit) : GameEvent;
