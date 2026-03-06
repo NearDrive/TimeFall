@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
+[Trait("Lane", "integration")]
 public class DeckCycleSystemTests
 {
     [Fact]

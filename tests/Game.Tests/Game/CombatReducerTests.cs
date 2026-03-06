@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
+[Trait("Lane", "integration")]
 public class CombatReducerTests
 {
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
@@ -339,6 +340,51 @@ public class CombatReducerTests
         Assert.Equal(GamePhase.RunEnded, newState.Phase);
         Assert.Null(newState.Combat);
         Assert.Contains(events, e => e is EnemyAttackPlayed { PlayerHpAfterHit: <= 0 });
+    }
+
+    [Fact]
+    [Trait("Lane", "canary")]
+    public void Canary_LongCombatSequence_RemainsPlayableAndDeterministic()
+    {
+        static (int PlayerHp, int EnemyHp, int HandCount, int DiscardCount) RunSequence(int seed)
+        {
+            var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(seed));
+            var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+            for (var turn = 0; turn < 24 && state.Phase == GamePhase.Combat; turn++)
+            {
+                var combat = state.Combat!;
+                if (combat.TurnOwner == TurnOwner.Player)
+                {
+                    if (combat.NeedsOverflowDiscard)
+                    {
+                        var indexes = Enumerable.Range(0, combat.RequiredOverflowDiscardCount).ToArray();
+                        state = GameReducer.Reduce(state, new DiscardOverflowAction(indexes)).NewState;
+                        continue;
+                    }
+
+                    if (combat.Player.Deck.Hand.Count > 0)
+                    {
+                        state = GameReducer.Reduce(state, new PlayCardAction(0)).NewState;
+                        continue;
+                    }
+                }
+
+                state = GameReducer.Reduce(state, new EndTurnAction()).NewState;
+            }
+
+            var finalCombat = state.Combat;
+            return (
+                PlayerHp: finalCombat?.Player.HP ?? 0,
+                EnemyHp: finalCombat?.Enemy.HP ?? 0,
+                HandCount: finalCombat?.Player.Deck.Hand.Count ?? 0,
+                DiscardCount: finalCombat?.Player.Deck.DiscardPile.Count ?? 0);
+        }
+
+        var first = RunSequence(seed: 4242);
+        var second = RunSequence(seed: 4242);
+
+        Assert.Equal(first, second);
     }
 
     private static int FindCardIndex(IReadOnlyList<CardInstance> cards, string id)

@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Combat;
 
+[Trait("Lane", "unit")]
 public class DamageSystemTests
 {
     [Fact]
