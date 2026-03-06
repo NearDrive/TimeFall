@@ -3,6 +3,7 @@ using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
 using Game.Core.Map;
+using Game.Core.TimeSystem;
 using CardsCardId = Game.Core.Cards.CardId;
 using System.Collections.Immutable;
 
@@ -175,6 +176,7 @@ public class StateHasherReplayTests
             Rng: global::Game.Core.Common.GameRng.FromSeed(99),
             Combat: new CombatState(TurnOwner.Player, player, enemy, false, 0),
             CardDefinitions: Content.CardDefinitions,
-            Map: SampleMapFactory.CreateDefaultState());
+            Map: SampleMapFactory.CreateDefaultState(),
+            Time: TimeState.Create(SampleMapFactory.CreateDefaultState()));
     }
 }

@@ -2,6 +2,7 @@ using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Map;
+using Game.Core.TimeSystem;
 using System.Collections.Immutable;
 
 namespace Game.Core.Game;
@@ -29,7 +30,14 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartRun(GameState state, StartRunAction action)
     {
-        var newState = new GameState(GamePhase.MapExploration, GameRng.FromSeed(action.Seed), null, state.CardDefinitions, SampleMapFactory.CreateDefaultState());
+        var mapState = SampleMapFactory.CreateDefaultState();
+        var newState = new GameState(
+            GamePhase.MapExploration,
+            GameRng.FromSeed(action.Seed),
+            null,
+            state.CardDefinitions,
+            mapState,
+            TimeState.Create(mapState));
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
@@ -145,10 +153,14 @@ public static class GameReducer
         return ResolveCombatPhase(state with { Combat = combatState, Rng = playerTurnStart.Rng }, events);
     }
 
-
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) MoveToNode(GameState state, MoveToNodeAction action)
     {
-        if (state.Phase != GamePhase.MapExploration)
+        if (state.Phase != GamePhase.MapExploration || state.Time.PlayerCaughtByTime)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (state.Time.CollapsedNodeIds.Contains(action.NodeId))
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -178,7 +190,20 @@ public static class GameReducer
             }
         }
 
-        return (state with { Map = movedMap }, events);
+        var timeAdvance = TimeAdvancer.Advance(state.Time, movedMap.CurrentNodeId);
+        events.Add(new TimeAdvanced(timeAdvance.TimeState.CurrentStep));
+
+        foreach (var collapsedNode in timeAdvance.NewlyCollapsedNodes)
+        {
+            events.Add(new NodeCollapsed(collapsedNode));
+        }
+
+        if (timeAdvance.PlayerCaughtThisStep)
+        {
+            events.Add(new TimeCaughtPlayer(movedMap.CurrentNodeId, timeAdvance.TimeState.CurrentStep));
+        }
+
+        return (state with { Map = movedMap, Time = timeAdvance.TimeState }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)

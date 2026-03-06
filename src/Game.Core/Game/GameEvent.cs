@@ -28,3 +28,10 @@ public sealed record MovedToNode(NodeId NodeId) : GameEvent;
 public sealed record EncounterResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
 
 public sealed record EncounterAlreadyResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
+
+
+public sealed record TimeAdvanced(int Step) : GameEvent;
+
+public sealed record NodeCollapsed(NodeId NodeId) : GameEvent;
+
+public sealed record TimeCaughtPlayer(NodeId NodeId, int Step) : GameEvent;
