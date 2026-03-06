@@ -20,24 +20,46 @@ public static class DeckCycleSystem
         }
 
         var generatedEvents = new List<GameEvent>();
-        var reshuffledDeck = Reshuffle(deck);
+
+        // Deck cycle order must remain explicit and deterministic:
+        // 1) reshuffle discard into draw, 2) burn escalated count, 3) resume draw.
+        // This keeps replay traces stable for the same seed + action sequence.
+        var (reshuffledDeck, reshuffleRng) = Reshuffle(deck, rng);
         generatedEvents.Add(new DeckReshuffled());
 
         var burnCount = combatState.ReshuffleCount + 1;
-        var (burnedDeck, nextRng, burnedCards) = Burn(reshuffledDeck, burnCount, rng);
+        var (burnedDeck, nextRng, burnedCards) = Burn(reshuffledDeck, burnCount, reshuffleRng);
         generatedEvents.AddRange(burnedCards.Select(c => new CardBurned(c)));
 
         events = generatedEvents;
         return (burnedDeck, combatState with { ReshuffleCount = combatState.ReshuffleCount + 1 }, nextRng);
     }
 
-    private static DeckState Reshuffle(DeckState deck)
+    private static (DeckState Deck, GameRng Rng) Reshuffle(DeckState deck, GameRng rng)
     {
-        return deck with
+        var candidatePool = deck.DiscardPile.ToList();
+        var (shuffledCards, nextRng) = Shuffle(candidatePool, rng);
+
+        return (deck with
         {
-            DrawPile = deck.DrawPile.AddRange(deck.DiscardPile),
+            DrawPile = shuffledCards.ToImmutableList(),
             DiscardPile = ImmutableList<CardInstance>.Empty,
-        };
+        }, nextRng);
+    }
+
+    private static (List<CardInstance> Shuffled, GameRng Rng) Shuffle(List<CardInstance> cards, GameRng rng)
+    {
+        var shuffled = new List<CardInstance>(cards);
+        var currentRng = rng;
+
+        for (var i = shuffled.Count - 1; i > 0; i--)
+        {
+            var (swapIndex, nextRng) = currentRng.NextInt(0, i + 1);
+            (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
+            currentRng = nextRng;
+        }
+
+        return (shuffled, currentRng);
     }
 
     private static (DeckState Deck, GameRng Rng, IReadOnlyList<CardInstance> BurnedCards) Burn(DeckState deck, int count, GameRng rng)

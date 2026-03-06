@@ -1,9 +1,9 @@
 using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Common;
-using CardId = Game.Core.Cards.CardId;
 using Game.Core.Game;
 using System.Collections.Immutable;
+using CardId = Game.Core.Cards.CardId;
 
 namespace Game.Tests.Game;
 
@@ -11,23 +11,32 @@ namespace Game.Tests.Game;
 public class DeckCycleSystemTests
 {
     [Fact]
-    public void Draw_WhenDrawPileIsConsumed_ReshufflesAndBurns()
+    public void Reshuffle_ShufflesDiscardDeterministically()
     {
-        var combatState = CreateCombatState(
-            draw: [Card("draw-1")],
-            discard: [Card("discard-1"), Card("discard-2")]);
+        var firstRun = ReshuffleDrawPile(seed: 77);
+        var secondRun = ReshuffleDrawPile(seed: 77);
 
-        var result = HandManager.Draw(combatState, GameRng.FromSeed(17), 2);
-
-        Assert.Equal(1, result.CombatState.ReshuffleCount);
-        Assert.Empty(result.CombatState.Player.Deck.DiscardPile);
-        Assert.Single(result.CombatState.Player.Deck.BurnPile);
-        Assert.Contains(result.Events, e => e is DeckReshuffled);
-        Assert.Single(result.Events.OfType<CardBurned>());
+        Assert.Equal(firstRun, secondRun);
     }
 
     [Fact]
-    public void EnsureDrawAvailable_BurnEscalatesAcrossReshuffles()
+    public void Reshuffle_DoesNotUseOrderedAppendSemantics()
+    {
+        var discard = new List<CardInstance>
+        {
+            Card("d1"), Card("d2"), Card("d3"), Card("d4"), Card("d5"),
+        };
+        var combatState = CreateCombatState(draw: [], discard: discard);
+
+        var result = DeckCycleSystem.EnsureDrawAvailable(combatState.Player.Deck, GameRng.FromSeed(17), combatState, out _);
+        var actualDrawPile = result.Deck.DrawPile.Select(c => c.DefinitionId.Value).ToList();
+        var orderedAppend = discard.Skip(1).Select(c => c.DefinitionId.Value).ToList();
+
+        Assert.NotEqual(orderedAppend, actualDrawPile);
+    }
+
+    [Fact]
+    public void Burn_EscalatesAfterEachReshuffle()
     {
         var combatState = CreateCombatState(
             draw: [],
@@ -50,12 +59,46 @@ public class DeckCycleSystemTests
     }
 
     [Fact]
-    public void EnsureDrawAvailable_IsDeterministicForSameSeedAndDrawSequence()
+    public void Burn_IsDeterministicForSeed()
     {
         var firstRun = SimulateBurnPile(seed: 1234);
         var secondRun = SimulateBurnPile(seed: 1234);
 
         Assert.Equal(firstRun, secondRun);
+    }
+
+    [Fact]
+    public void Reshuffle_Burn_HappenBeforeSubsequentDraw()
+    {
+        var discard = new List<CardInstance>
+        {
+            Card("d1"), Card("d2"), Card("d3"), Card("d4"), Card("d5"),
+        };
+        var combatState = CreateCombatState(draw: [], discard: discard);
+
+        var cycle = DeckCycleSystem.EnsureDrawAvailable(combatState.Player.Deck, GameRng.FromSeed(17), combatState, out var events);
+        var drawn = HandManager.Draw(
+            cycle.CombatState with { Player = cycle.CombatState.Player with { Deck = cycle.Deck } },
+            cycle.Rng,
+            1);
+
+        Assert.Contains(events, e => e is DeckReshuffled);
+        var burned = events.OfType<CardBurned>().Select(e => e.Card.DefinitionId.Value).ToList();
+        Assert.Single(burned);
+
+        var expectedTopAfterBurn = cycle.Deck.DrawPile[0].DefinitionId.Value;
+        Assert.Single(drawn.DrawnCards);
+        Assert.Equal(expectedTopAfterBurn, drawn.DrawnCards[0].DefinitionId.Value);
+    }
+
+    private static List<string> ReshuffleDrawPile(int seed)
+    {
+        var combatState = CreateCombatState(
+            draw: [],
+            discard: Enumerable.Range(1, 8).Select(i => Card($"c{i}")).ToList());
+
+        var result = DeckCycleSystem.EnsureDrawAvailable(combatState.Player.Deck, GameRng.FromSeed(seed), combatState, out _);
+        return result.Deck.DrawPile.Select(c => c.DefinitionId.Value).ToList();
     }
 
     private static List<string> SimulateBurnPile(int seed)
