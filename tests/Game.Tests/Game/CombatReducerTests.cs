@@ -78,7 +78,7 @@ public class CombatReducerTests
     }
 
     [Fact]
-    public void EndTurn_PlayerTurnDrawsExactlyOneCard_UnderControlledDeckState()
+    public void PlayerTurnStart_DrawsExactlyOneCard()
     {
         var blueprint = new CombatBlueprint(
             Player: new CombatantBlueprint(
@@ -95,8 +95,6 @@ public class CombatReducerTests
                     new CardsCardId("defend"),
                     new CardsCardId("strike"),
                     new CardsCardId("focus"),
-                    new CardsCardId("defend"),
-                    new CardsCardId("strike"),
                 ]),
             Enemy: new CombatantBlueprint(
                 EntityId: "enemy",
@@ -106,23 +104,24 @@ public class CombatReducerTests
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile:
                 [
-                    new CardsCardId("defend"),
+                    new CardsCardId("attack"),
                 ]));
 
         var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint, Content.CardDefinitions));
         var handCountBeforeEndTurn = combatState.Combat!.Player.Deck.Hand.Count;
+        var drawPileCountBeforeEndTurn = combatState.Combat.Player.Deck.DrawPile.Count;
 
         var (afterEndTurnState, events) = GameReducer.Reduce(combatState, new EndTurnAction());
 
         Assert.Equal(handCountBeforeEndTurn + 1, afterEndTurnState.Combat!.Player.Deck.Hand.Count);
+        Assert.Equal(drawPileCountBeforeEndTurn - 1, afterEndTurnState.Combat.Player.Deck.DrawPile.Count);
 
         var drawnCards = events.OfType<CardDrawn>().Select(e => e.Card.DefinitionId.Value).ToArray();
-        Assert.Equal(2, drawnCards.Length);
-        Assert.Equal(["defend", "focus"], drawnCards);
+        Assert.Equal(1, drawnCards.Count(id => id == "focus"));
     }
 
     [Fact]
-    public void OverflowRequiresDiscardBeforeContinuingTurns()
+    public void EndTurn_IsBlocked_WhenOverflowDiscardPending()
     {
         var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
 
@@ -143,6 +142,78 @@ public class CombatReducerTests
         Assert.Equal(handCountBeforeDiscard - 1, resolvedState.Combat.Player.Deck.Hand.Count);
         Assert.Single(discardEvents);
         Assert.IsType<CardDiscarded>(discardEvents[0]);
+    }
+
+    [Fact]
+    public void PlayCard_IsBlocked_WhenOverflowDiscardPending()
+    {
+        var overflowState = CreateOverflowState(requiredDiscardCount: 1, handSize: 8);
+
+        var result = GameReducer.Reduce(overflowState, new PlayCardAction(0));
+
+        Assert.Equal(overflowState, result.NewState);
+        Assert.Empty(result.Events);
+    }
+
+    [Fact]
+    public void DiscardOverflow_IsRejected_WhenNoOverflowPending()
+    {
+        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+        var result = GameReducer.Reduce(combatState, new DiscardOverflowAction([0]));
+
+        Assert.Equal(combatState, result.NewState);
+        Assert.Empty(result.Events);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(99)]
+    public void InvalidHandIndex_IsRejected(int handIndex)
+    {
+        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+        var playResult = GameReducer.Reduce(combatState, new PlayCardAction(handIndex));
+
+        Assert.Equal(combatState, playResult.NewState);
+        Assert.Empty(playResult.Events);
+
+        var overflowState = CreateOverflowState(requiredDiscardCount: 1, handSize: 8);
+        var discardResult = GameReducer.Reduce(overflowState, new DiscardOverflowAction([handIndex]));
+
+        Assert.Equal(overflowState, discardResult.NewState);
+        Assert.Empty(discardResult.Events);
+    }
+
+    [Fact]
+    public void InvalidPhaseActions_AreRejected()
+    {
+        var state = GameState.Initial;
+
+        var playResult = GameReducer.Reduce(state, new PlayCardAction(0));
+        var endTurnResult = GameReducer.Reduce(state, new EndTurnAction());
+
+        Assert.Equal(state, playResult.NewState);
+        Assert.Empty(playResult.Events);
+        Assert.Equal(state, endTurnResult.NewState);
+        Assert.Empty(endTurnResult.Events);
+    }
+
+    [Fact]
+    public void PendingState_AllowsOnlyResolutionAction()
+    {
+        var overflowState = CreateOverflowState(requiredDiscardCount: 1, handSize: 8);
+
+        var playResult = GameReducer.Reduce(overflowState, new PlayCardAction(0));
+        var endTurnResult = GameReducer.Reduce(overflowState, new EndTurnAction());
+        var discardResult = GameReducer.Reduce(overflowState, new DiscardOverflowAction([0]));
+
+        Assert.Equal(overflowState, playResult.NewState);
+        Assert.Empty(playResult.Events);
+        Assert.Equal(overflowState, endTurnResult.NewState);
+        Assert.Empty(endTurnResult.Events);
+        Assert.NotEqual(overflowState, discardResult.NewState);
+        Assert.NotEmpty(discardResult.Events);
     }
 
     [Fact]
@@ -385,6 +456,35 @@ public class CombatReducerTests
         var second = RunSequence(seed: 4242);
 
         Assert.Equal(first, second);
+    }
+
+    private static GameState CreateOverflowState(int requiredDiscardCount, int handSize)
+    {
+        var overflowCombatState = new CombatState(
+            TurnOwner: TurnOwner.Player,
+            ReshuffleCount: 0,
+            Player: new CombatEntity(
+                EntityId: "player",
+                HP: 10,
+                MaxHP: 10,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(
+                    DrawPile: ImmutableList<CardInstance>.Empty,
+                    Hand: Enumerable.Repeat(new CardInstance(new CardsCardId("strike")), handSize).ToImmutableList(),
+                    DiscardPile: ImmutableList<CardInstance>.Empty,
+                    BurnPile: ImmutableList<CardInstance>.Empty)),
+            Enemy: new CombatEntity(
+                EntityId: "enemy",
+                HP: 10,
+                MaxHP: 10,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+            NeedsOverflowDiscard: true,
+            RequiredOverflowDiscardCount: requiredDiscardCount);
+
+        return new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, Content.CardDefinitions);
     }
 
     private static int FindCardIndex(IReadOnlyList<CardInstance> cards, string id)
