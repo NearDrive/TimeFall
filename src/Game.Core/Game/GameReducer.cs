@@ -9,6 +9,11 @@ public static class GameReducer
 {
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
+        if (IsBlockedByPendingCombatRequirement(state, action))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
         return action switch
         {
             StartRunAction startRunAction => StartRun(state, startRunAction),
@@ -43,7 +48,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)
     {
-        if (state.Phase != GamePhase.Combat || state.Combat is null || state.Combat.NeedsOverflowDiscard)
+        if (!IsCombatPhase(state))
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -92,7 +97,7 @@ public static class GameReducer
     {
         _ = action;
 
-        if (state.Phase != GamePhase.Combat || state.Combat is null || state.Combat.NeedsOverflowDiscard)
+        if (!IsCombatPhase(state))
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -117,12 +122,11 @@ public static class GameReducer
         combatState = combatState with { TurnOwner = TurnOwner.Player };
         events.Add(new TurnEnded(TurnOwner.Player));
 
-        var drawResult = HandManager.Draw(combatState, enemyResult.Rng, 1);
-        combatState = drawResult.CombatState;
-        events.AddRange(drawResult.Events);
-        events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
+        var playerTurnStart = StartPlayerTurn(combatState, enemyResult.Rng);
+        combatState = playerTurnStart.CombatState;
+        events.AddRange(playerTurnStart.Events);
 
-        return ResolveCombatPhase(state with { Combat = combatState, Rng = drawResult.Rng }, events);
+        return ResolveCombatPhase(state with { Combat = combatState, Rng = playerTurnStart.Rng }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)
@@ -196,5 +200,25 @@ public static class GameReducer
         }
 
         return (state, events);
+    }
+
+    private static bool IsBlockedByPendingCombatRequirement(GameState state, GameAction action)
+    {
+        return state.Combat is { NeedsOverflowDiscard: true } && action is not DiscardOverflowAction;
+    }
+
+    private static bool IsCombatPhase(GameState state)
+    {
+        return state.Phase == GamePhase.Combat && state.Combat is not null;
+    }
+
+    private static (CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events) StartPlayerTurn(CombatState combatState, GameRng rng)
+    {
+        var drawResult = HandManager.Draw(combatState, rng, 1);
+        var events = new List<GameEvent>();
+        events.AddRange(drawResult.Events);
+        events.AddRange(drawResult.DrawnCards.Select(card => new CardDrawn(card)));
+
+        return (drawResult.CombatState, drawResult.Rng, events);
     }
 }
