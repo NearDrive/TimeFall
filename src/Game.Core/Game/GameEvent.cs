@@ -1,5 +1,7 @@
 using Game.Core.Combat;
 using Game.Core.Map;
+using Game.Core.Rewards;
+using CardId = Game.Core.Cards.CardId;
 
 namespace Game.Core.Game;
 
@@ -31,7 +33,15 @@ public sealed record EncounterResolved(NodeId NodeId, NodeType NodeType) : GameE
 
 public sealed record EncounterAlreadyResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
 
-public sealed record CombatEnded(NodeId NodeId, NodeType NodeType, bool PlayerWon) : GameEvent;
+public sealed record CombatEnded(NodeId? NodeId, NodeType? NodeType, bool PlayerWon) : GameEvent;
+
+public sealed record CombatVictory(NodeId? NodeId, NodeType? NodeType) : GameEvent;
+
+public sealed record RewardOffered(RewardType RewardType, IReadOnlyList<CardId> CardOptions, NodeId? SourceNodeId) : GameEvent;
+
+public sealed record RewardChosen(RewardType RewardType, CardId CardId, NodeId? SourceNodeId) : GameEvent;
+
+public sealed record CardAddedToDeck(CardId CardId) : GameEvent;
 
 public sealed record TimeAdvanced(int Step) : GameEvent;
 

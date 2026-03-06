@@ -3,6 +3,7 @@ using Game.Core.Combat;
 using Game.Core.Cards;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
+using Game.Core.Rewards;
 using System.Collections.Immutable;
 using CardId = Game.Core.Cards.CardId;
 
@@ -15,7 +16,9 @@ public sealed record GameState(
     global::Game.Core.Map.NodeId? ActiveCombatNodeId,
     IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions,
     MapState Map,
-    TimeState Time)
+    TimeState Time,
+    RewardState? Reward,
+    ImmutableList<CardInstance> PlayerDeckDiscardPile)
 {
     private static readonly MapState InitialMap = SampleMapFactory.CreateDefaultState();
 
@@ -26,5 +29,7 @@ public sealed record GameState(
         null,
         ImmutableDictionary<CardId, CardDefinition>.Empty,
         InitialMap,
-        TimeState.Create(InitialMap));
+        TimeState.Create(InitialMap),
+        null,
+        ImmutableList<CardInstance>.Empty);
 }

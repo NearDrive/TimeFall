@@ -25,7 +25,8 @@ public class MapCombatIntegrationTests
     {
         var state = CreateMapExplorationState();
         var (afterCombat, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
-        var mapState = ForceCompleteCombatAtCurrentNode(afterCombat);
+        var rewardState = ForceCompleteCombatAtCurrentNode(afterCombat);
+        var mapState = ClaimFirstRewardCard(rewardState);
 
         var (newState, _) = GameReducer.Reduce(mapState, new MoveToNodeAction(new NodeId("elite-1")));
 
@@ -53,7 +54,8 @@ public class MapCombatIntegrationTests
     {
         var state = CreateMapExplorationState();
         var (afterEntry, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
-        var afterVictory = ForceCompleteCombatAtCurrentNode(afterEntry);
+        var rewardState = ForceCompleteCombatAtCurrentNode(afterEntry);
+        var afterVictory = ClaimFirstRewardCard(rewardState);
         var (afterMoveToStart, _) = GameReducer.Reduce(afterVictory, new MoveToNodeAction(new NodeId("start")));
 
         var (revisit, events) = GameReducer.Reduce(afterMoveToStart, new MoveToNodeAction(new NodeId("combat-1")));
@@ -64,14 +66,14 @@ public class MapCombatIntegrationTests
     }
 
     [Fact]
-    public void CombatVictory_ReturnsToMapExploration()
+    public void CombatVictory_TransitionsToRewardSelection()
     {
         var state = CreateMapExplorationState();
         var (afterEntry, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
 
         var afterVictory = ForceCompleteCombatAtCurrentNode(afterEntry);
 
-        Assert.Equal(GamePhase.MapExploration, afterVictory.Phase);
+        Assert.Equal(GamePhase.RewardSelection, afterVictory.Phase);
         Assert.Null(afterVictory.Combat);
         Assert.Null(afterVictory.ActiveCombatNodeId);
     }
@@ -84,9 +86,9 @@ public class MapCombatIntegrationTests
 
         Assert.DoesNotContain(new NodeId("combat-1"), afterEntry.Map.ResolvedEncounterNodeIds);
 
-        var afterVictory = ForceCompleteCombatAtCurrentNode(afterEntry);
+        var rewardState = ForceCompleteCombatAtCurrentNode(afterEntry);
 
-        Assert.Contains(new NodeId("combat-1"), afterVictory.Map.ResolvedEncounterNodeIds);
+        Assert.Contains(new NodeId("combat-1"), rewardState.Map.ResolvedEncounterNodeIds);
     }
 
     [Fact]
@@ -135,6 +137,12 @@ public class MapCombatIntegrationTests
             Map = map,
             Time = TimeState.Create(map),
         };
+    }
+
+    private static GameState ClaimFirstRewardCard(GameState rewardState)
+    {
+        var selected = rewardState.Reward!.CardOptions[0];
+        return GameReducer.Reduce(rewardState, new ChooseRewardCardAction(selected)).NewState;
     }
 
     private static GameState ForceCompleteCombatAtCurrentNode(GameState combatState)

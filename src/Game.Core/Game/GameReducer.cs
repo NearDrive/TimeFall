@@ -3,6 +3,7 @@ using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
+using Game.Core.Rewards;
 using System.Collections.Immutable;
 
 namespace Game.Core.Game;
@@ -24,6 +25,7 @@ public static class GameReducer
             EndTurnAction endTurnAction => EndTurn(state, endTurnAction),
             DiscardOverflowAction discardOverflowAction => DiscardOverflow(state, discardOverflowAction),
             MoveToNodeAction moveToNodeAction => MoveToNode(state, moveToNodeAction),
+            ChooseRewardCardAction chooseRewardCardAction => ChooseRewardCard(state, chooseRewardCardAction),
             _ => (state, Array.Empty<GameEvent>()),
         };
     }
@@ -38,7 +40,9 @@ public static class GameReducer
             null,
             state.CardDefinitions,
             mapState,
-            TimeState.Create(mapState));
+            TimeState.Create(mapState),
+            null,
+            ImmutableList<CardInstance>.Empty);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
@@ -62,7 +66,7 @@ public static class GameReducer
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions }, events);
+        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, Reward = null }, events);
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -224,6 +228,7 @@ public static class GameReducer
                 Rng = drawResult.Rng,
                 CardDefinitions = encounter.CardDefinitions,
                 ActiveCombatNodeId = action.NodeId,
+                Reward = null,
             };
 
             return (combatEnteredState, events);
@@ -278,6 +283,39 @@ public static class GameReducer
         return (state with { Combat = combatState }, events);
     }
 
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ChooseRewardCard(GameState state, ChooseRewardCardAction action)
+    {
+        if (state.Phase != GamePhase.RewardSelection || state.Reward is null)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (state.Reward.RewardType != RewardType.CardChoice || state.Reward.IsClaimed)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (!state.Reward.CardOptions.Contains(action.CardId))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var events = new GameEvent[]
+        {
+            new RewardChosen(state.Reward.RewardType, action.CardId, state.Reward.SourceNodeId),
+            new CardAddedToDeck(action.CardId),
+        };
+
+        return (state with
+        {
+            Phase = GamePhase.MapExploration,
+            Reward = null,
+            Combat = null,
+            PlayerDeckDiscardPile = state.PlayerDeckDiscardPile.Add(new CardInstance(action.CardId)),
+        }, events);
+    }
+
     private static CombatState CreateCombatState(CombatBlueprint blueprint)
     {
         var player = CreateCombatEntity(blueprint.Player);
@@ -310,32 +348,40 @@ public static class GameReducer
 
         if (state.Combat.Player.HP <= 0)
         {
-            return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null }, events);
+            return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null, Reward = null }, events);
         }
 
         if (state.Combat.Enemy.HP <= 0)
         {
+            NodeId? sourceNodeId = state.ActiveCombatNodeId;
+            NodeType? sourceNodeType = null;
+            var mapState = state.Map;
+            var resolvedEvents = new List<GameEvent>();
+
             if (state.ActiveCombatNodeId is { } nodeId && state.Map.Graph.TryGetNode(nodeId, out var node) && node is not null)
             {
+                sourceNodeType = node.Type;
                 var resolution = EncounterResolver.Resolve(state.Map, nodeId);
-                var withMap = state with
-                {
-                    Phase = GamePhase.MapExploration,
-                    Combat = null,
-                    ActiveCombatNodeId = null,
-                    Map = resolution.MapState,
-                };
-
-                var resolvedEvents = events.Concat(new GameEvent[]
-                {
-                    new CombatEnded(nodeId, node.Type, true),
-                    new EncounterResolved(nodeId, node.Type),
-                }).ToArray();
-
-                return (withMap, resolvedEvents);
+                mapState = resolution.MapState;
+                resolvedEvents.Add(new EncounterResolved(nodeId, node.Type));
             }
 
-            return (state with { Phase = GamePhase.Reward, Combat = null, ActiveCombatNodeId = null }, events);
+            var rewardResult = RewardGenerator.CreateCardChoiceReward(state.CardDefinitions, state.Rng, sourceNodeId);
+            var rewardState = rewardResult.RewardState;
+
+            resolvedEvents.Insert(0, new CombatEnded(sourceNodeId, sourceNodeType, true));
+            resolvedEvents.Insert(0, new CombatVictory(sourceNodeId, sourceNodeType));
+            resolvedEvents.Add(new RewardOffered(rewardState.RewardType, rewardState.CardOptions, rewardState.SourceNodeId));
+
+            return (state with
+            {
+                Phase = GamePhase.RewardSelection,
+                Combat = null,
+                ActiveCombatNodeId = null,
+                Map = mapState,
+                Rng = rewardResult.Rng,
+                Reward = rewardState,
+            }, events.Concat(resolvedEvents).ToArray());
         }
 
         return (state, events);

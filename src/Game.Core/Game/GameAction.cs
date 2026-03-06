@@ -17,3 +17,5 @@ public sealed record EndTurnAction : GameAction;
 public sealed record DiscardOverflowAction(int[] Indexes) : GameAction;
 
 public sealed record MoveToNodeAction(NodeId NodeId) : GameAction;
+
+public sealed record ChooseRewardCardAction(CardId CardId) : GameAction;

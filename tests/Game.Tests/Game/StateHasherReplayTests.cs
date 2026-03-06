@@ -178,6 +178,8 @@ public class StateHasherReplayTests
             ActiveCombatNodeId: null,
             CardDefinitions: Content.CardDefinitions,
             Map: SampleMapFactory.CreateDefaultState(),
-            Time: TimeState.Create(SampleMapFactory.CreateDefaultState()));
+            Time: TimeState.Create(SampleMapFactory.CreateDefaultState()),
+            Reward: null,
+            PlayerDeckDiscardPile: ImmutableList<CardInstance>.Empty);
     }
 }
