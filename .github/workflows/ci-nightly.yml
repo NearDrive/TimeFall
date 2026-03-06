@@ -10,19 +10,19 @@ on:
         required: false
         default: ""
       unit_test_filter:
-        description: "Optional unit test filter (future category split)"
+        description: "Optional unit test filter"
         required: false
         default: ""
       integration_test_filter:
-        description: "Optional integration test filter (future category split)"
+        description: "Optional integration test filter"
         required: false
         default: ""
       replay_test_filter:
-        description: "Optional deterministic/replay filter (future category split)"
+        description: "Optional deterministic/replay filter"
         required: false
         default: ""
       canary_test_filter:
-        description: "Optional canary filter (future category split)"
+        description: "Optional canary filter"
         required: false
         default: ""
 
@@ -66,10 +66,10 @@ jobs:
           CANARY_TEST_FILTER="${{ github.event.inputs.canary_test_filter || '' }}"
 
           [ -n "$FULL_TEST_FILTER" ] && echo "FULL_TEST_FILTER_ARG=--filter $FULL_TEST_FILTER" >> "$GITHUB_ENV" || echo "FULL_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
-          [ -n "$UNIT_TEST_FILTER" ] && echo "UNIT_TEST_FILTER_ARG=--filter $UNIT_TEST_FILTER" >> "$GITHUB_ENV" || echo "UNIT_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
-          [ -n "$INTEGRATION_TEST_FILTER" ] && echo "INTEGRATION_TEST_FILTER_ARG=--filter $INTEGRATION_TEST_FILTER" >> "$GITHUB_ENV" || echo "INTEGRATION_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
-          [ -n "$REPLAY_TEST_FILTER" ] && echo "REPLAY_TEST_FILTER_ARG=--filter $REPLAY_TEST_FILTER" >> "$GITHUB_ENV" || echo "REPLAY_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
-          [ -n "$CANARY_TEST_FILTER" ] && echo "CANARY_TEST_FILTER_ARG=--filter $CANARY_TEST_FILTER" >> "$GITHUB_ENV" || echo "CANARY_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+          [ -n "$UNIT_TEST_FILTER" ] && echo "UNIT_TEST_FILTER_ARG=--filter $UNIT_TEST_FILTER" >> "$GITHUB_ENV" || echo "UNIT_TEST_FILTER_ARG=--filter Lane=unit" >> "$GITHUB_ENV"
+          [ -n "$INTEGRATION_TEST_FILTER" ] && echo "INTEGRATION_TEST_FILTER_ARG=--filter $INTEGRATION_TEST_FILTER" >> "$GITHUB_ENV" || echo "INTEGRATION_TEST_FILTER_ARG=--filter Lane=integration" >> "$GITHUB_ENV"
+          [ -n "$REPLAY_TEST_FILTER" ] && echo "REPLAY_TEST_FILTER_ARG=--filter $REPLAY_TEST_FILTER" >> "$GITHUB_ENV" || echo "REPLAY_TEST_FILTER_ARG=--filter Lane=replay" >> "$GITHUB_ENV"
+          [ -n "$CANARY_TEST_FILTER" ] && echo "CANARY_TEST_FILTER_ARG=--filter $CANARY_TEST_FILTER" >> "$GITHUB_ENV" || echo "CANARY_TEST_FILTER_ARG=--filter Lane=canary" >> "$GITHUB_ENV"
 
       - name: Restore
         run: dotnet restore TimefallDeck.sln
@@ -77,7 +77,27 @@ jobs:
       - name: Build
         run: dotnet build TimefallDeck.sln --configuration Release --no-restore
 
-      # If full_test_filter is provided, it takes precedence over per-suite filters.
+      - name: Verify nightly lanes have targeted tests
+        if: env.FULL_TEST_FILTER_ARG == ''
+        shell: bash
+        run: |
+          verify_lane() {
+            local lane="$1"
+            local output
+            output="$(dotnet test TimefallDeck.sln --configuration Release --no-build --list-tests --filter "Lane=$lane")"
+            echo "$output"
+
+            if ! echo "$output" | rg -q '^\s*Game\.Tests\.'; then
+              echo "No tests discovered for Lane=$lane"
+              exit 1
+            fi
+          }
+
+          verify_lane "unit"
+          verify_lane "integration"
+          verify_lane "replay"
+          verify_lane "canary"
+
       - name: Run full suite (single filter)
         if: env.FULL_TEST_FILTER_ARG != ''
         shell: bash
@@ -90,9 +110,8 @@ jobs:
             --results-directory ./artifacts/test-results/full \
             $FULL_TEST_FILTER_ARG
 
-      # Future-ready lanes for category/trait-based suite partitioning.
       - name: Run unit suite
-        if: env.FULL_TEST_FILTER_ARG == '' && env.UNIT_TEST_FILTER_ARG != ''
+        if: env.FULL_TEST_FILTER_ARG == ''
         shell: bash
         run: |
           dotnet test TimefallDeck.sln \
@@ -104,7 +123,7 @@ jobs:
             $UNIT_TEST_FILTER_ARG
 
       - name: Run integration suite
-        if: env.FULL_TEST_FILTER_ARG == '' && env.INTEGRATION_TEST_FILTER_ARG != ''
+        if: env.FULL_TEST_FILTER_ARG == ''
         shell: bash
         run: |
           dotnet test TimefallDeck.sln \
@@ -116,7 +135,7 @@ jobs:
             $INTEGRATION_TEST_FILTER_ARG
 
       - name: Run replay/determinism suite
-        if: env.FULL_TEST_FILTER_ARG == '' && env.REPLAY_TEST_FILTER_ARG != ''
+        if: env.FULL_TEST_FILTER_ARG == ''
         shell: bash
         run: |
           dotnet test TimefallDeck.sln \
@@ -128,7 +147,7 @@ jobs:
             $REPLAY_TEST_FILTER_ARG
 
       - name: Run canary suite
-        if: env.FULL_TEST_FILTER_ARG == '' && env.CANARY_TEST_FILTER_ARG != ''
+        if: env.FULL_TEST_FILTER_ARG == ''
         shell: bash
         run: |
           dotnet test TimefallDeck.sln \
@@ -138,11 +157,6 @@ jobs:
             --logger "trx;LogFileName=canary-suite.trx" \
             --results-directory ./artifacts/test-results/canary \
             $CANARY_TEST_FILTER_ARG
-
-      # Fallback: if no filters are supplied, run everything.
-      - name: Run full suite (default)
-        if: env.FULL_TEST_FILTER_ARG == '' && env.UNIT_TEST_FILTER_ARG == '' && env.INTEGRATION_TEST_FILTER_ARG == '' && env.REPLAY_TEST_FILTER_ARG == '' && env.CANARY_TEST_FILTER_ARG == ''
-        run: dotnet test TimefallDeck.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=full-default.trx" --results-directory ./artifacts/test-results/full-default
 
       - name: Upload nightly test artifacts
         if: always()

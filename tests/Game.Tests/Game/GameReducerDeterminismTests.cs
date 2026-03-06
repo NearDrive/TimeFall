@@ -3,6 +3,7 @@ using Game.Core.Game;
 
 namespace Game.Tests.Game;
 
+[ReplayLane]
 public class GameReducerDeterminismTests
 {
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();

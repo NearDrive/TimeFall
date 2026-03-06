@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
+[IntegrationLane]
 public class DeckCycleSystemTests
 {
     [Fact]

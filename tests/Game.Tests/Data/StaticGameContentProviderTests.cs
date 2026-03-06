@@ -4,6 +4,7 @@ using Game.Core.Game;
 
 namespace Game.Tests.Data;
 
+[UnitLane]
 public class StaticGameContentProviderTests
 {
     [Fact]

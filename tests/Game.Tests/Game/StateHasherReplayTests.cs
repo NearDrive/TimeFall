@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
+[ReplayLane]
 public class StateHasherReplayTests
 {
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
@@ -93,6 +94,27 @@ public class StateHasherReplayTests
         var hashB = StateHasher.Hash(stateB);
 
         Assert.Equal(hashA, hashB);
+    }
+
+    [Fact]
+    [CanaryLane]
+    public void Canary_ReplayHashSequence_StaysStableAcrossLongRuns()
+    {
+        var actions = new List<GameAction>
+        {
+            new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions),
+        };
+
+        for (var i = 0; i < 40; i++)
+        {
+            actions.Add(new EndTurnAction());
+        }
+
+        var first = ReplayHashes(actions, seed: 9001);
+        var second = ReplayHashes(actions, seed: 9001);
+
+        Assert.Equal(first, second);
+        Assert.True(first.Length > 30);
     }
 
     private static string[] ReplayHashes(IReadOnlyList<GameAction> actions, int seed = 2024)
