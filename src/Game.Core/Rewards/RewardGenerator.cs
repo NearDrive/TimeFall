@@ -1,6 +1,7 @@
 using Game.Core.Cards;
 using Game.Core.Common;
-using Game.Core.Map;
+using CardId = Game.Core.Cards.CardId;
+using NodeId = Game.Core.Map.NodeId;
 using System.Collections.Immutable;
 
 namespace Game.Core.Rewards;
