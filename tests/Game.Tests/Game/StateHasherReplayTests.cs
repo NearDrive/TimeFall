@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
-[ReplayLane]
+[Trait("Lane", "replay")]
 public class StateHasherReplayTests
 {
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
@@ -97,7 +97,7 @@ public class StateHasherReplayTests
     }
 
     [Fact]
-    [CanaryLane]
+    [Trait("Lane", "canary")]
     public void Canary_ReplayHashSequence_StaysStableAcrossLongRuns()
     {
         var actions = new List<GameAction>

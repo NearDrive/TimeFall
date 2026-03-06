@@ -4,7 +4,7 @@ using Game.Core.Game;
 
 namespace Game.Tests.Data;
 
-[UnitLane]
+[Trait("Lane", "unit")]
 public class StaticGameContentProviderTests
 {
     [Fact]

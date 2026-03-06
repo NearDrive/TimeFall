@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
-[IntegrationLane]
+[Trait("Lane", "integration")]
 public class CombatReducerTests
 {
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
@@ -343,7 +343,7 @@ public class CombatReducerTests
     }
 
     [Fact]
-    [CanaryLane]
+    [Trait("Lane", "canary")]
     public void Canary_LongCombatSequence_RemainsPlayableAndDeterministic()
     {
         static (int PlayerHp, int EnemyHp, int HandCount, int DiscardCount) RunSequence(int seed)
