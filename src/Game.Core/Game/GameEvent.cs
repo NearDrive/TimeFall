@@ -1,4 +1,5 @@
 using Game.Core.Combat;
+using Game.Core.Map;
 
 namespace Game.Core.Game;
 
@@ -21,3 +22,9 @@ public sealed record DeckReshuffled : GameEvent;
 public sealed record CardBurned(CardInstance Card) : GameEvent;
 
 public sealed record EnemyAttackPlayed(CardInstance Card, int Damage, int PlayerHpAfterHit) : GameEvent;
+
+public sealed record MovedToNode(NodeId NodeId) : GameEvent;
+
+public sealed record EncounterResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
+
+public sealed record EncounterAlreadyResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
