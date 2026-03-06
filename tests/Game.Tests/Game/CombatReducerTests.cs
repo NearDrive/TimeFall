@@ -3,6 +3,7 @@ using CardsCardId = Game.Core.Cards.CardId;
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
+using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
@@ -29,7 +30,7 @@ public class CombatReducerTests
     public void PlayCard_StrikeDamagesEnemyAndDiscardsCard()
     {
         var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
-        var strikeIndex = stateAfterBegin.Combat!.Player.Deck.Hand.FindIndex(c => c.DefinitionId.Value == "strike");
+        var strikeIndex = FindCardIndex(stateAfterBegin.Combat!.Player.Deck.Hand, "strike");
 
         Assert.True(strikeIndex >= 0);
 
@@ -48,7 +49,7 @@ public class CombatReducerTests
     public void PlayCard_NonStrikeWithDefinedEffect_IsPlayable()
     {
         var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
-        var nonStrikeIndex = stateAfterBegin.Combat!.Player.Deck.Hand.FindIndex(c => c.DefinitionId.Value == "defend");
+        var nonStrikeIndex = FindCardIndex(stateAfterBegin.Combat!.Player.Deck.Hand, "defend");
 
         Assert.True(nonStrikeIndex >= 0);
 
@@ -84,7 +85,7 @@ public class CombatReducerTests
                 HP: 30,
                 MaxHP: 30,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile:
                 [
                     new CardsCardId("strike"),
@@ -101,7 +102,7 @@ public class CombatReducerTests
                 HP: 40,
                 MaxHP: 40,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile:
                 [
                     new CardsCardId("defend"),
@@ -154,31 +155,19 @@ public class CombatReducerTests
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 Deck: new DeckState(
-                    DrawPile: [],
-                    Hand:
-                    [
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                    ],
-                    DiscardPile: [],
-                    BurnPile: [])),
+                    DrawPile: ImmutableList<CardInstance>.Empty,
+                    Hand: Enumerable.Repeat(new CardInstance(new CardsCardId("strike")), 10).ToImmutableList(),
+                    DiscardPile: ImmutableList<CardInstance>.Empty,
+                    BurnPile: ImmutableList<CardInstance>.Empty)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [], [], [])),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
@@ -206,31 +195,19 @@ public class CombatReducerTests
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 Deck: new DeckState(
-                    DrawPile: [],
-                    Hand:
-                    [
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                        new CardInstance(new CardsCardId("strike")),
-                    ],
-                    DiscardPile: [],
-                    BurnPile: [])),
+                    DrawPile: ImmutableList<CardInstance>.Empty,
+                    Hand: Enumerable.Repeat(new CardInstance(new CardsCardId("strike")), 10).ToImmutableList(),
+                    DiscardPile: ImmutableList<CardInstance>.Empty,
+                    BurnPile: ImmutableList<CardInstance>.Empty)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [], [], [])),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
@@ -272,14 +249,14 @@ public class CombatReducerTests
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile: [new CardsCardId("defend")]),
             Enemy: new CombatantBlueprint(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile: [clawCardId]));
 
         var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint, cardDefinitions));
@@ -311,15 +288,15 @@ public class CombatReducerTests
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [new CardInstance(new CardsCardId("strike"))], [], [])),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("strike"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 4,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [], [], [])),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
@@ -343,15 +320,15 @@ public class CombatReducerTests
                 HP: 4,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [new CardInstance(new CardsCardId("defend"))], [], [])),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("defend"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
-                Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([new CardInstance(new CardsCardId("attack"))], [], [], [])),
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList.Create(new CardInstance(new CardsCardId("attack"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
@@ -362,6 +339,19 @@ public class CombatReducerTests
         Assert.Equal(GamePhase.RunEnded, newState.Phase);
         Assert.Null(newState.Combat);
         Assert.Contains(events, e => e is EnemyAttackPlayed { PlayerHpAfterHit: <= 0 });
+    }
+
+    private static int FindCardIndex(IReadOnlyList<CardInstance> cards, string id)
+    {
+        for (var i = 0; i < cards.Count; i++)
+        {
+            if (cards[i].DefinitionId.Value == id)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private static (int PlayerHp, int EnemyCardsDrawn, int EnemyAttacksPlayed) SimulatePlayerEnemyTurns(int seed, int turns)

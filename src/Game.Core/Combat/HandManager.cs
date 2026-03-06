@@ -8,7 +8,7 @@ public static class HandManager
 {
     public static DrawResult Draw(CombatState combatState, GameRng rng, int count)
     {
-        var mutable = Clone(combatState);
+        var mutable = combatState;
         var currentRng = rng;
         var drawn = new List<CardInstance>();
         var events = new List<GameEvent>();
@@ -29,8 +29,17 @@ public static class HandManager
             }
 
             var topCard = mutable.Player.Deck.DrawPile[0];
-            mutable.Player.Deck.DrawPile.RemoveAt(0);
-            mutable.Player.Deck.Hand.Add(topCard);
+            mutable = mutable with
+            {
+                Player = mutable.Player with
+                {
+                    Deck = mutable.Player.Deck with
+                    {
+                        DrawPile = mutable.Player.Deck.DrawPile.RemoveAt(0),
+                        Hand = mutable.Player.Deck.Hand.Add(topCard),
+                    },
+                },
+            };
             drawn.Add(topCard);
         }
 
@@ -52,12 +61,21 @@ public static class HandManager
 
     public static CombatState ApplyDiscard(CombatState combatState, IReadOnlyCollection<int> indexes)
     {
-        var mutable = Clone(combatState);
+        var mutable = combatState;
         foreach (var index in indexes.OrderDescending())
         {
             var card = mutable.Player.Deck.Hand[index];
-            mutable.Player.Deck.Hand.RemoveAt(index);
-            mutable.Player.Deck.DiscardPile.Add(card);
+            mutable = mutable with
+            {
+                Player = mutable.Player with
+                {
+                    Deck = mutable.Player.Deck with
+                    {
+                        Hand = mutable.Player.Deck.Hand.RemoveAt(index),
+                        DiscardPile = mutable.Player.Deck.DiscardPile.Add(card),
+                    },
+                },
+            };
         }
 
         var requiredDiscardCount = RequireOverflowDiscard(mutable);
@@ -68,37 +86,6 @@ public static class HandManager
         };
     }
 
-    private static CombatState Clone(CombatState combatState)
-    {
-        var playerDeck = combatState.Player.Deck;
-        var enemyDeck = combatState.Enemy.Deck;
-
-        return combatState with
-        {
-            Player = combatState.Player with
-            {
-                Resources = new Dictionary<ResourceType, int>(combatState.Player.Resources),
-                Deck = playerDeck with
-                {
-                    DrawPile = new List<CardInstance>(playerDeck.DrawPile),
-                    Hand = new List<CardInstance>(playerDeck.Hand),
-                    DiscardPile = new List<CardInstance>(playerDeck.DiscardPile),
-                    BurnPile = new List<CardInstance>(playerDeck.BurnPile),
-                },
-            },
-            Enemy = combatState.Enemy with
-            {
-                Resources = new Dictionary<ResourceType, int>(combatState.Enemy.Resources),
-                Deck = enemyDeck with
-                {
-                    DrawPile = new List<CardInstance>(enemyDeck.DrawPile),
-                    Hand = new List<CardInstance>(enemyDeck.Hand),
-                    DiscardPile = new List<CardInstance>(enemyDeck.DiscardPile),
-                    BurnPile = new List<CardInstance>(enemyDeck.BurnPile),
-                },
-            },
-        };
-    }
 }
 
 public sealed record DrawResult(

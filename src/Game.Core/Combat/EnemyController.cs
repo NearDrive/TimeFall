@@ -12,7 +12,7 @@ public static class EnemyController
         GameRng rng,
         IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
-        var mutable = Clone(combatState);
+        var mutable = combatState;
         var currentRng = rng;
         var events = new List<GameEvent>();
         var actionCount = 0;
@@ -33,15 +33,24 @@ public static class EnemyController
                 }
             }
 
-            var attackIndex = mutable.Enemy.Deck.Hand.FindIndex(card => CardEffectResolver.HasResolvableEffects(card, cardDefinitions));
+            var attackIndex = FindPlayableCardIndex(mutable.Enemy.Deck.Hand, cardDefinitions);
             if (attackIndex < 0)
             {
                 break;
             }
 
             var attackCard = mutable.Enemy.Deck.Hand[attackIndex];
-            mutable.Enemy.Deck.Hand.RemoveAt(attackIndex);
-            mutable.Enemy.Deck.DiscardPile.Add(attackCard);
+            mutable = mutable with
+            {
+                Enemy = mutable.Enemy with
+                {
+                    Deck = mutable.Enemy.Deck with
+                    {
+                        Hand = mutable.Enemy.Deck.Hand.RemoveAt(attackIndex),
+                        DiscardPile = mutable.Enemy.Deck.DiscardPile.Add(attackCard),
+                    },
+                },
+            };
 
             var resolution = CardEffectResolver.Resolve(mutable, attackCard, TurnOwner.Enemy, cardDefinitions);
             mutable = resolution.CombatState;
@@ -54,7 +63,7 @@ public static class EnemyController
 
     private static DrawResult DrawEnemyCards(CombatState combatState, GameRng rng, int count)
     {
-        var mutable = Clone(combatState);
+        var mutable = combatState;
         var currentRng = rng;
         var drawn = new List<CardInstance>();
         var events = new List<GameEvent>();
@@ -75,44 +84,36 @@ public static class EnemyController
             }
 
             var topCard = mutable.Enemy.Deck.DrawPile[0];
-            mutable.Enemy.Deck.DrawPile.RemoveAt(0);
-            mutable.Enemy.Deck.Hand.Add(topCard);
+            mutable = mutable with
+            {
+                Enemy = mutable.Enemy with
+                {
+                    Deck = mutable.Enemy.Deck with
+                    {
+                        DrawPile = mutable.Enemy.Deck.DrawPile.RemoveAt(0),
+                        Hand = mutable.Enemy.Deck.Hand.Add(topCard),
+                    },
+                },
+            };
             drawn.Add(topCard);
         }
 
         return new DrawResult(mutable, currentRng, drawn, events);
     }
 
-    private static CombatState Clone(CombatState combatState)
+    private static int FindPlayableCardIndex(
+        IReadOnlyList<CardInstance> hand,
+        IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
-        var playerDeck = combatState.Player.Deck;
-        var enemyDeck = combatState.Enemy.Deck;
-
-        return combatState with
+        for (var i = 0; i < hand.Count; i++)
         {
-            Player = combatState.Player with
+            if (CardEffectResolver.HasResolvableEffects(hand[i], cardDefinitions))
             {
-                Resources = new Dictionary<ResourceType, int>(combatState.Player.Resources),
-                Deck = playerDeck with
-                {
-                    DrawPile = new List<CardInstance>(playerDeck.DrawPile),
-                    Hand = new List<CardInstance>(playerDeck.Hand),
-                    DiscardPile = new List<CardInstance>(playerDeck.DiscardPile),
-                    BurnPile = new List<CardInstance>(playerDeck.BurnPile),
-                },
-            },
-            Enemy = combatState.Enemy with
-            {
-                Resources = new Dictionary<ResourceType, int>(combatState.Enemy.Resources),
-                Deck = enemyDeck with
-                {
-                    DrawPile = new List<CardInstance>(enemyDeck.DrawPile),
-                    Hand = new List<CardInstance>(enemyDeck.Hand),
-                    DiscardPile = new List<CardInstance>(enemyDeck.DiscardPile),
-                    BurnPile = new List<CardInstance>(enemyDeck.BurnPile),
-                },
-            },
-        };
+                return i;
+            }
+        }
+
+        return -1;
     }
 }
 

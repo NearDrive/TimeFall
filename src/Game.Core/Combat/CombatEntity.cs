@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Game.Core.Combat;
 
 public sealed record CombatEntity(
@@ -5,5 +7,5 @@ public sealed record CombatEntity(
     int HP,
     int MaxHP,
     int Armor,
-    Dictionary<ResourceType, int> Resources,
+    ImmutableDictionary<ResourceType, int> Resources,
     DeckState Deck);

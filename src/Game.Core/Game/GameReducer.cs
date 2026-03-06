@@ -1,7 +1,7 @@
 using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Common;
-using CardId = Game.Core.Cards.CardId;
+using System.Collections.Immutable;
 
 namespace Game.Core.Game;
 
@@ -64,9 +64,17 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        var combatState = Clone(state.Combat);
-        combatState.Player.Deck.Hand.RemoveAt(action.HandIndex);
-        combatState.Player.Deck.DiscardPile.Add(card);
+        var combatState = state.Combat with
+        {
+            Player = state.Combat.Player with
+            {
+                Deck = state.Combat.Player.Deck with
+                {
+                    Hand = state.Combat.Player.Deck.Hand.RemoveAt(action.HandIndex),
+                    DiscardPile = state.Combat.Player.Deck.DiscardPile.Add(card),
+                },
+            },
+        };
 
         var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions);
         combatState = resolution.CombatState;
@@ -162,44 +170,12 @@ public static class GameReducer
             HP: blueprint.HP,
             MaxHP: blueprint.MaxHP,
             Armor: blueprint.Armor,
-            Resources: blueprint.Resources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            Resources: blueprint.Resources.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value),
             Deck: new DeckState(
-                DrawPile: blueprint.DrawPile.Select(id => new CardInstance(id)).ToList(),
-                Hand: new List<CardInstance>(),
-                DiscardPile: new List<CardInstance>(),
-                BurnPile: new List<CardInstance>()));
-    }
-
-    private static CombatState Clone(CombatState combatState)
-    {
-        var playerDeck = combatState.Player.Deck;
-        var enemyDeck = combatState.Enemy.Deck;
-
-        return combatState with
-        {
-            Player = combatState.Player with
-            {
-                Resources = new Dictionary<ResourceType, int>(combatState.Player.Resources),
-                Deck = playerDeck with
-                {
-                    DrawPile = new List<CardInstance>(playerDeck.DrawPile),
-                    Hand = new List<CardInstance>(playerDeck.Hand),
-                    DiscardPile = new List<CardInstance>(playerDeck.DiscardPile),
-                    BurnPile = new List<CardInstance>(playerDeck.BurnPile),
-                },
-            },
-            Enemy = combatState.Enemy with
-            {
-                Resources = new Dictionary<ResourceType, int>(combatState.Enemy.Resources),
-                Deck = enemyDeck with
-                {
-                    DrawPile = new List<CardInstance>(enemyDeck.DrawPile),
-                    Hand = new List<CardInstance>(enemyDeck.Hand),
-                    DiscardPile = new List<CardInstance>(enemyDeck.DiscardPile),
-                    BurnPile = new List<CardInstance>(enemyDeck.BurnPile),
-                },
-            },
-        };
+                DrawPile: blueprint.DrawPile.Select(id => new CardInstance(id)).ToImmutableList(),
+                Hand: ImmutableList<CardInstance>.Empty,
+                DiscardPile: ImmutableList<CardInstance>.Empty,
+                BurnPile: ImmutableList<CardInstance>.Empty));
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ResolveCombatPhase(GameState state, IReadOnlyList<GameEvent> events)

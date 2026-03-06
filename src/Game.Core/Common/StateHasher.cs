@@ -65,6 +65,12 @@ public static class StateHasher
             return;
         }
 
+        if (IsReadOnlyDictionaryType(type))
+        {
+            AppendDictionary(builder, (IEnumerable)value, type);
+            return;
+        }
+
         if (value is IEnumerable enumerable)
         {
             AppendEnumerable(builder, enumerable, type);
@@ -75,6 +81,11 @@ public static class StateHasher
     }
 
     private static void AppendDictionary(StringBuilder builder, IDictionary dictionary, Type type)
+    {
+        AppendDictionary(builder, (IEnumerable)dictionary, type);
+    }
+
+    private static void AppendDictionary(StringBuilder builder, IEnumerable dictionary, Type type)
     {
         builder.Append("dict:").Append(type.FullName).Append('[');
 
@@ -95,6 +106,13 @@ public static class StateHasher
         }
 
         builder.Append(']');
+    }
+
+    private static bool IsReadOnlyDictionaryType(Type type)
+    {
+        return type
+            .GetInterfaces()
+            .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>));
     }
 
     private static IEnumerable<(object? Key, object? Value)> EnumerateDictionaryEntries(IEnumerable dictionary)
