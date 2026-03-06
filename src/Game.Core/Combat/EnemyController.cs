@@ -1,4 +1,3 @@
-using Game.Core.Cards;
 using Game.Core.Common;
 using CardId = Game.Core.Cards.CardId;
 using Game.Core.Game;
@@ -55,8 +54,7 @@ public static class EnemyController
 
     private static bool CanPlayAttackCard(CardInstance card)
     {
-        return card.DefinitionId == AttackCardId
-            && ContentRegistry.CardDefinitions.ContainsKey(card.DefinitionId);
+        return card.DefinitionId == AttackCardId;
     }
 
     private static DrawResult DrawEnemyCards(CombatState combatState, GameRng rng, int count)

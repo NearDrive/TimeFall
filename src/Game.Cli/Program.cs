@@ -1,11 +1,12 @@
-using Game.Core.Cards;
 using Game.Core.Game;
+using Game.Data.Content;
 
+var content = StaticGameContentProvider.LoadDefault();
 var state = GameState.Initial;
 var eventLog = new List<GameEvent>();
 
 Console.WriteLine("Timefall CLI combat (start <seed>, hand, play <index>, end, discard <i1> <i2> ..., quit)");
-RenderState(state, eventLog);
+RenderState(state, eventLog, content.CardDefinitions);
 
 while (true)
 {
@@ -31,7 +32,7 @@ while (true)
 
     if (command == "hand")
     {
-        RenderHand(state);
+        RenderHand(state, content.CardDefinitions);
         continue;
     }
 
@@ -49,7 +50,7 @@ while (true)
 
             (state, var startedEvents) = GameReducer.Reduce(state, new StartRunAction(seed));
             newEvents.AddRange(startedEvents);
-            (state, var combatEvents) = GameReducer.Reduce(state, new BeginCombatAction());
+            (state, var combatEvents) = GameReducer.Reduce(state, new BeginCombatAction(content.OpeningCombat));
             newEvents.AddRange(combatEvents);
             break;
         }
@@ -112,10 +113,10 @@ while (true)
     }
 
     eventLog.AddRange(newEvents);
-    RenderState(state, eventLog);
+    RenderState(state, eventLog, content.CardDefinitions);
 }
 
-static void RenderState(GameState state, IReadOnlyList<GameEvent> eventLog)
+static void RenderState(GameState state, IReadOnlyList<GameEvent> eventLog, IReadOnlyDictionary<Game.Core.Cards.CardId, Game.Core.Cards.CardDefinition> cardDefinitions)
 {
     if (state.Combat is null)
     {
@@ -144,11 +145,11 @@ static void RenderState(GameState state, IReadOnlyList<GameEvent> eventLog)
 
     foreach (var gameEvent in eventLog.TakeLast(10))
     {
-        Console.WriteLine($"- {FormatEvent(gameEvent)}");
+        Console.WriteLine($"- {FormatEvent(gameEvent, cardDefinitions)}");
     }
 }
 
-static void RenderHand(GameState state)
+static void RenderHand(GameState state, IReadOnlyDictionary<Game.Core.Cards.CardId, Game.Core.Cards.CardDefinition> cardDefinitions)
 {
     if (state.Combat is null)
     {
@@ -160,30 +161,30 @@ static void RenderHand(GameState state)
     for (var i = 0; i < state.Combat.Player.Deck.Hand.Count; i++)
     {
         var card = state.Combat.Player.Deck.Hand[i];
-        Console.WriteLine($"{i}: {GetCardName(card)}");
+        Console.WriteLine($"{i}: {GetCardName(card, cardDefinitions)}");
     }
 }
 
-static string FormatEvent(GameEvent gameEvent)
+static string FormatEvent(GameEvent gameEvent, IReadOnlyDictionary<Game.Core.Cards.CardId, Game.Core.Cards.CardDefinition> cardDefinitions)
 {
     return gameEvent switch
     {
         RunStarted e => $"Run started (seed {e.Seed})",
         EnteredCombat => "Entered combat",
-        CardDrawn e => $"Card drawn: {GetCardName(e.Card)}",
-        CardDiscarded e => $"Card discarded: {GetCardName(e.Card)}",
+        CardDrawn e => $"Card drawn: {GetCardName(e.Card, cardDefinitions)}",
+        CardDiscarded e => $"Card discarded: {GetCardName(e.Card, cardDefinitions)}",
         PlayerStrikePlayed e => $"Strike deals {e.Damage} (enemy HP {e.EnemyHpAfterHit})",
         EnemyAttackPlayed e => $"Enemy attack deals {e.Damage} (player HP {e.PlayerHpAfterHit})",
         TurnEnded e => $"Turn ended -> {e.NextTurnOwner}",
         DeckReshuffled => "Deck reshuffled",
-        CardBurned e => $"Card burned: {GetCardName(e.Card)}",
+        CardBurned e => $"Card burned: {GetCardName(e.Card, cardDefinitions)}",
         _ => gameEvent.GetType().Name,
     };
 }
 
-static string GetCardName(Game.Core.Combat.CardInstance card)
+static string GetCardName(Game.Core.Combat.CardInstance card, IReadOnlyDictionary<Game.Core.Cards.CardId, Game.Core.Cards.CardDefinition> cardDefinitions)
 {
-    return ContentRegistry.CardDefinitions.TryGetValue(card.DefinitionId, out var definition)
+    return cardDefinitions.TryGetValue(card.DefinitionId, out var definition)
         ? definition.Name
         : card.DefinitionId.Value;
 }
