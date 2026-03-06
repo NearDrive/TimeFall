@@ -353,7 +353,7 @@ public static class GameReducer
     {
         _ = action;
 
-        if (state.Phase != GamePhase.MapExploration)
+        if (state.Phase != GamePhase.MapExploration || state.RunDeck.Count == 0)
         {
             return (state, Array.Empty<GameEvent>());
         }

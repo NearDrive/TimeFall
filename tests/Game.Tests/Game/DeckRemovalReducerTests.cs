@@ -68,6 +68,18 @@ public class DeckRemovalReducerTests
         Assert.Empty(result.Events);
     }
 
+
+    [Fact]
+    public void BeginDeckRemoval_IsRejected_WhenRunDeckIsEmpty()
+    {
+        var state = CreateMapStateWithRunDeck([]);
+
+        var result = GameReducer.Reduce(state, new BeginDeckRemovalAction());
+
+        Assert.Equal(state, result.NewState);
+        Assert.Empty(result.Events);
+    }
+
     [Fact]
     public void RemovalFlow_CannotRemoveWithoutEnteringRemovalState()
     {
