@@ -94,7 +94,7 @@ public class DeckCycleSystemTests
         var enemySecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemyFirst.Deck, 200, 211), playerSecond.Rng, out _);
         var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, 300, 311), enemySecond.Rng, out var playerThirdEvents);
 
-        Assert.Equal(1, playerFirstEvents.OfType<CardBurned>().Count());
+        Assert.Single(playerFirstEvents.OfType<CardBurned>());
         Assert.Equal(2, playerSecondEvents.OfType<CardBurned>().Count());
         Assert.Equal(3, playerThirdEvents.OfType<CardBurned>().Count());
     }
@@ -114,7 +114,7 @@ public class DeckCycleSystemTests
         var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, 200, 211), enemySecond.Rng, out _);
         var enemyThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemySecond.Deck, 300, 311), playerSecond.Rng, out var enemyThirdEvents);
 
-        Assert.Equal(1, enemyFirstEvents.OfType<CardBurned>().Count());
+        Assert.Single(enemyFirstEvents.OfType<CardBurned>());
         Assert.Equal(2, enemySecondEvents.OfType<CardBurned>().Count());
         Assert.Equal(3, enemyThirdEvents.OfType<CardBurned>().Count());
     }
