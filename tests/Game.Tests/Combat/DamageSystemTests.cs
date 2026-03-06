@@ -78,6 +78,6 @@ public class DamageSystemTests
             MaxHP: 100,
             Armor: armor,
             Resources: new Dictionary<ResourceType, int>(),
-            Deck: new DeckState([], [], []));
+            Deck: new DeckState([], [], [], []));
     }
 }
