@@ -1,3 +1,4 @@
+using Game.Core.Combat;
 using Game.Core.Game;
 
 namespace Game.Tests.Game;
@@ -40,7 +41,50 @@ public class GameReducerDeterminismTests
         var first = GameReducer.Reduce(runA, new BeginCombatAction(Content.OpeningCombat));
         var second = GameReducer.Reduce(runB, new BeginCombatAction(Content.OpeningCombat));
 
-        Assert.Equal(first.NewState, second.NewState);
+        AssertGameStateEquivalent(first.NewState, second.NewState);
         Assert.Equal(first.Events, second.Events);
+    }
+
+    private static void AssertGameStateEquivalent(GameState expected, GameState actual)
+    {
+        Assert.Equal(expected.Phase, actual.Phase);
+        Assert.Equal(expected.Rng, actual.Rng);
+
+        if (expected.Combat is null)
+        {
+            Assert.Null(actual.Combat);
+            return;
+        }
+
+        Assert.NotNull(actual.Combat);
+        AssertCombatStateEquivalent(expected.Combat, actual.Combat!);
+    }
+
+    private static void AssertCombatStateEquivalent(CombatState expected, CombatState actual)
+    {
+        Assert.Equal(expected.TurnOwner, actual.TurnOwner);
+        Assert.Equal(expected.ReshuffleCount, actual.ReshuffleCount);
+        Assert.Equal(expected.NeedsOverflowDiscard, actual.NeedsOverflowDiscard);
+        Assert.Equal(expected.RequiredOverflowDiscardCount, actual.RequiredOverflowDiscardCount);
+
+        AssertCombatEntityEquivalent(expected.Player, actual.Player);
+        AssertCombatEntityEquivalent(expected.Enemy, actual.Enemy);
+    }
+
+    private static void AssertCombatEntityEquivalent(CombatEntity expected, CombatEntity actual)
+    {
+        Assert.Equal(expected.EntityId, actual.EntityId);
+        Assert.Equal(expected.HP, actual.HP);
+        Assert.Equal(expected.MaxHP, actual.MaxHP);
+        Assert.Equal(expected.Armor, actual.Armor);
+
+        var expectedResources = expected.Resources.OrderBy(kvp => kvp.Key).ToArray();
+        var actualResources = actual.Resources.OrderBy(kvp => kvp.Key).ToArray();
+        Assert.Equal(expectedResources, actualResources);
+
+        Assert.Equal(expected.Deck.DrawPile, actual.Deck.DrawPile);
+        Assert.Equal(expected.Deck.Hand, actual.Deck.Hand);
+        Assert.Equal(expected.Deck.DiscardPile, actual.Deck.DiscardPile);
+        Assert.Equal(expected.Deck.BurnPile, actual.Deck.BurnPile);
     }
 }

@@ -1,5 +1,6 @@
 using Game.Core.Cards;
 using Game.Core.Combat;
+using Game.Core.Game;
 
 namespace Game.Tests.Data;
 
@@ -23,7 +24,7 @@ public class StaticGameContentProviderTests
         var first = StaticGameContentProvider.LoadDefault();
         var second = StaticGameContentProvider.LoadDefault();
 
-        Assert.Equal(first.OpeningCombat, second.OpeningCombat);
+        AssertCombatBlueprintEquivalent(first.OpeningCombat, second.OpeningCombat);
 
         var firstDefinitions = first.CardDefinitions.OrderBy(kvp => kvp.Key.Value).ToArray();
         var secondDefinitions = second.CardDefinitions.OrderBy(kvp => kvp.Key.Value).ToArray();
@@ -39,5 +40,24 @@ public class StaticGameContentProviderTests
         Assert.All(content.OpeningCombat.Player.DrawPile, cardId => Assert.Contains(cardId, knownCards));
         Assert.All(content.OpeningCombat.Enemy.DrawPile, cardId => Assert.Contains(cardId, knownCards));
         Assert.Equal(3, content.OpeningCombat.Player.Resources[ResourceType.Energy]);
+    }
+
+    private static void AssertCombatBlueprintEquivalent(CombatBlueprint expected, CombatBlueprint actual)
+    {
+        AssertCombatantEquivalent(expected.Player, actual.Player);
+        AssertCombatantEquivalent(expected.Enemy, actual.Enemy);
+    }
+
+    private static void AssertCombatantEquivalent(CombatantBlueprint expected, CombatantBlueprint actual)
+    {
+        Assert.Equal(expected.EntityId, actual.EntityId);
+        Assert.Equal(expected.HP, actual.HP);
+        Assert.Equal(expected.MaxHP, actual.MaxHP);
+        Assert.Equal(expected.Armor, actual.Armor);
+        Assert.Equal(expected.DrawPile, actual.DrawPile);
+
+        var expectedResources = expected.Resources.OrderBy(kvp => kvp.Key).ToArray();
+        var actualResources = actual.Resources.OrderBy(kvp => kvp.Key).ToArray();
+        Assert.Equal(expectedResources, actualResources);
     }
 }
