@@ -62,14 +62,39 @@ public class DamageSystemTests
     }
 
     [Fact]
-    public void ApplyHit_EmitsEntityDied_WhenHpDropsToZeroOrBelow()
+    public void Damage_ClampsHp_ToZero()
     {
         var target = CreateTarget(hp: 5, armor: 0);
 
-        var (updated, events) = DamageSystem.ApplyHit(target, incomingDamage: 5);
+        var (updated, events) = DamageSystem.ApplyHit(target, incomingDamage: 50);
 
         Assert.Equal(0, updated.HP);
         Assert.Contains(events, evt => evt is EntityDied("player-1"));
+    }
+
+    [Fact]
+    public void Damage_EmitsDeath_OnlyOnAliveToDeadTransition()
+    {
+        var target = CreateTarget(hp: 5, armor: 0);
+
+        var (deadTarget, firstEvents) = DamageSystem.ApplyHit(target, incomingDamage: 5);
+        var (_, secondEvents) = DamageSystem.ApplyHit(deadTarget, incomingDamage: 5);
+
+        Assert.Equal(1, firstEvents.Count(evt => evt is EntityDied("player-1")));
+        Assert.Equal(0, secondEvents.Count(evt => evt is EntityDied("player-1")));
+    }
+
+    [Fact]
+    public void ArmorRule_RemainsUnchanged_AfterHardening()
+    {
+        var target = CreateTarget(hp: 50, armor: 10);
+
+        var (updated, events) = DamageSystem.ApplyHit(target, incomingDamage: 20);
+
+        Assert.Equal(40, updated.HP);
+        Assert.Equal(5, updated.Armor);
+        Assert.Equal(new DamageDealt(20, 10), events[0]);
+        Assert.Equal(new ArmorChanged(10, 5), events[1]);
     }
 
     private static CombatEntity CreateTarget(int hp, int armor)
