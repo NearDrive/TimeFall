@@ -35,6 +35,7 @@ public static class GameReducer
             GamePhase.MapExploration,
             GameRng.FromSeed(action.Seed),
             null,
+            null,
             state.CardDefinitions,
             mapState,
             TimeState.Create(mapState));
@@ -57,7 +58,7 @@ public static class GameReducer
 
         var combatState = CreateCombatState(action.Blueprint);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
-        var events = new List<GameEvent> { new EnteredCombat() };
+        var events = new List<GameEvent> { new EnteredCombat(null, null) };
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
@@ -66,7 +67,6 @@ public static class GameReducer
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
     {
-        // Combat entry is only allowed from pre-combat traversal/setup phases.
         return phase is GamePhase.DeckSelect or GamePhase.MapExploration;
     }
 
@@ -173,21 +173,19 @@ public static class GameReducer
 
         var traversal = traversalResult.Value;
         var movedMap = traversal.MapState;
+        if (!movedMap.Graph.TryGetNode(action.NodeId, out var node) || node is null)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
         var events = new List<GameEvent>
         {
             new MovedToNode(action.NodeId),
         };
 
-        if (movedMap.Graph.TryGetNode(action.NodeId, out var node) && node is not null)
+        if (traversal.EncounterStatus == EncounterLifecycleStatus.Triggered)
         {
-            if (traversal.EncounterStatus == EncounterResolutionStatus.Resolved)
-            {
-                events.Add(new EncounterResolved(action.NodeId, node.Type));
-            }
-            else
-            {
-                events.Add(new EncounterAlreadyResolved(action.NodeId, node.Type));
-            }
+            events.Add(new EncounterTriggered(action.NodeId, node.Type));
         }
 
         var timeAdvance = TimeAdvancer.Advance(state.Time, movedMap.CurrentNodeId);
@@ -203,7 +201,50 @@ public static class GameReducer
             events.Add(new TimeCaughtPlayer(movedMap.CurrentNodeId, timeAdvance.TimeState.CurrentStep));
         }
 
-        return (state with { Map = movedMap, Time = timeAdvance.TimeState }, events);
+        var movedState = state with { Map = movedMap, Time = timeAdvance.TimeState };
+
+        if (MapNodeEncounterSelector.IsCombatNode(node.Type) && !movedMap.ResolvedEncounterNodeIds.Contains(action.NodeId))
+        {
+            var selected = MapNodeEncounterSelector.TrySelect(node.Type, out var encounter);
+            if (!selected)
+            {
+                return (movedState, events);
+            }
+
+            var combatState = CreateCombatState(encounter.Blueprint);
+            var drawResult = HandManager.Draw(combatState, movedState.Rng, 5);
+            events.Add(new EnteredCombat(action.NodeId, node.Type));
+            events.AddRange(drawResult.Events);
+            events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
+
+            var combatEnteredState = movedState with
+            {
+                Phase = GamePhase.Combat,
+                Combat = drawResult.CombatState,
+                Rng = drawResult.Rng,
+                CardDefinitions = encounter.CardDefinitions,
+                ActiveCombatNodeId = action.NodeId,
+            };
+
+            return (combatEnteredState, events);
+        }
+
+        if (movedMap.ResolvedEncounterNodeIds.Contains(action.NodeId))
+        {
+            events.Add(new EncounterAlreadyResolved(action.NodeId, node.Type));
+        }
+        else if (!MapNodeEncounterSelector.IsCombatNode(node.Type))
+        {
+            var resolution = EncounterResolver.Resolve(movedMap, action.NodeId);
+            movedState = movedState with { Map = resolution.MapState };
+            events.Add(new EncounterResolved(action.NodeId, node.Type));
+        }
+        else
+        {
+            events.Add(new EncounterAlreadyResolved(action.NodeId, node.Type));
+        }
+
+        return (movedState, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)
@@ -269,12 +310,32 @@ public static class GameReducer
 
         if (state.Combat.Player.HP <= 0)
         {
-            return (state with { Phase = GamePhase.RunEnded, Combat = null }, events);
+            return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null }, events);
         }
 
         if (state.Combat.Enemy.HP <= 0)
         {
-            return (state with { Phase = GamePhase.Reward, Combat = null }, events);
+            if (state.ActiveCombatNodeId is { } nodeId && state.Map.Graph.TryGetNode(nodeId, out var node) && node is not null)
+            {
+                var resolution = EncounterResolver.Resolve(state.Map, nodeId);
+                var withMap = state with
+                {
+                    Phase = GamePhase.MapExploration,
+                    Combat = null,
+                    ActiveCombatNodeId = null,
+                    Map = resolution.MapState,
+                };
+
+                var resolvedEvents = events.Concat(new GameEvent[]
+                {
+                    new CombatEnded(nodeId, node.Type, true),
+                    new EncounterResolved(nodeId, node.Type),
+                }).ToArray();
+
+                return (withMap, resolvedEvents);
+            }
+
+            return (state with { Phase = GamePhase.Reward, Combat = null, ActiveCombatNodeId = null }, events);
         }
 
         return (state, events);

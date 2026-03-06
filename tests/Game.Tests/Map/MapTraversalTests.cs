@@ -47,12 +47,12 @@ public class MapTraversalTests
     {
         var state = CreateMapExplorationState();
 
-        var (afterFirstVisit, firstEvents) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
+        var (afterFirstVisit, firstEvents) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("shop-1")));
         var (afterReturnToStart, _) = GameReducer.Reduce(afterFirstVisit, new MoveToNodeAction(new NodeId("start")));
-        var (afterRevisit, secondEvents) = GameReducer.Reduce(afterReturnToStart, new MoveToNodeAction(new NodeId("combat-1")));
+        var (afterRevisit, secondEvents) = GameReducer.Reduce(afterReturnToStart, new MoveToNodeAction(new NodeId("shop-1")));
 
-        Assert.Contains(firstEvents, e => e is EncounterResolved { NodeId: var id } && id == new NodeId("combat-1"));
-        Assert.Contains(secondEvents, e => e is EncounterAlreadyResolved { NodeId: var id } && id == new NodeId("combat-1"));
+        Assert.Contains(firstEvents, e => e is EncounterResolved { NodeId: var id } && id == new NodeId("shop-1"));
+        Assert.Contains(secondEvents, e => e is EncounterAlreadyResolved { NodeId: var id } && id == new NodeId("shop-1"));
         Assert.Equal(2, afterRevisit.Map.ResolvedEncounterNodeIds.Count);
     }
 

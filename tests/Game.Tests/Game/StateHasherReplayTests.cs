@@ -175,6 +175,7 @@ public class StateHasherReplayTests
             Phase: GamePhase.Combat,
             Rng: global::Game.Core.Common.GameRng.FromSeed(99),
             Combat: new CombatState(TurnOwner.Player, player, enemy, false, 0),
+            ActiveCombatNodeId: null,
             CardDefinitions: Content.CardDefinitions,
             Map: SampleMapFactory.CreateDefaultState(),
             Time: TimeState.Create(SampleMapFactory.CreateDefaultState()));

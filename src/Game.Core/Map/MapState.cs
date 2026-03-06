@@ -6,6 +6,7 @@ public sealed record MapState(
     MapGraph Graph,
     NodeId CurrentNodeId,
     ImmutableSortedSet<NodeId> VisitedNodeIds,
+    ImmutableSortedSet<NodeId> TriggeredEncounterNodeIds,
     ImmutableSortedSet<NodeId> ResolvedEncounterNodeIds,
     NodeId? BossNodeId)
 {
@@ -27,6 +28,7 @@ public sealed record MapState(
             Graph: graph,
             CurrentNodeId: startNodeId,
             VisitedNodeIds: ImmutableSortedSet.Create(NodeIdComparer, startNodeId),
+            TriggeredEncounterNodeIds: ImmutableSortedSet.Create<NodeId>(NodeIdComparer),
             ResolvedEncounterNodeIds: ImmutableSortedSet.Create<NodeId>(NodeIdComparer),
             BossNodeId: bossNodeId);
     }
