@@ -12,6 +12,20 @@ namespace Game.Core.Game;
 
 public static class GameReducer
 {
+    private static readonly ImmutableArray<CardId> DefaultRunDeckCardIds =
+    [
+        new CardId("strike"),
+        new CardId("defend"),
+        new CardId("strike"),
+        new CardId("defend"),
+        new CardId("focus"),
+        new CardId("strike"),
+        new CardId("defend"),
+        new CardId("focus"),
+        new CardId("strike"),
+        new CardId("defend"),
+    ];
+
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
         if (IsBlockedByPendingCombatRequirement(state, action))
@@ -416,14 +430,15 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        var index = state.RunDeck.FindIndex(card => card.DefinitionId == action.CardId);
+        var stateWithDeck = EnsureRunDeckInitializedForNonCombatInteraction(state);
+        var index = stateWithDeck.RunDeck.FindIndex(card => card.DefinitionId == action.CardId);
         if (index < 0)
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        var resolution = EncounterResolver.Resolve(state.Map, interaction.NodeId);
-        var updatedDeck = state.RunDeck.RemoveAt(index);
+        var resolution = EncounterResolver.Resolve(stateWithDeck.Map, interaction.NodeId);
+        var updatedDeck = stateWithDeck.RunDeck.RemoveAt(index);
         var events = new GameEvent[]
         {
             new ShopRemovalUsed(interaction.NodeId, action.CardId),
@@ -491,6 +506,20 @@ public static class GameReducer
         }
 
         var initializedDeck = blueprint.Player.DrawPile
+            .Select(id => new CardInstance(id))
+            .ToImmutableList();
+
+        return state with { RunDeck = initializedDeck };
+    }
+
+    private static GameState EnsureRunDeckInitializedForNonCombatInteraction(GameState state)
+    {
+        if (state.RunDeck.Count > 0)
+        {
+            return state;
+        }
+
+        var initializedDeck = DefaultRunDeckCardIds
             .Select(id => new CardInstance(id))
             .ToImmutableList();
 

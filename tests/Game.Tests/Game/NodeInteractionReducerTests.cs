@@ -82,6 +82,19 @@ public class NodeInteractionReducerTests
     }
 
     [Fact]
+    public void ShopRemoval_UsesDefaultRunDeck_WhenDeckNotInitializedYet()
+    {
+        var state = CreateMapExplorationState();
+        var atShop = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("shop-1"))).NewState;
+
+        var (afterRemoval, events) = GameReducer.Reduce(atShop, new UseShopRemovalAction(new CardId("strike")));
+
+        Assert.Equal(9, afterRemoval.RunDeck.Count);
+        Assert.Contains(events, e => e is ShopRemovalUsed { NodeId: var id, CardId: var cardId } && id == new NodeId("shop-1") && cardId == new CardId("strike"));
+        Assert.Contains(new NodeId("shop-1"), afterRemoval.Map.ResolvedEncounterNodeIds);
+    }
+
+    [Fact]
     public void RevisitingResolvedShopNode_DoesNotReOfferInteraction()
     {
         var state = CreateMapExplorationState() with
