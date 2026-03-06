@@ -18,7 +18,13 @@ public static class HandManager
             if (mutable.Player.Deck.DrawPile.Count == 0)
             {
                 var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Player.Deck, currentRng, mutable, out var cycleEvents);
-                mutable = cycleResult.CombatState;
+                mutable = cycleResult.CombatState with
+                {
+                    Player = cycleResult.CombatState.Player with
+                    {
+                        Deck = cycleResult.Deck,
+                    },
+                };
                 currentRng = cycleResult.Rng;
                 events.AddRange(cycleEvents);
 
