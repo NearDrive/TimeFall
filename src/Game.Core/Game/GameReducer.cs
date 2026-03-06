@@ -48,35 +48,35 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)
     {
-        if (!IsCombatPhase(state))
+        if (state is not { Phase: GamePhase.Combat, Combat: { } combatState })
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        if (state.Combat.TurnOwner != TurnOwner.Player)
+        if (combatState.TurnOwner != TurnOwner.Player)
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        if (action.HandIndex < 0 || action.HandIndex >= state.Combat.Player.Deck.Hand.Count)
+        if (action.HandIndex < 0 || action.HandIndex >= combatState.Player.Deck.Hand.Count)
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        var card = state.Combat.Player.Deck.Hand[action.HandIndex];
+        var card = combatState.Player.Deck.Hand[action.HandIndex];
         if (!CardEffectResolver.HasResolvableEffects(card, state.CardDefinitions))
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        var combatState = state.Combat with
+        combatState = combatState with
         {
-            Player = state.Combat.Player with
+            Player = combatState.Player with
             {
-                Deck = state.Combat.Player.Deck with
+                Deck = combatState.Player.Deck with
                 {
-                    Hand = state.Combat.Player.Deck.Hand.RemoveAt(action.HandIndex),
-                    DiscardPile = state.Combat.Player.Deck.DiscardPile.Add(card),
+                    Hand = combatState.Player.Deck.Hand.RemoveAt(action.HandIndex),
+                    DiscardPile = combatState.Player.Deck.DiscardPile.Add(card),
                 },
             },
         };
@@ -97,17 +97,17 @@ public static class GameReducer
     {
         _ = action;
 
-        if (!IsCombatPhase(state))
+        if (state is not { Phase: GamePhase.Combat, Combat: { } combatState })
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        if (state.Combat.TurnOwner == TurnOwner.Enemy)
+        if (combatState.TurnOwner == TurnOwner.Enemy)
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        var combatState = state.Combat with { TurnOwner = TurnOwner.Enemy };
+        combatState = combatState with { TurnOwner = TurnOwner.Enemy };
         var events = new List<GameEvent> { new TurnEnded(TurnOwner.Enemy) };
 
         var enemyResult = EnemyController.ExecuteTurn(combatState, state.Rng, state.CardDefinitions);
@@ -205,11 +205,6 @@ public static class GameReducer
     private static bool IsBlockedByPendingCombatRequirement(GameState state, GameAction action)
     {
         return state.Combat is { NeedsOverflowDiscard: true } && action is not DiscardOverflowAction;
-    }
-
-    private static bool IsCombatPhase(GameState state)
-    {
-        return state.Phase == GamePhase.Combat && state.Combat is not null;
     }
 
     private static (CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events) StartPlayerTurn(CombatState combatState, GameRng rng)
