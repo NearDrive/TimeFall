@@ -1,5 +1,6 @@
 using Game.Core.Game;
 using Game.Core.Map;
+using Game.Core.TimeSystem;
 
 namespace Game.Tests.Map;
 
@@ -99,10 +100,12 @@ public class MapTraversalTests
 
     private static GameState CreateMapExplorationState()
     {
+        var map = SampleMapFactory.CreateDefaultState();
         return GameState.Initial with
         {
             Phase = GamePhase.MapExploration,
-            Map = SampleMapFactory.CreateDefaultState(),
+            Map = map,
+            Time = TimeState.Create(map),
         };
     }
 }

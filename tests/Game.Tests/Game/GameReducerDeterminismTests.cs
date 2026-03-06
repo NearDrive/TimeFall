@@ -61,6 +61,13 @@ public class GameReducerDeterminismTests
             Assert.Equal(expectedDefinition.Value.Effects, actualDefinition.Effects);
         }
 
+        Assert.Equal(expected.Time.CurrentStep, actual.Time.CurrentStep);
+        Assert.Equal(expected.Time.CollapseCursor, actual.Time.CollapseCursor);
+        Assert.Equal(expected.Time.PlayerCaughtByTime, actual.Time.PlayerCaughtByTime);
+        Assert.Equal(expected.Time.TimeBossTriggerPending, actual.Time.TimeBossTriggerPending);
+        Assert.Equal(expected.Time.CollapseOrder, actual.Time.CollapseOrder);
+        Assert.Equal(expected.Time.CollapsedNodeIds, actual.Time.CollapsedNodeIds);
+
         if (expected.Combat is null)
         {
             Assert.Null(actual.Combat);
