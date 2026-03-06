@@ -8,7 +8,7 @@ public static class DamageSystem
         var damageTaken = Math.Max(0, normalizedIncoming - target.Armor);
         var oldArmor = target.Armor;
         var newArmor = oldArmor / 2;
-        var newHp = target.HP - damageTaken;
+        var newHp = Math.Max(0, target.HP - damageTaken);
 
         var updated = target with
         {
@@ -22,7 +22,7 @@ public static class DamageSystem
             new ArmorChanged(oldArmor, newArmor)
         };
 
-        if (newHp <= 0)
+        if (target.HP > 0 && newHp == 0)
         {
             events.Add(new EntityDied(target.EntityId));
         }

@@ -27,6 +27,33 @@ public class CombatReducerTests
     }
 
 
+
+    [Fact]
+    public void BeginCombat_IsRejected_WhenAlreadyInCombat()
+    {
+        var (stateAfterBegin, beginEvents) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+        Assert.Equal(GamePhase.Combat, stateAfterBegin.Phase);
+        Assert.NotNull(stateAfterBegin.Combat);
+        Assert.Contains(beginEvents, e => e is EnteredCombat);
+
+        var (rejectedState, rejectedEvents) = GameReducer.Reduce(stateAfterBegin, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+        Assert.Equal(stateAfterBegin, rejectedState);
+        Assert.Empty(rejectedEvents);
+    }
+
+    [Fact]
+    public void BeginCombat_IsRejected_InInvalidPhase()
+    {
+        var state = GameState.Initial with { Phase = GamePhase.Reward };
+
+        var (newState, events) = GameReducer.Reduce(state, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+        Assert.Equal(state, newState);
+        Assert.Empty(events);
+    }
+
     [Fact]
     public void PlayCard_StrikeDamagesEnemyAndDiscardsCard()
     {

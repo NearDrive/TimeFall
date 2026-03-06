@@ -35,7 +35,15 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) BeginCombat(GameState state, BeginCombatAction action)
     {
-        _ = action;
+        if (state.Combat is not null)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (!IsBeginCombatAllowedPhase(state.Phase))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
 
         var combatState = CreateCombatState(action.Blueprint);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
@@ -44,6 +52,12 @@ public static class GameReducer
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
         return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions }, events);
+    }
+
+    private static bool IsBeginCombatAllowedPhase(GamePhase phase)
+    {
+        // Combat entry is only allowed from pre-combat traversal/setup phases.
+        return phase is GamePhase.DeckSelect or GamePhase.MapExploration;
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)
