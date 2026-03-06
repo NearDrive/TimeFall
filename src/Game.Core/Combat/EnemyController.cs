@@ -1,16 +1,16 @@
 using Game.Core.Cards;
 using Game.Core.Common;
-using CardId = Game.Core.Cards.CardId;
 using Game.Core.Game;
+using CardId = Game.Core.Cards.CardId;
 
 namespace Game.Core.Combat;
 
 public static class EnemyController
 {
-    private static readonly CardId AttackCardId = new("attack");
-    private const int AttackDamage = 4;
-
-    public static EnemyTurnResult ExecuteTurn(CombatState combatState, GameRng rng)
+    public static EnemyTurnResult ExecuteTurn(
+        CombatState combatState,
+        GameRng rng,
+        IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         var mutable = Clone(combatState);
         var currentRng = rng;
@@ -33,7 +33,7 @@ public static class EnemyController
                 }
             }
 
-            var attackIndex = mutable.Enemy.Deck.Hand.FindIndex(CanPlayAttackCard);
+            var attackIndex = mutable.Enemy.Deck.Hand.FindIndex(card => CardEffectResolver.HasResolvableEffects(card, cardDefinitions));
             if (attackIndex < 0)
             {
                 break;
@@ -43,19 +43,13 @@ public static class EnemyController
             mutable.Enemy.Deck.Hand.RemoveAt(attackIndex);
             mutable.Enemy.Deck.DiscardPile.Add(attackCard);
 
-            var hitResult = DamageSystem.ApplyHit(mutable.Player, AttackDamage);
-            mutable = mutable with { Player = hitResult.UpdatedEntity };
-            events.Add(new EnemyAttackPlayed(attackCard, AttackDamage, hitResult.UpdatedEntity.HP));
+            var resolution = CardEffectResolver.Resolve(mutable, attackCard, TurnOwner.Enemy, cardDefinitions);
+            mutable = resolution.CombatState;
+            events.AddRange(resolution.Events);
             actionCount++;
         }
 
         return new EnemyTurnResult(mutable, currentRng, events, actionCount);
-    }
-
-
-    private static bool CanPlayAttackCard(CardInstance card)
-    {
-        return card.DefinitionId == AttackCardId;
     }
 
     private static DrawResult DrawEnemyCards(CombatState combatState, GameRng rng, int count)
