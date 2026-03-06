@@ -157,7 +157,8 @@ public class StateHasherReplayTests
             DrawPile: new[] { new CardInstance(new CardsCardId("strike")), new CardInstance(new CardsCardId("defend")) }.ToImmutableList(),
             Hand: ImmutableList<CardInstance>.Empty,
             DiscardPile: ImmutableList<CardInstance>.Empty,
-            BurnPile: ImmutableList<CardInstance>.Empty);
+            BurnPile: ImmutableList<CardInstance>.Empty,
+            ReshuffleCount: 0);
 
         var player = new CombatEntity("player", 20, 20, 0, resources.ToImmutableDictionary(), deck);
         var enemy = new CombatEntity(
@@ -166,12 +167,12 @@ public class StateHasherReplayTests
             10,
             0,
             ImmutableDictionary<ResourceType, int>.Empty,
-            new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty));
+            new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0));
 
         return new GameState(
             Phase: GamePhase.Combat,
             Rng: global::Game.Core.Common.GameRng.FromSeed(99),
-            Combat: new CombatState(TurnOwner.Player, 0, player, enemy, false, 0),
+            Combat: new CombatState(TurnOwner.Player, player, enemy, false, 0),
             CardDefinitions: Content.CardDefinitions);
     }
 }

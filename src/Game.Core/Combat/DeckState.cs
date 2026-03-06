@@ -6,4 +6,5 @@ public sealed record DeckState(
     ImmutableList<CardInstance> DrawPile,
     ImmutableList<CardInstance> Hand,
     ImmutableList<CardInstance> DiscardPile,
-    ImmutableList<CardInstance> BurnPile);
+    ImmutableList<CardInstance> BurnPile,
+    int ReshuffleCount);

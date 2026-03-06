@@ -80,6 +80,6 @@ public class DamageSystemTests
             MaxHP: 100,
             Armor: armor,
             Resources: ImmutableDictionary<ResourceType, int>.Empty,
-            Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty));
+            Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0));
     }
 }

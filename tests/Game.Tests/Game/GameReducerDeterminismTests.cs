@@ -74,7 +74,6 @@ public class GameReducerDeterminismTests
     private static void AssertCombatStateEquivalent(CombatState expected, CombatState actual)
     {
         Assert.Equal(expected.TurnOwner, actual.TurnOwner);
-        Assert.Equal(expected.ReshuffleCount, actual.ReshuffleCount);
         Assert.Equal(expected.NeedsOverflowDiscard, actual.NeedsOverflowDiscard);
         Assert.Equal(expected.RequiredOverflowDiscardCount, actual.RequiredOverflowDiscardCount);
 
@@ -97,5 +96,6 @@ public class GameReducerDeterminismTests
         Assert.Equal(expected.Deck.Hand, actual.Deck.Hand);
         Assert.Equal(expected.Deck.DiscardPile, actual.Deck.DiscardPile);
         Assert.Equal(expected.Deck.BurnPile, actual.Deck.BurnPile);
+        Assert.Equal(expected.Deck.ReshuffleCount, actual.Deck.ReshuffleCount);
     }
 }

@@ -221,7 +221,6 @@ public class CombatReducerTests
     {
         var overflowCombatState = new CombatState(
             TurnOwner: TurnOwner.Player,
-            ReshuffleCount: 0,
             Player: new CombatEntity(
                 EntityId: "player",
                 HP: 10,
@@ -232,14 +231,15 @@ public class CombatReducerTests
                     DrawPile: ImmutableList<CardInstance>.Empty,
                     Hand: Enumerable.Repeat(new CardInstance(new CardsCardId("strike")), 10).ToImmutableList(),
                     DiscardPile: ImmutableList<CardInstance>.Empty,
-                    BurnPile: ImmutableList<CardInstance>.Empty)),
+                    BurnPile: ImmutableList<CardInstance>.Empty,
+            ReshuffleCount: 0)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
@@ -261,7 +261,6 @@ public class CombatReducerTests
     {
         var overflowCombatState = new CombatState(
             TurnOwner: TurnOwner.Player,
-            ReshuffleCount: 0,
             Player: new CombatEntity(
                 EntityId: "player",
                 HP: 10,
@@ -272,14 +271,15 @@ public class CombatReducerTests
                     DrawPile: ImmutableList<CardInstance>.Empty,
                     Hand: Enumerable.Repeat(new CardInstance(new CardsCardId("strike")), 10).ToImmutableList(),
                     DiscardPile: ImmutableList<CardInstance>.Empty,
-                    BurnPile: ImmutableList<CardInstance>.Empty)),
+                    BurnPile: ImmutableList<CardInstance>.Empty,
+            ReshuffleCount: 0)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
@@ -354,21 +354,20 @@ public class CombatReducerTests
     {
         var combatState = new CombatState(
             TurnOwner: TurnOwner.Player,
-            ReshuffleCount: 0,
             Player: new CombatEntity(
                 EntityId: "player",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("strike"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("strike"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 4,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
@@ -386,21 +385,20 @@ public class CombatReducerTests
     {
         var combatState = new CombatState(
             TurnOwner: TurnOwner.Player,
-            ReshuffleCount: 0,
             Player: new CombatEntity(
                 EntityId: "player",
                 HP: 4,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("defend"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("defend"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList.Create(new CardInstance(new CardsCardId("attack"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList.Create(new CardInstance(new CardsCardId("attack"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
@@ -462,7 +460,6 @@ public class CombatReducerTests
     {
         var overflowCombatState = new CombatState(
             TurnOwner: TurnOwner.Player,
-            ReshuffleCount: 0,
             Player: new CombatEntity(
                 EntityId: "player",
                 HP: 10,
@@ -473,14 +470,15 @@ public class CombatReducerTests
                     DrawPile: ImmutableList<CardInstance>.Empty,
                     Hand: Enumerable.Repeat(new CardInstance(new CardsCardId("strike")), handSize).ToImmutableList(),
                     DiscardPile: ImmutableList<CardInstance>.Empty,
-                    BurnPile: ImmutableList<CardInstance>.Empty)),
+                    BurnPile: ImmutableList<CardInstance>.Empty,
+            ReshuffleCount: 0)),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty)),
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: requiredDiscardCount);
 

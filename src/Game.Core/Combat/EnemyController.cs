@@ -72,10 +72,10 @@ public static class EnemyController
         {
             if (mutable.Enemy.Deck.DrawPile.Count == 0)
             {
-                var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Enemy.Deck, currentRng, mutable, out var cycleEvents);
-                mutable = cycleResult.CombatState with
+                var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Enemy.Deck, currentRng, out var cycleEvents);
+                mutable = mutable with
                 {
-                    Enemy = cycleResult.CombatState.Enemy with
+                    Enemy = mutable.Enemy with
                     {
                         Deck = cycleResult.Deck,
                     },
