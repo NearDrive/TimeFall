@@ -6,12 +6,27 @@ using Game.Core.TimeSystem;
 using Game.Core.Rewards;
 using Game.Core.Decks;
 using NodeId = Game.Core.Map.NodeId;
+using CardId = Game.Core.Cards.CardId;
 using System.Collections.Immutable;
 
 namespace Game.Core.Game;
 
 public static class GameReducer
 {
+    private static readonly ImmutableArray<CardId> DefaultRunDeckCardIds =
+    [
+        new CardId("strike"),
+        new CardId("defend"),
+        new CardId("strike"),
+        new CardId("defend"),
+        new CardId("focus"),
+        new CardId("strike"),
+        new CardId("defend"),
+        new CardId("focus"),
+        new CardId("strike"),
+        new CardId("defend"),
+    ];
+
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
         if (IsBlockedByPendingCombatRequirement(state, action))
@@ -31,6 +46,8 @@ public static class GameReducer
             SkipRewardAction skipRewardAction => SkipReward(state, skipRewardAction),
             BeginDeckRemovalAction beginDeckRemovalAction => BeginDeckRemoval(state, beginDeckRemovalAction),
             RemoveCardFromDeckAction removeCardFromDeckAction => RemoveCardFromDeck(state, removeCardFromDeckAction),
+            UseRestAction useRestAction => UseRest(state, useRestAction),
+            UseShopRemovalAction useShopRemovalAction => UseShopRemoval(state, useShopRemovalAction),
             _ => (state, Array.Empty<GameEvent>()),
         };
     }
@@ -48,6 +65,9 @@ public static class GameReducer
             TimeState.Create(mapState),
             null,
             ImmutableList<CardInstance>.Empty,
+            null,
+            GameState.DefaultRunMaxHp,
+            GameState.DefaultRunMaxHp,
             null);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
@@ -67,13 +87,13 @@ public static class GameReducer
         }
 
         var stateWithDeck = EnsureRunDeckInitialized(state, action.Blueprint);
-        var combatState = CreateCombatState(action.Blueprint, stateWithDeck.RunDeck);
+        var combatState = CreateCombatState(stateWithDeck, action.Blueprint, stateWithDeck.RunDeck);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
         var events = new List<GameEvent> { new EnteredCombat(null, null) };
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, Reward = null, DeckEdit = null }, events);
+        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, Reward = null, DeckEdit = null, NodeInteraction = null }, events);
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -212,7 +232,7 @@ public static class GameReducer
             events.Add(new TimeCaughtPlayer(movedMap.CurrentNodeId, timeAdvance.TimeState.CurrentStep));
         }
 
-        var movedState = state with { Map = movedMap, Time = timeAdvance.TimeState };
+        var movedState = state with { Map = movedMap, Time = timeAdvance.TimeState, NodeInteraction = null };
 
         if (MapNodeEncounterSelector.IsCombatNode(node.Type) && !movedMap.ResolvedEncounterNodeIds.Contains(action.NodeId))
         {
@@ -223,7 +243,7 @@ public static class GameReducer
             }
 
             movedState = EnsureRunDeckInitialized(movedState, encounter.Blueprint);
-            var combatState = CreateCombatState(encounter.Blueprint, movedState.RunDeck);
+            var combatState = CreateCombatState(movedState, encounter.Blueprint, movedState.RunDeck);
             var drawResult = HandManager.Draw(combatState, movedState.Rng, 5);
             events.Add(new EnteredCombat(action.NodeId, node.Type));
             events.AddRange(drawResult.Events);
@@ -238,6 +258,7 @@ public static class GameReducer
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
                 DeckEdit = null,
+                NodeInteraction = null,
             };
 
             return (combatEnteredState, events);
@@ -246,6 +267,10 @@ public static class GameReducer
         if (movedMap.ResolvedEncounterNodeIds.Contains(action.NodeId))
         {
             events.Add(new EncounterAlreadyResolved(action.NodeId, node.Type));
+        }
+        else if (node.Type is NodeType.Rest or NodeType.Shop)
+        {
+            movedState = movedState with { NodeInteraction = CreateNodeInteraction(action.NodeId, node.Type) };
         }
         else if (!MapNodeEncounterSelector.IsCombatNode(node.Type))
         {
@@ -367,6 +392,69 @@ public static class GameReducer
         return (state with { Phase = GamePhase.DeckRemoval, DeckEdit = deckEditState, Reward = null }, events);
     }
 
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) UseRest(GameState state, UseRestAction action)
+    {
+        if (state.Phase != GamePhase.MapExploration ||
+            state.NodeInteraction is not { NodeType: NodeType.Rest } interaction ||
+            state.Map.CurrentNodeId != interaction.NodeId ||
+            state.Map.ResolvedEncounterNodeIds.Contains(interaction.NodeId) ||
+            action.Option != RestOption.Heal)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var healedHp = Math.Min(state.RunMaxHp, state.RunHp + GameState.RestHealAmount);
+        var healedAmount = healedHp - state.RunHp;
+        var resolution = EncounterResolver.Resolve(state.Map, interaction.NodeId);
+        var events = new GameEvent[]
+        {
+            new RestUsed(interaction.NodeId, action.Option),
+            new Healed(healedAmount, healedHp, state.RunMaxHp),
+            new EncounterResolved(interaction.NodeId, NodeType.Rest),
+        };
+
+        return (state with
+        {
+            Map = resolution.MapState,
+            RunHp = healedHp,
+            NodeInteraction = null,
+        }, events);
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) UseShopRemoval(GameState state, UseShopRemovalAction action)
+    {
+        if (state.Phase != GamePhase.MapExploration ||
+            state.NodeInteraction is not { NodeType: NodeType.Shop } interaction ||
+            state.Map.CurrentNodeId != interaction.NodeId ||
+            state.Map.ResolvedEncounterNodeIds.Contains(interaction.NodeId))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var stateWithDeck = EnsureRunDeckInitializedForNonCombatInteraction(state);
+        var index = stateWithDeck.RunDeck.FindIndex(card => card.DefinitionId == action.CardId);
+        if (index < 0)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var resolution = EncounterResolver.Resolve(stateWithDeck.Map, interaction.NodeId);
+        var updatedDeck = stateWithDeck.RunDeck.RemoveAt(index);
+        var events = new GameEvent[]
+        {
+            new ShopRemovalUsed(interaction.NodeId, action.CardId),
+            new CardRemovedFromDeck(action.CardId),
+            new EncounterResolved(interaction.NodeId, NodeType.Shop),
+        };
+
+        return (state with
+        {
+            Map = resolution.MapState,
+            RunDeck = updatedDeck,
+            NodeInteraction = null,
+        }, events);
+    }
+
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) RemoveCardFromDeck(GameState state, RemoveCardFromDeckAction action)
     {
         if (state.Phase != GamePhase.DeckRemoval || state.DeckEdit is null || state.DeckEdit.RemainingRemovals <= 0)
@@ -397,10 +485,12 @@ public static class GameReducer
         }, events);
     }
 
-    private static CombatState CreateCombatState(CombatBlueprint blueprint, IReadOnlyList<CardInstance> runDeck)
+    private static CombatState CreateCombatState(GameState state, CombatBlueprint blueprint, IReadOnlyList<CardInstance> runDeck)
     {
         var playerBlueprint = blueprint.Player with
         {
+            HP = state.RunHp,
+            MaxHP = state.RunMaxHp,
             DrawPile = runDeck.Select(card => card.DefinitionId).ToArray(),
         };
 
@@ -417,6 +507,20 @@ public static class GameReducer
         }
 
         var initializedDeck = blueprint.Player.DrawPile
+            .Select(id => new CardInstance(id))
+            .ToImmutableList();
+
+        return state with { RunDeck = initializedDeck };
+    }
+
+    private static GameState EnsureRunDeckInitializedForNonCombatInteraction(GameState state)
+    {
+        if (state.RunDeck.Count > 0)
+        {
+            return state;
+        }
+
+        var initializedDeck = DefaultRunDeckCardIds
             .Select(id => new CardInstance(id))
             .ToImmutableList();
 
@@ -448,7 +552,7 @@ public static class GameReducer
 
         if (state.Combat.Player.HP <= 0)
         {
-            return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null, Reward = null }, events);
+            return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null, Reward = null, RunHp = 0, NodeInteraction = null }, events);
         }
 
         if (state.Combat.Enemy.HP <= 0)
@@ -481,6 +585,8 @@ public static class GameReducer
                 Map = mapState,
                 Rng = rewardResult.Rng,
                 Reward = rewardState,
+                RunHp = state.Combat.Player.HP,
+                NodeInteraction = null,
             }, events.Concat(resolvedEvents).ToArray());
         }
 
@@ -490,6 +596,18 @@ public static class GameReducer
     private static bool IsBlockedByPendingCombatRequirement(GameState state, GameAction action)
     {
         return state.Combat is { NeedsOverflowDiscard: true } && action is not DiscardOverflowAction;
+    }
+
+    private static NodeInteractionState CreateNodeInteraction(NodeId nodeId, NodeType nodeType)
+    {
+        var options = nodeType switch
+        {
+            NodeType.Rest => ImmutableArray.Create(NodeInteractionOption.RestHeal),
+            NodeType.Shop => ImmutableArray.Create(NodeInteractionOption.ShopRemoveCard),
+            _ => ImmutableArray<NodeInteractionOption>.Empty,
+        };
+
+        return new NodeInteractionState(nodeId, nodeType, options);
     }
 
     private static (CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events) StartPlayerTurn(CombatState combatState, GameRng rng)

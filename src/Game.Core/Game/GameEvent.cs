@@ -49,6 +49,12 @@ public sealed record DeckRemovalBegan(int RemainingRemovals) : GameEvent;
 
 public sealed record CardRemovedFromDeck(CardId CardId) : GameEvent;
 
+public sealed record RestUsed(NodeId NodeId, RestOption Option) : GameEvent;
+
+public sealed record Healed(int Amount, int CurrentHp, int MaxHp) : GameEvent;
+
+public sealed record ShopRemovalUsed(NodeId NodeId, CardId CardId) : GameEvent;
+
 public sealed record TimeAdvanced(int Step) : GameEvent;
 
 public sealed record NodeCollapsed(NodeId NodeId) : GameEvent;

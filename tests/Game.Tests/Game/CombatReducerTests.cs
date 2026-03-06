@@ -272,7 +272,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
 
         var (newState, events) = GameReducer.Reduce(state, new DiscardOverflowAction([0, 1, 2]));
 
@@ -312,7 +312,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
 
         var result = GameReducer.Reduce(state, new DiscardOverflowAction(indexes));
 
@@ -360,7 +360,8 @@ public class CombatReducerTests
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile: [clawCardId]));
 
-        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint, cardDefinitions));
+        var initialState = GameState.Initial with { RunHp = 10, RunMaxHp = 10 };
+        var (combatState, _) = GameReducer.Reduce(initialState, new BeginCombatAction(blueprint, cardDefinitions));
         var (newState, events) = GameReducer.Reduce(combatState, new EndTurnAction());
 
         Assert.Equal(8, newState.Combat!.Player.HP);
@@ -400,7 +401,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
 
         var (newState, events) = GameReducer.Reduce(state, new PlayCardAction(0));
 
@@ -431,7 +432,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
 
         var (newState, events) = GameReducer.Reduce(state, new EndTurnAction());
 
@@ -511,7 +512,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: requiredDiscardCount);
 
-        return new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null);
+        return new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
     }
 
     private static int FindCardIndex(IReadOnlyList<CardInstance> cards, string id)
