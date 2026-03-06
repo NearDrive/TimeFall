@@ -4,6 +4,7 @@ using Game.Core.Cards;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
 using Game.Core.Rewards;
+using Game.Core.Decks;
 using System.Collections.Immutable;
 using CardId = Game.Core.Cards.CardId;
 
@@ -18,7 +19,8 @@ public sealed record GameState(
     MapState Map,
     TimeState Time,
     RewardState? Reward,
-    ImmutableList<CardInstance> PlayerDeckDiscardPile)
+    ImmutableList<CardInstance> RunDeck,
+    DeckEditState? DeckEdit)
 {
     private static readonly MapState InitialMap = SampleMapFactory.CreateDefaultState();
 
@@ -31,5 +33,6 @@ public sealed record GameState(
         InitialMap,
         TimeState.Create(InitialMap),
         null,
-        ImmutableList<CardInstance>.Empty);
+        ImmutableList<CardInstance>.Empty,
+        null);
 }

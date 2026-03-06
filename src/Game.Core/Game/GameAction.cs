@@ -19,3 +19,9 @@ public sealed record DiscardOverflowAction(int[] Indexes) : GameAction;
 public sealed record MoveToNodeAction(NodeId NodeId) : GameAction;
 
 public sealed record ChooseRewardCardAction(CardId CardId) : GameAction;
+
+public sealed record SkipRewardAction : GameAction;
+
+public sealed record BeginDeckRemovalAction : GameAction;
+
+public sealed record RemoveCardFromDeckAction(CardId CardId) : GameAction;

@@ -68,7 +68,7 @@ public class GameReducerDeterminismTests
         Assert.Equal(expected.Time.CollapseOrder, actual.Time.CollapseOrder);
         Assert.Equal(expected.Time.CollapsedNodeIds, actual.Time.CollapsedNodeIds);
         Assert.Equal(expected.Reward, actual.Reward);
-        Assert.Equal(expected.PlayerDeckDiscardPile, actual.PlayerDeckDiscardPile);
+        Assert.Equal(expected.RunDeck, actual.RunDeck);
 
         if (expected.Combat is null)
         {
