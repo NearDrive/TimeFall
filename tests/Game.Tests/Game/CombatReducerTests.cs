@@ -1,4 +1,5 @@
 using Game.Core.Cards;
+using CardsCardId = Game.Core.Cards.CardId;
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
@@ -82,14 +83,14 @@ public class CombatReducerTests
                 Resources: new Dictionary<ResourceType, int>(),
                 DrawPile:
                 [
-                    new CardId("strike"),
-                    new CardId("defend"),
-                    new CardId("focus"),
-                    new CardId("defend"),
-                    new CardId("strike"),
-                    new CardId("focus"),
-                    new CardId("defend"),
-                    new CardId("strike"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("defend"),
+                    new CardsCardId("focus"),
+                    new CardsCardId("defend"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("focus"),
+                    new CardsCardId("defend"),
+                    new CardsCardId("strike"),
                 ]),
             Enemy: new CombatantBlueprint(
                 EntityId: "enemy",
@@ -99,7 +100,7 @@ public class CombatReducerTests
                 Resources: new Dictionary<ResourceType, int>(),
                 DrawPile:
                 [
-                    new CardId("defend"),
+                    new CardsCardId("defend"),
                 ]));
 
         var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint));
@@ -151,16 +152,16 @@ public class CombatReducerTests
                     DrawPile: [],
                     Hand:
                     [
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
                     ],
                     DiscardPile: [],
                     BurnPile: [])),
@@ -203,16 +204,16 @@ public class CombatReducerTests
                     DrawPile: [],
                     Hand:
                     [
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
-                        new CardInstance(new CardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
+                        new CardInstance(new CardsCardId("strike")),
                     ],
                     DiscardPile: [],
                     BurnPile: [])),
@@ -272,7 +273,7 @@ public class CombatReducerTests
                 MaxHP: 10,
                 Armor: 0,
                 Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [new CardInstance(new CardId("strike"))], [], [])),
+                Deck: new DeckState([], [new CardInstance(new CardsCardId("strike"))], [], [])),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 4,
@@ -304,14 +305,14 @@ public class CombatReducerTests
                 MaxHP: 10,
                 Armor: 0,
                 Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([], [new CardInstance(new CardId("defend"))], [], [])),
+                Deck: new DeckState([], [new CardInstance(new CardsCardId("defend"))], [], [])),
             Enemy: new CombatEntity(
                 EntityId: "enemy",
                 HP: 10,
                 MaxHP: 10,
                 Armor: 0,
                 Resources: new Dictionary<ResourceType, int>(),
-                Deck: new DeckState([new CardInstance(new CardId("attack"))], [], [], [])),
+                Deck: new DeckState([new CardInstance(new CardsCardId("attack"))], [], [], [])),
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
