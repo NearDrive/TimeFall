@@ -69,7 +69,7 @@ jobs:
             output="$(dotnet test TimefallDeck.sln --configuration Release --no-build --list-tests --filter "Lane=$lane")"
             echo "$output"
 
-            if ! echo "$output" | rg -q '^\s*Game\.Tests\.'; then
+            if ! echo "$output" | grep -Eq '^[[:space:]]*Game\.Tests\.'; then
               echo "No tests discovered for Lane=$lane"
               exit 1
             fi
