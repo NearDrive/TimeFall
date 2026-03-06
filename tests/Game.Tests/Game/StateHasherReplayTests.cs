@@ -79,13 +79,22 @@ public class StateHasherReplayTests
         return hashes.ToArray();
     }
 
+
+    private static int ResourceValue(ResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            ResourceType.Energy => 2,
+            ResourceType.Generic => 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, "Unsupported resource type for test."),
+        };
+    }
+
     private static GameState CreateStateWithResourceInsertionOrder(ResourceType first, ResourceType second)
     {
-        var resources = new Dictionary<ResourceType, int>
-        {
-            [first] = 2,
-            [second] = 1,
-        };
+        var resources = new Dictionary<ResourceType, int>();
+        resources[first] = ResourceValue(first);
+        resources[second] = ResourceValue(second);
 
         var deck = new DeckState(
             DrawPile: new List<CardInstance> { new(new CardsCardId("strike")), new(new CardsCardId("defend")) },
