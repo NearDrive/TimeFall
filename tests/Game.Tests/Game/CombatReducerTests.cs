@@ -72,7 +72,7 @@ public class CombatReducerTests
     }
 
     [Fact]
-    public void EndTurn_PlayerTurnDrawsExactlyOneCard()
+    public void EndTurn_PlayerTurnDrawsExactlyOneCard_UnderControlledDeckState()
     {
         var blueprint = new CombatBlueprint(
             Player: new CombatantBlueprint(
@@ -109,7 +109,10 @@ public class CombatReducerTests
         var (afterEndTurnState, events) = GameReducer.Reduce(combatState, new EndTurnAction());
 
         Assert.Equal(handCountBeforeEndTurn + 1, afterEndTurnState.Combat!.Player.Deck.Hand.Count);
-        Assert.Single(events.OfType<CardDrawn>());
+
+        var drawnCards = events.OfType<CardDrawn>().Select(e => e.Card.DefinitionId.Value).ToArray();
+        Assert.Equal(2, drawnCards.Length);
+        Assert.Equal(["defend", "focus"], drawnCards);
     }
 
     [Fact]
