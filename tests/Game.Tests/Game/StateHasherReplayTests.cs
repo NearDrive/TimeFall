@@ -15,7 +15,7 @@ public class StateHasherReplayTests
     {
         var actions = new GameAction[]
         {
-            new BeginCombatAction(Content.OpeningCombat),
+            new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions),
             new EndTurnAction(),
             new PlayCardAction(0),
             new EndTurnAction(),
@@ -36,7 +36,7 @@ public class StateHasherReplayTests
     {
         var sharedActions = new GameAction[]
         {
-            new BeginCombatAction(Content.OpeningCombat),
+            new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions),
             new EndTurnAction(),
             new EndTurnAction(),
         };
@@ -114,6 +114,7 @@ public class StateHasherReplayTests
         return new GameState(
             Phase: GamePhase.Combat,
             Rng: global::Game.Core.Common.GameRng.FromSeed(99),
-            Combat: new CombatState(TurnOwner.Player, 0, player, enemy, false, 0));
+            Combat: new CombatState(TurnOwner.Player, 0, player, enemy, false, 0),
+            CardDefinitions: Content.CardDefinitions);
     }
 }

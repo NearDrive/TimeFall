@@ -7,9 +7,6 @@ namespace Game.Core.Game;
 
 public static class GameReducer
 {
-    private static readonly CardId StrikeCardId = new("strike");
-    private const int StrikeDamage = 4;
-
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
         return action switch
@@ -27,7 +24,7 @@ public static class GameReducer
     {
         _ = state;
 
-        var newState = new GameState(GamePhase.DeckSelect, GameRng.FromSeed(action.Seed), null);
+        var newState = new GameState(GamePhase.DeckSelect, GameRng.FromSeed(action.Seed), null, new Dictionary<CardId, CardDefinition>());
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
@@ -43,7 +40,7 @@ public static class GameReducer
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng }, events);
+        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)
@@ -64,7 +61,7 @@ public static class GameReducer
         }
 
         var card = state.Combat.Player.Deck.Hand[action.HandIndex];
-        if (card.DefinitionId != StrikeCardId)
+        if (!CardEffectResolver.HasResolvableEffects(card, state.CardDefinitions))
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -73,14 +70,14 @@ public static class GameReducer
         combatState.Player.Deck.Hand.RemoveAt(action.HandIndex);
         combatState.Player.Deck.DiscardPile.Add(card);
 
-        var hitResult = DamageSystem.ApplyHit(combatState.Enemy, StrikeDamage);
-        combatState = combatState with { Enemy = hitResult.UpdatedEntity };
+        var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions);
+        combatState = resolution.CombatState;
 
-        var events = new GameEvent[]
+        var events = new List<GameEvent>
         {
             new CardDiscarded(card),
-            new PlayerStrikePlayed(card, StrikeDamage, hitResult.UpdatedEntity.HP),
         };
+        events.AddRange(resolution.Events);
 
         return ResolveCombatPhase(state with { Combat = combatState }, events);
     }
@@ -102,7 +99,7 @@ public static class GameReducer
         var combatState = state.Combat with { TurnOwner = TurnOwner.Enemy };
         var events = new List<GameEvent> { new TurnEnded(TurnOwner.Enemy) };
 
-        var enemyResult = EnemyController.ExecuteTurn(combatState, state.Rng);
+        var enemyResult = EnemyController.ExecuteTurn(combatState, state.Rng, state.CardDefinitions);
         combatState = enemyResult.CombatState;
         events.AddRange(enemyResult.Events);
 

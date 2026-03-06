@@ -38,8 +38,8 @@ public class GameReducerDeterminismTests
         var (runA, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(2024));
         var (runB, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(2024));
 
-        var first = GameReducer.Reduce(runA, new BeginCombatAction(Content.OpeningCombat));
-        var second = GameReducer.Reduce(runB, new BeginCombatAction(Content.OpeningCombat));
+        var first = GameReducer.Reduce(runA, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+        var second = GameReducer.Reduce(runB, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
 
         AssertGameStateEquivalent(first.NewState, second.NewState);
         Assert.Equal(first.Events, second.Events);

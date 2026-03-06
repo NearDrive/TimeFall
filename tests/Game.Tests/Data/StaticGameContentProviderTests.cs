@@ -13,7 +13,9 @@ public class StaticGameContentProviderTests
 
         Assert.Equal(4, content.CardDefinitions.Count);
         Assert.Equal("Strike", content.CardDefinitions[new CardId("strike")].Name);
+        Assert.Contains(content.CardDefinitions[new CardId("strike")].Effects, e => e is DamageCardEffect { Amount: 4, Target: CardTarget.Opponent });
         Assert.Equal("Defend", content.CardDefinitions[new CardId("defend")].Name);
+        Assert.Contains(content.CardDefinitions[new CardId("defend")].Effects, e => e is GainArmorCardEffect { Amount: 3, Target: CardTarget.Self });
         Assert.Equal("Focus", content.CardDefinitions[new CardId("focus")].Name);
         Assert.Equal("Attack", content.CardDefinitions[new CardId("attack")].Name);
     }

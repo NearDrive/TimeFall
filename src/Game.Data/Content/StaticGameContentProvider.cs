@@ -15,10 +15,10 @@ public static class StaticGameContentProvider
     {
         var cardDefinitions = new Dictionary<CardId, CardDefinition>
         {
-            [StrikeCardId] = new(StrikeCardId, "Strike", 1),
-            [DefendCardId] = new(DefendCardId, "Defend", 1),
-            [FocusCardId] = new(FocusCardId, "Focus", 1),
-            [AttackCardId] = new(AttackCardId, "Attack", 1),
+            [StrikeCardId] = new(StrikeCardId, "Strike", 1, [new DamageCardEffect(4, CardTarget.Opponent)]),
+            [DefendCardId] = new(DefendCardId, "Defend", 1, [new GainArmorCardEffect(3, CardTarget.Self)]),
+            [FocusCardId] = new(FocusCardId, "Focus", 1, [new GainArmorCardEffect(1, CardTarget.Self)]),
+            [AttackCardId] = new(AttackCardId, "Attack", 1, [new DamageCardEffect(4, CardTarget.Opponent)]),
         };
 
         var openingCombat = new CombatBlueprint(
