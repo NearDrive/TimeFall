@@ -2,7 +2,7 @@ using Game.Core.Common;
 
 namespace Game.Core.Map;
 
-public readonly record struct MapTraversalResult(MapState MapState, EncounterResolutionStatus EncounterStatus);
+public readonly record struct MapTraversalResult(MapState MapState, EncounterLifecycleStatus EncounterStatus);
 
 public static class MapTraversal
 {
@@ -24,7 +24,7 @@ public static class MapTraversal
             VisitedNodeIds = state.VisitedNodeIds.Add(targetNodeId),
         };
 
-        var resolution = EncounterResolver.Resolve(moved, targetNodeId);
-        return Result<MapTraversalResult>.Success(new MapTraversalResult(resolution.MapState, resolution.Status));
+        var trigger = EncounterResolver.Trigger(moved, targetNodeId);
+        return Result<MapTraversalResult>.Success(new MapTraversalResult(trigger.MapState, trigger.Status));
     }
 }

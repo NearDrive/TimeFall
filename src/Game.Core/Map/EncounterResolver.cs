@@ -1,27 +1,48 @@
 namespace Game.Core.Map;
 
-public enum EncounterResolutionStatus
+public enum EncounterLifecycleStatus
 {
+    Triggered,
+    AlreadyTriggered,
     Resolved,
     AlreadyResolved,
 }
 
-public readonly record struct EncounterResolutionResult(MapState MapState, EncounterResolutionStatus Status);
+public readonly record struct EncounterLifecycleResult(MapState MapState, EncounterLifecycleStatus Status);
 
 public static class EncounterResolver
 {
-    public static EncounterResolutionResult Resolve(MapState mapState, NodeId nodeId)
+    public static EncounterLifecycleResult Trigger(MapState mapState, NodeId nodeId)
     {
-        if (mapState.ResolvedEncounterNodeIds.Contains(nodeId))
+        if (mapState.TriggeredEncounterNodeIds.Contains(nodeId))
         {
-            return new EncounterResolutionResult(mapState, EncounterResolutionStatus.AlreadyResolved);
+            return new EncounterLifecycleResult(mapState, EncounterLifecycleStatus.AlreadyTriggered);
         }
 
         var newState = mapState with
         {
-            ResolvedEncounterNodeIds = mapState.ResolvedEncounterNodeIds.Add(nodeId),
+            TriggeredEncounterNodeIds = mapState.TriggeredEncounterNodeIds.Add(nodeId),
         };
 
-        return new EncounterResolutionResult(newState, EncounterResolutionStatus.Resolved);
+        return new EncounterLifecycleResult(newState, EncounterLifecycleStatus.Triggered);
+    }
+
+    public static EncounterLifecycleResult Resolve(MapState mapState, NodeId nodeId)
+    {
+        if (mapState.ResolvedEncounterNodeIds.Contains(nodeId))
+        {
+            return new EncounterLifecycleResult(mapState, EncounterLifecycleStatus.AlreadyResolved);
+        }
+
+        var triggeredState = mapState.TriggeredEncounterNodeIds.Contains(nodeId)
+            ? mapState
+            : mapState with { TriggeredEncounterNodeIds = mapState.TriggeredEncounterNodeIds.Add(nodeId) };
+
+        var newState = triggeredState with
+        {
+            ResolvedEncounterNodeIds = triggeredState.ResolvedEncounterNodeIds.Add(nodeId),
+        };
+
+        return new EncounterLifecycleResult(newState, EncounterLifecycleStatus.Resolved);
     }
 }

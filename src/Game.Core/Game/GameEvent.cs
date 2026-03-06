@@ -7,7 +7,7 @@ public abstract record GameEvent;
 
 public sealed record RunStarted(int Seed) : GameEvent;
 
-public sealed record EnteredCombat : GameEvent;
+public sealed record EnteredCombat(NodeId? NodeId, NodeType? NodeType) : GameEvent;
 
 public sealed record CardDrawn(CardInstance Card) : GameEvent;
 
@@ -25,10 +25,13 @@ public sealed record EnemyAttackPlayed(CardInstance Card, int Damage, int Player
 
 public sealed record MovedToNode(NodeId NodeId) : GameEvent;
 
+public sealed record EncounterTriggered(NodeId NodeId, NodeType NodeType) : GameEvent;
+
 public sealed record EncounterResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
 
 public sealed record EncounterAlreadyResolved(NodeId NodeId, NodeType NodeType) : GameEvent;
 
+public sealed record CombatEnded(NodeId NodeId, NodeType NodeType, bool PlayerWon) : GameEvent;
 
 public sealed record TimeAdvanced(int Step) : GameEvent;
 

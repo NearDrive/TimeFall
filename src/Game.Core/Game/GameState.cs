@@ -12,6 +12,7 @@ public sealed record GameState(
     GamePhase Phase,
     GameRng Rng,
     CombatState? Combat,
+    NodeId? ActiveCombatNodeId,
     IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions,
     MapState Map,
     TimeState Time)
@@ -21,6 +22,7 @@ public sealed record GameState(
     public static GameState Initial => new(
         GamePhase.DeckSelect,
         GameRng.FromSeed(0),
+        null,
         null,
         ImmutableDictionary<CardId, CardDefinition>.Empty,
         InitialMap,
