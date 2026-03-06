@@ -1,6 +1,7 @@
-namespace Game.Core.Game;
-
 using Game.Core.Cards;
+using CardId = Game.Core.Cards.CardId;
+
+namespace Game.Core.Game;
 
 public abstract record GameAction;
 
