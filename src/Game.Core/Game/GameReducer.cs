@@ -1,6 +1,7 @@
 using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Common;
+using Game.Core.Map;
 using System.Collections.Immutable;
 
 namespace Game.Core.Game;
@@ -21,13 +22,14 @@ public static class GameReducer
             PlayCardAction playCardAction => PlayCard(state, playCardAction),
             EndTurnAction endTurnAction => EndTurn(state, endTurnAction),
             DiscardOverflowAction discardOverflowAction => DiscardOverflow(state, discardOverflowAction),
+            MoveToNodeAction moveToNodeAction => MoveToNode(state, moveToNodeAction),
             _ => (state, Array.Empty<GameEvent>()),
         };
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartRun(GameState state, StartRunAction action)
     {
-        var newState = new GameState(GamePhase.DeckSelect, GameRng.FromSeed(action.Seed), null, state.CardDefinitions);
+        var newState = new GameState(GamePhase.MapExploration, GameRng.FromSeed(action.Seed), null, state.CardDefinitions, SampleMapFactory.CreateDefaultState());
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
@@ -141,6 +143,42 @@ public static class GameReducer
         events.AddRange(playerTurnStart.Events);
 
         return ResolveCombatPhase(state with { Combat = combatState, Rng = playerTurnStart.Rng }, events);
+    }
+
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) MoveToNode(GameState state, MoveToNodeAction action)
+    {
+        if (state.Phase != GamePhase.MapExploration)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var traversalResult = MapTraversal.MoveToNode(state.Map, action.NodeId);
+        if (!traversalResult.IsSuccess)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var traversal = traversalResult.Value;
+        var movedMap = traversal.MapState;
+        var events = new List<GameEvent>
+        {
+            new MovedToNode(action.NodeId),
+        };
+
+        if (movedMap.Graph.TryGetNode(action.NodeId, out var node) && node is not null)
+        {
+            if (traversal.EncounterStatus == EncounterResolutionStatus.Resolved)
+            {
+                events.Add(new EncounterResolved(action.NodeId, node.Type));
+            }
+            else
+            {
+                events.Add(new EncounterAlreadyResolved(action.NodeId, node.Type));
+            }
+        }
+
+        return (state with { Map = movedMap }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)
