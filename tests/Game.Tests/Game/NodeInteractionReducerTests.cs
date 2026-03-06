@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Game.Core.Cards;
+using Game.Core.Combat;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
