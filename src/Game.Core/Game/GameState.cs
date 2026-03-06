@@ -12,7 +12,7 @@ public sealed record GameState(
     GamePhase Phase,
     GameRng Rng,
     CombatState? Combat,
-    NodeId? ActiveCombatNodeId,
+    Game.Core.Map.NodeId? ActiveCombatNodeId,
     IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions,
     MapState Map,
     TimeState Time)
