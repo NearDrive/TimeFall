@@ -360,7 +360,8 @@ public class CombatReducerTests
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile: [clawCardId]));
 
-        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint, cardDefinitions));
+        var initialState = GameState.Initial with { RunHp = 10, RunMaxHp = 10 };
+        var (combatState, _) = GameReducer.Reduce(initialState, new BeginCombatAction(blueprint, cardDefinitions));
         var (newState, events) = GameReducer.Reduce(combatState, new EndTurnAction());
 
         Assert.Equal(8, newState.Combat!.Player.HP);
