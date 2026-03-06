@@ -82,7 +82,7 @@ public static class GameReducer
             new PlayerStrikePlayed(card, StrikeDamage, hitResult.UpdatedEntity.HP),
         };
 
-        return (state with { Combat = combatState }, events);
+        return ResolveCombatPhase(state with { Combat = combatState }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) EndTurn(GameState state, EndTurnAction action)
@@ -106,6 +106,11 @@ public static class GameReducer
         combatState = enemyResult.CombatState;
         events.AddRange(enemyResult.Events);
 
+        if (combatState.Player.HP <= 0)
+        {
+            return ResolveCombatPhase(state with { Combat = combatState, Rng = enemyResult.Rng }, events);
+        }
+
         combatState = combatState with { TurnOwner = TurnOwner.Player };
         events.Add(new TurnEnded(TurnOwner.Player));
 
@@ -114,7 +119,7 @@ public static class GameReducer
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (state with { Combat = combatState, Rng = drawResult.Rng }, events);
+        return ResolveCombatPhase(state with { Combat = combatState, Rng = drawResult.Rng }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)
@@ -200,5 +205,25 @@ public static class GameReducer
                 },
             },
         };
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ResolveCombatPhase(GameState state, IReadOnlyList<GameEvent> events)
+    {
+        if (state.Combat is null)
+        {
+            return (state, events);
+        }
+
+        if (state.Combat.Player.HP <= 0)
+        {
+            return (state with { Phase = GamePhase.RunEnded, Combat = null }, events);
+        }
+
+        if (state.Combat.Enemy.HP <= 0)
+        {
+            return (state with { Phase = GamePhase.Reward, Combat = null }, events);
+        }
+
+        return (state, events);
     }
 }
