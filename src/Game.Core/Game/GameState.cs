@@ -20,8 +20,14 @@ public sealed record GameState(
     TimeState Time,
     RewardState? Reward,
     ImmutableList<CardInstance> RunDeck,
-    DeckEditState? DeckEdit)
+    DeckEditState? DeckEdit,
+    int RunHp,
+    int RunMaxHp,
+    NodeInteractionState? NodeInteraction)
 {
+    public const int DefaultRunMaxHp = 80;
+    public const int RestHealAmount = 20;
+
     private static readonly MapState InitialMap = SampleMapFactory.CreateDefaultState();
 
     public static GameState Initial => new(
@@ -34,5 +40,8 @@ public sealed record GameState(
         TimeState.Create(InitialMap),
         null,
         ImmutableList<CardInstance>.Empty,
+        null,
+        DefaultRunMaxHp,
+        DefaultRunMaxHp,
         null);
 }

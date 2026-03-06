@@ -25,3 +25,7 @@ public sealed record SkipRewardAction : GameAction;
 public sealed record BeginDeckRemovalAction : GameAction;
 
 public sealed record RemoveCardFromDeckAction(CardId CardId) : GameAction;
+
+public sealed record UseRestAction(RestOption Option) : GameAction;
+
+public sealed record UseShopRemovalAction(CardId CardId) : GameAction;

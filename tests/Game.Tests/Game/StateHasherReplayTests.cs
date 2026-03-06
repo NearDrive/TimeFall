@@ -181,6 +181,9 @@ public class StateHasherReplayTests
             Time: TimeState.Create(SampleMapFactory.CreateDefaultState()),
             Reward: null,
             RunDeck: ImmutableList<CardInstance>.Empty,
-            DeckEdit: null);
+            DeckEdit: null,
+            RunHp: 20,
+            RunMaxHp: 20,
+            NodeInteraction: null);
     }
 }
