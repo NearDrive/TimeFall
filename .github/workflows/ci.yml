@@ -1,28 +1,82 @@
-name: CI
+name: CI (Fast)
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: "Optional VSTest filter for fast-lane test selection"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-fast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
 jobs:
-  build-test:
+  build_and_test:
+    name: Fast build + tests (.NET 8)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Resolve optional test filter
+        shell: bash
+        run: |
+          TEST_FILTER="${{ github.event.inputs.test_filter || '' }}"
+          if [ -n "$TEST_FILTER" ]; then
+            echo "TEST_FILTER_ARG=--filter $TEST_FILTER" >> "$GITHUB_ENV"
+          else
+            echo "TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+          fi
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore TimefallDeck.sln
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build TimefallDeck.sln --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test -c Release --no-build --verbosity normal
+        shell: bash
+        run: |
+          dotnet test TimefallDeck.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory ./artifacts/test-results \
+            $TEST_FILTER_ARG
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-ci-test-artifacts
+          path: |
+            artifacts/test-results/**/*.trx
+            artifacts/test-results/**
+            **/TestResults/**
+            **/coverage*/**
+          if-no-files-found: ignore

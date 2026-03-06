@@ -1,0 +1,157 @@
+name: CI (Nightly / Full)
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      full_test_filter:
+        description: "Optional VSTest filter for full-lane runs"
+        required: false
+        default: ""
+      unit_test_filter:
+        description: "Optional unit test filter (future category split)"
+        required: false
+        default: ""
+      integration_test_filter:
+        description: "Optional integration test filter (future category split)"
+        required: false
+        default: ""
+      replay_test_filter:
+        description: "Optional deterministic/replay filter (future category split)"
+        required: false
+        default: ""
+      canary_test_filter:
+        description: "Optional canary filter (future category split)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-nightly-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  full_validation:
+    name: Full validation suite (.NET 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Prepare filter arguments
+        shell: bash
+        run: |
+          FULL_TEST_FILTER="${{ github.event.inputs.full_test_filter || '' }}"
+          UNIT_TEST_FILTER="${{ github.event.inputs.unit_test_filter || '' }}"
+          INTEGRATION_TEST_FILTER="${{ github.event.inputs.integration_test_filter || '' }}"
+          REPLAY_TEST_FILTER="${{ github.event.inputs.replay_test_filter || '' }}"
+          CANARY_TEST_FILTER="${{ github.event.inputs.canary_test_filter || '' }}"
+
+          [ -n "$FULL_TEST_FILTER" ] && echo "FULL_TEST_FILTER_ARG=--filter $FULL_TEST_FILTER" >> "$GITHUB_ENV" || echo "FULL_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+          [ -n "$UNIT_TEST_FILTER" ] && echo "UNIT_TEST_FILTER_ARG=--filter $UNIT_TEST_FILTER" >> "$GITHUB_ENV" || echo "UNIT_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+          [ -n "$INTEGRATION_TEST_FILTER" ] && echo "INTEGRATION_TEST_FILTER_ARG=--filter $INTEGRATION_TEST_FILTER" >> "$GITHUB_ENV" || echo "INTEGRATION_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+          [ -n "$REPLAY_TEST_FILTER" ] && echo "REPLAY_TEST_FILTER_ARG=--filter $REPLAY_TEST_FILTER" >> "$GITHUB_ENV" || echo "REPLAY_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+          [ -n "$CANARY_TEST_FILTER" ] && echo "CANARY_TEST_FILTER_ARG=--filter $CANARY_TEST_FILTER" >> "$GITHUB_ENV" || echo "CANARY_TEST_FILTER_ARG=" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore TimefallDeck.sln
+
+      - name: Build
+        run: dotnet build TimefallDeck.sln --configuration Release --no-restore
+
+      # If full_test_filter is provided, it takes precedence over per-suite filters.
+      - name: Run full suite (single filter)
+        if: env.FULL_TEST_FILTER_ARG != ''
+        shell: bash
+        run: |
+          dotnet test TimefallDeck.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=full-suite.trx" \
+            --results-directory ./artifacts/test-results/full \
+            $FULL_TEST_FILTER_ARG
+
+      # Future-ready lanes for category/trait-based suite partitioning.
+      - name: Run unit suite
+        if: env.FULL_TEST_FILTER_ARG == '' && env.UNIT_TEST_FILTER_ARG != ''
+        shell: bash
+        run: |
+          dotnet test TimefallDeck.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=unit-suite.trx" \
+            --results-directory ./artifacts/test-results/unit \
+            $UNIT_TEST_FILTER_ARG
+
+      - name: Run integration suite
+        if: env.FULL_TEST_FILTER_ARG == '' && env.INTEGRATION_TEST_FILTER_ARG != ''
+        shell: bash
+        run: |
+          dotnet test TimefallDeck.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=integration-suite.trx" \
+            --results-directory ./artifacts/test-results/integration \
+            $INTEGRATION_TEST_FILTER_ARG
+
+      - name: Run replay/determinism suite
+        if: env.FULL_TEST_FILTER_ARG == '' && env.REPLAY_TEST_FILTER_ARG != ''
+        shell: bash
+        run: |
+          dotnet test TimefallDeck.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=replay-suite.trx" \
+            --results-directory ./artifacts/test-results/replay \
+            $REPLAY_TEST_FILTER_ARG
+
+      - name: Run canary suite
+        if: env.FULL_TEST_FILTER_ARG == '' && env.CANARY_TEST_FILTER_ARG != ''
+        shell: bash
+        run: |
+          dotnet test TimefallDeck.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=canary-suite.trx" \
+            --results-directory ./artifacts/test-results/canary \
+            $CANARY_TEST_FILTER_ARG
+
+      # Fallback: if no filters are supplied, run everything.
+      - name: Run full suite (default)
+        if: env.FULL_TEST_FILTER_ARG == '' && env.UNIT_TEST_FILTER_ARG == '' && env.INTEGRATION_TEST_FILTER_ARG == '' && env.REPLAY_TEST_FILTER_ARG == '' && env.CANARY_TEST_FILTER_ARG == ''
+        run: dotnet test TimefallDeck.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=full-default.trx" --results-directory ./artifacts/test-results/full-default
+
+      - name: Upload nightly test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ci-test-artifacts
+          path: |
+            artifacts/test-results/**/*.trx
+            artifacts/test-results/**
+            **/TestResults/**
+            **/coverage*/**
+          if-no-files-found: ignore
