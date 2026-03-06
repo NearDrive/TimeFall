@@ -154,11 +154,12 @@ public static class GameReducer
         }
 
         var traversalResult = MapTraversal.MoveToNode(state.Map, action.NodeId);
-        if (!traversalResult.IsSuccess || traversalResult.Value is not { } traversal)
+        if (!traversalResult.IsSuccess)
         {
             return (state, Array.Empty<GameEvent>());
         }
 
+        var traversal = traversalResult.Value;
         var movedMap = traversal.MapState;
         var events = new List<GameEvent>
         {
