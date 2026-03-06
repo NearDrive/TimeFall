@@ -78,7 +78,7 @@ public static class StateHasher
     {
         builder.Append("dict:").Append(type.FullName).Append('[');
 
-        var entries = dictionary.Cast<DictionaryEntry>()
+        var entries = EnumerateDictionaryEntries(dictionary)
             .Select(entry => new KeyValuePair<string, object?>(Canonicalize(entry.Key), entry.Value))
             .OrderBy(entry => entry.Key, StringComparer.Ordinal)
             .ToArray();
@@ -95,6 +95,33 @@ public static class StateHasher
         }
 
         builder.Append(']');
+    }
+
+    private static IEnumerable<(object? Key, object? Value)> EnumerateDictionaryEntries(IEnumerable dictionary)
+    {
+        foreach (var entry in dictionary)
+        {
+            if (entry is DictionaryEntry dictionaryEntry)
+            {
+                yield return (dictionaryEntry.Key, dictionaryEntry.Value);
+                continue;
+            }
+
+            if (entry is null)
+            {
+                throw new InvalidOperationException("Dictionary entry cannot be null.");
+            }
+
+            var entryType = entry.GetType();
+            var keyProperty = entryType.GetProperty("Key", BindingFlags.Public | BindingFlags.Instance);
+            var valueProperty = entryType.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
+            if (keyProperty is null || valueProperty is null)
+            {
+                throw new InvalidOperationException($"Unsupported dictionary entry type: {entryType.FullName}.");
+            }
+
+            yield return (keyProperty.GetValue(entry), valueProperty.GetValue(entry));
+        }
     }
 
     private static void AppendEnumerable(StringBuilder builder, IEnumerable enumerable, Type type)
