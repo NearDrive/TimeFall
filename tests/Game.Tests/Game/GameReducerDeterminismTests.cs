@@ -28,7 +28,7 @@ public class GameReducerDeterminismTests
         var first = GameReducer.Reduce(initialState, action);
         var second = GameReducer.Reduce(initialState, action);
 
-        Assert.Equal(first.NewState, second.NewState);
+        AssertGameStateEquivalent(first.NewState, second.NewState);
         Assert.Equal(first.Events, second.Events);
     }
 
@@ -49,6 +49,16 @@ public class GameReducerDeterminismTests
     {
         Assert.Equal(expected.Phase, actual.Phase);
         Assert.Equal(expected.Rng, actual.Rng);
+        Assert.Equal(expected.CardDefinitions.Count, actual.CardDefinitions.Count);
+
+        foreach (var expectedDefinition in expected.CardDefinitions)
+        {
+            Assert.True(actual.CardDefinitions.TryGetValue(expectedDefinition.Key, out var actualDefinition));
+            Assert.Equal(expectedDefinition.Value.Id, actualDefinition!.Id);
+            Assert.Equal(expectedDefinition.Value.Name, actualDefinition.Name);
+            Assert.Equal(expectedDefinition.Value.Cost, actualDefinition.Cost);
+            Assert.Equal(expectedDefinition.Value.Effects, actualDefinition.Effects);
+        }
 
         if (expected.Combat is null)
         {

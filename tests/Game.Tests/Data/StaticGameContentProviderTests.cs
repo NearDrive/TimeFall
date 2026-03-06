@@ -30,7 +30,19 @@ public class StaticGameContentProviderTests
 
         var firstDefinitions = first.CardDefinitions.OrderBy(kvp => kvp.Key.Value).ToArray();
         var secondDefinitions = second.CardDefinitions.OrderBy(kvp => kvp.Key.Value).ToArray();
-        Assert.Equal(firstDefinitions, secondDefinitions);
+        Assert.Equal(firstDefinitions.Length, secondDefinitions.Length);
+
+        for (var i = 0; i < firstDefinitions.Length; i++)
+        {
+            var expected = firstDefinitions[i];
+            var actual = secondDefinitions[i];
+
+            Assert.Equal(expected.Key, actual.Key);
+            Assert.Equal(expected.Value.Id, actual.Value.Id);
+            Assert.Equal(expected.Value.Name, actual.Value.Name);
+            Assert.Equal(expected.Value.Cost, actual.Value.Cost);
+            Assert.Equal(expected.Value.Effects, actual.Value.Effects);
+        }
     }
 
     [Fact]
