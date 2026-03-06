@@ -6,5 +6,6 @@ public enum GamePhase
     MapExploration = 1,
     Combat = 2,
     RewardSelection = 3,
-    RunEnded = 4,
+    DeckRemoval = 4,
+    RunEnded = 5,
 }

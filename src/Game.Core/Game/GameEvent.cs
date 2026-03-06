@@ -41,7 +41,13 @@ public sealed record RewardOffered(RewardType RewardType, IReadOnlyList<CardId> 
 
 public sealed record RewardChosen(RewardType RewardType, CardId CardId, NodeId? SourceNodeId) : GameEvent;
 
+public sealed record RewardSkipped(RewardType RewardType, NodeId? SourceNodeId) : GameEvent;
+
 public sealed record CardAddedToDeck(CardId CardId) : GameEvent;
+
+public sealed record DeckRemovalBegan(int RemainingRemovals) : GameEvent;
+
+public sealed record CardRemovedFromDeck(CardId CardId) : GameEvent;
 
 public sealed record TimeAdvanced(int Step) : GameEvent;
 

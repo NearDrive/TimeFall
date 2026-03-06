@@ -4,6 +4,7 @@ using Game.Core.Common;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
 using Game.Core.Rewards;
+using Game.Core.Decks;
 using NodeId = Game.Core.Map.NodeId;
 using System.Collections.Immutable;
 
@@ -27,6 +28,9 @@ public static class GameReducer
             DiscardOverflowAction discardOverflowAction => DiscardOverflow(state, discardOverflowAction),
             MoveToNodeAction moveToNodeAction => MoveToNode(state, moveToNodeAction),
             ChooseRewardCardAction chooseRewardCardAction => ChooseRewardCard(state, chooseRewardCardAction),
+            SkipRewardAction skipRewardAction => SkipReward(state, skipRewardAction),
+            BeginDeckRemovalAction beginDeckRemovalAction => BeginDeckRemoval(state, beginDeckRemovalAction),
+            RemoveCardFromDeckAction removeCardFromDeckAction => RemoveCardFromDeck(state, removeCardFromDeckAction),
             _ => (state, Array.Empty<GameEvent>()),
         };
     }
@@ -43,7 +47,8 @@ public static class GameReducer
             mapState,
             TimeState.Create(mapState),
             null,
-            ImmutableList<CardInstance>.Empty);
+            ImmutableList<CardInstance>.Empty,
+            null);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
@@ -61,13 +66,14 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        var combatState = CreateCombatState(action.Blueprint, state.PlayerDeckDiscardPile);
+        var stateWithDeck = EnsureRunDeckInitialized(state, action.Blueprint);
+        var combatState = CreateCombatState(action.Blueprint, stateWithDeck.RunDeck);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
         var events = new List<GameEvent> { new EnteredCombat(null, null) };
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (state with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, Reward = null }, events);
+        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, Reward = null, DeckEdit = null }, events);
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -216,7 +222,8 @@ public static class GameReducer
                 return (movedState, events);
             }
 
-            var combatState = CreateCombatState(encounter.Blueprint, movedState.PlayerDeckDiscardPile);
+            movedState = EnsureRunDeckInitialized(movedState, encounter.Blueprint);
+            var combatState = CreateCombatState(encounter.Blueprint, movedState.RunDeck);
             var drawResult = HandManager.Draw(combatState, movedState.Rng, 5);
             events.Add(new EnteredCombat(action.NodeId, node.Type));
             events.AddRange(drawResult.Events);
@@ -230,6 +237,7 @@ public static class GameReducer
                 CardDefinitions = encounter.CardDefinitions,
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
+                DeckEdit = null,
             };
 
             return (combatEnteredState, events);
@@ -313,7 +321,79 @@ public static class GameReducer
             Phase = GamePhase.MapExploration,
             Reward = null,
             Combat = null,
-            PlayerDeckDiscardPile = state.PlayerDeckDiscardPile.Add(new CardInstance(action.CardId)),
+            RunDeck = state.RunDeck.Add(new CardInstance(action.CardId)),
+            DeckEdit = null,
+        }, events);
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) SkipReward(GameState state, SkipRewardAction action)
+    {
+        _ = action;
+
+        if (state.Phase != GamePhase.RewardSelection || state.Reward is null)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var events = new GameEvent[]
+        {
+            new RewardSkipped(state.Reward.RewardType, state.Reward.SourceNodeId),
+        };
+
+        return (state with
+        {
+            Phase = GamePhase.MapExploration,
+            Reward = null,
+            Combat = null,
+            DeckEdit = null,
+        }, events);
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) BeginDeckRemoval(GameState state, BeginDeckRemovalAction action)
+    {
+        _ = action;
+
+        if (state.Phase != GamePhase.MapExploration)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var deckEditState = DeckEditState.RemoveOneCard();
+        var events = new GameEvent[]
+        {
+            new DeckRemovalBegan(deckEditState.RemainingRemovals),
+        };
+
+        return (state with { Phase = GamePhase.DeckRemoval, DeckEdit = deckEditState, Reward = null }, events);
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) RemoveCardFromDeck(GameState state, RemoveCardFromDeckAction action)
+    {
+        if (state.Phase != GamePhase.DeckRemoval || state.DeckEdit is null || state.DeckEdit.RemainingRemovals <= 0)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var index = state.RunDeck.FindIndex(card => card.DefinitionId == action.CardId);
+        if (index < 0)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var updatedDeck = state.RunDeck.RemoveAt(index);
+        var remainingRemovals = state.DeckEdit.RemainingRemovals - 1;
+        var nextDeckEdit = remainingRemovals > 0 ? state.DeckEdit with { RemainingRemovals = remainingRemovals } : null;
+
+        var events = new GameEvent[]
+        {
+            new CardRemovedFromDeck(action.CardId),
+        };
+
+        return (state with
+        {
+            RunDeck = updatedDeck,
+            DeckEdit = nextDeckEdit,
+            Phase = nextDeckEdit is null ? GamePhase.MapExploration : GamePhase.DeckRemoval,
         }, events);
     }
 
@@ -327,6 +407,20 @@ public static class GameReducer
         var player = CreateCombatEntity(playerBlueprint);
         var enemy = CreateCombatEntity(blueprint.Enemy);
         return new CombatState(TurnOwner.Player, player, enemy, false, 0);
+    }
+
+    private static GameState EnsureRunDeckInitialized(GameState state, CombatBlueprint blueprint)
+    {
+        if (state.RunDeck.Count > 0)
+        {
+            return state;
+        }
+
+        var initializedDeck = blueprint.Player.DrawPile
+            .Select(id => new CardInstance(id))
+            .ToImmutableList();
+
+        return state with { RunDeck = initializedDeck };
     }
 
     private static CombatEntity CreateCombatEntity(CombatantBlueprint blueprint)

@@ -41,7 +41,7 @@ public class RewardReducerTests
 
         var (newState, events) = GameReducer.Reduce(rewardState, new ChooseRewardCardAction(chosen));
 
-        Assert.Contains(newState.PlayerDeckDiscardPile, c => c.DefinitionId == chosen);
+        Assert.Contains(newState.RunDeck, c => c.DefinitionId == chosen);
         Assert.Contains(events, e => e is CardAddedToDeck { CardId: var id } && id == chosen);
     }
 
@@ -110,6 +110,54 @@ public class RewardReducerTests
         var result = GameReducer.Reduce(rewardState, new ChooseRewardCardAction(rewardState.Reward!.CardOptions[0]));
 
         Assert.Null(result.NewState.Reward);
+    }
+
+    [Fact]
+    public void RewardSkip_IsAllowed_InRewardPhase()
+    {
+        var rewardState = CreateRewardSelectionState(seed: 41);
+
+        var result = GameReducer.Reduce(rewardState, new SkipRewardAction());
+
+        Assert.Contains(result.Events, e => e is RewardSkipped);
+    }
+
+    [Fact]
+    public void RewardSkip_ReturnsToMapExploration()
+    {
+        var rewardState = CreateRewardSelectionState(seed: 41);
+
+        var result = GameReducer.Reduce(rewardState, new SkipRewardAction());
+
+        Assert.Equal(GamePhase.MapExploration, result.NewState.Phase);
+    }
+
+    [Fact]
+    public void RewardSkip_ClearsRewardState()
+    {
+        var rewardState = CreateRewardSelectionState(seed: 41);
+
+        var result = GameReducer.Reduce(rewardState, new SkipRewardAction());
+
+        Assert.Null(result.NewState.Reward);
+        Assert.Equal(rewardState.RunDeck, result.NewState.RunDeck);
+    }
+
+    [Fact]
+    public void RewardSkip_IsRejected_OutsideRewardPhase()
+    {
+        var map = SampleMapFactory.CreateDefaultState();
+        var state = GameState.Initial with
+        {
+            Phase = GamePhase.MapExploration,
+            Map = map,
+            Time = TimeState.Create(map),
+        };
+
+        var result = GameReducer.Reduce(state, new SkipRewardAction());
+
+        Assert.Equal(state, result.NewState);
+        Assert.Empty(result.Events);
     }
 
     private static GameState CreateRewardSelectionState(int seed)

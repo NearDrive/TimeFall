@@ -180,6 +180,7 @@ public class StateHasherReplayTests
             Map: SampleMapFactory.CreateDefaultState(),
             Time: TimeState.Create(SampleMapFactory.CreateDefaultState()),
             Reward: null,
-            PlayerDeckDiscardPile: ImmutableList<CardInstance>.Empty);
+            RunDeck: ImmutableList<CardInstance>.Empty,
+            DeckEdit: null);
     }
 }
