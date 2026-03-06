@@ -164,7 +164,7 @@ public static class GameReducer
     {
         var player = CreateCombatEntity(blueprint.Player);
         var enemy = CreateCombatEntity(blueprint.Enemy);
-        return new CombatState(TurnOwner.Player, 0, player, enemy, false, 0);
+        return new CombatState(TurnOwner.Player, player, enemy, false, 0);
     }
 
     private static CombatEntity CreateCombatEntity(CombatantBlueprint blueprint)
@@ -179,7 +179,8 @@ public static class GameReducer
                 DrawPile: blueprint.DrawPile.Select(id => new CardInstance(id)).ToImmutableList(),
                 Hand: ImmutableList<CardInstance>.Empty,
                 DiscardPile: ImmutableList<CardInstance>.Empty,
-                BurnPile: ImmutableList<CardInstance>.Empty));
+                BurnPile: ImmutableList<CardInstance>.Empty,
+                ReshuffleCount: 0));
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ResolveCombatPhase(GameState state, IReadOnlyList<GameEvent> events)

@@ -7,16 +7,15 @@ namespace Game.Core.Cards;
 
 public static class DeckCycleSystem
 {
-    public static (DeckState Deck, CombatState CombatState, GameRng Rng) EnsureDrawAvailable(
+    public static (DeckState Deck, GameRng Rng) EnsureDrawAvailable(
         DeckState deck,
         GameRng rng,
-        CombatState combatState,
         out IReadOnlyList<GameEvent> events)
     {
         if (deck.DrawPile.Count > 0 || deck.DiscardPile.Count == 0)
         {
             events = Array.Empty<GameEvent>();
-            return (deck, combatState, rng);
+            return (deck, rng);
         }
 
         var generatedEvents = new List<GameEvent>();
@@ -27,12 +26,15 @@ public static class DeckCycleSystem
         var (reshuffledDeck, reshuffleRng) = Reshuffle(deck, rng);
         generatedEvents.Add(new DeckReshuffled());
 
-        var burnCount = combatState.ReshuffleCount + 1;
-        var (burnedDeck, nextRng, burnedCards) = Burn(reshuffledDeck, burnCount, reshuffleRng);
+        var burnCount = reshuffledDeck.ReshuffleCount + 1;
+        var (burnedDeck, nextRng, burnedCards) = Burn(
+            reshuffledDeck with { ReshuffleCount = reshuffledDeck.ReshuffleCount + 1 },
+            burnCount,
+            reshuffleRng);
         generatedEvents.AddRange(burnedCards.Select(c => new CardBurned(c)));
 
         events = generatedEvents;
-        return (burnedDeck, combatState with { ReshuffleCount = combatState.ReshuffleCount + 1 }, nextRng);
+        return (burnedDeck, nextRng);
     }
 
     private static (DeckState Deck, GameRng Rng) Reshuffle(DeckState deck, GameRng rng)

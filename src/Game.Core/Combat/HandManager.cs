@@ -17,10 +17,10 @@ public static class HandManager
         {
             if (mutable.Player.Deck.DrawPile.Count == 0)
             {
-                var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Player.Deck, currentRng, mutable, out var cycleEvents);
-                mutable = cycleResult.CombatState with
+                var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Player.Deck, currentRng, out var cycleEvents);
+                mutable = mutable with
                 {
-                    Player = cycleResult.CombatState.Player with
+                    Player = mutable.Player with
                     {
                         Deck = cycleResult.Deck,
                     },
