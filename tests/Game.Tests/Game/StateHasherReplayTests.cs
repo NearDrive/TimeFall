@@ -2,6 +2,7 @@ using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
+using CardsCardId = Game.Core.Cards.CardId;
 
 namespace Game.Tests.Game;
 
@@ -50,8 +51,8 @@ public class StateHasherReplayTests
     [Fact]
     public void Hash_IgnoresDictionaryInsertionOrder_ForEquivalentState()
     {
-        var stateA = CreateStateWithResourceInsertionOrder(ResourceType.Energy, ResourceType.Shield);
-        var stateB = CreateStateWithResourceInsertionOrder(ResourceType.Shield, ResourceType.Energy);
+        var stateA = CreateStateWithResourceInsertionOrder(ResourceType.Energy, ResourceType.Generic);
+        var stateB = CreateStateWithResourceInsertionOrder(ResourceType.Generic, ResourceType.Energy);
 
         var hashA = StateHasher.Hash(stateA);
         var hashB = StateHasher.Hash(stateB);
@@ -87,7 +88,7 @@ public class StateHasherReplayTests
         };
 
         var deck = new DeckState(
-            DrawPile: new List<CardInstance> { new(new CardId("strike")), new(new CardId("defend")) },
+            DrawPile: new List<CardInstance> { new(new CardsCardId("strike")), new(new CardsCardId("defend")) },
             Hand: new List<CardInstance>(),
             DiscardPile: new List<CardInstance>(),
             BurnPile: new List<CardInstance>());
@@ -103,7 +104,7 @@ public class StateHasherReplayTests
 
         return new GameState(
             Phase: GamePhase.Combat,
-            Rng: Game.Core.Common.GameRng.FromSeed(99),
+            Rng: global::Game.Core.Common.GameRng.FromSeed(99),
             Combat: new CombatState(TurnOwner.Player, 0, player, enemy, false, 0));
     }
 }
