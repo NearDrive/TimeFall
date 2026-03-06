@@ -72,7 +72,8 @@ public class CombatReducerTests
         var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
 
         var (stateAfterEnemyTurn, _) = GameReducer.Reduce(stateAfterBegin, new EndTurnAction());
-        var (overflowState, _) = GameReducer.Reduce(stateAfterEnemyTurn, new EndTurnAction());
+        var (stateBeforeOverflow, _) = GameReducer.Reduce(stateAfterEnemyTurn, new EndTurnAction());
+        var (overflowState, _) = GameReducer.Reduce(stateBeforeOverflow, new EndTurnAction());
         var (blockedState, blockedEvents) = GameReducer.Reduce(overflowState, new EndTurnAction());
 
         Assert.True(overflowState.Combat!.NeedsOverflowDiscard);

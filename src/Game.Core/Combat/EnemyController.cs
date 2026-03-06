@@ -1,5 +1,6 @@
 using Game.Core.Cards;
 using Game.Core.Common;
+using CardId = Game.Core.Cards.CardId;
 using Game.Core.Game;
 
 namespace Game.Core.Combat;
