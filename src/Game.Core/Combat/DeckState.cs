@@ -1,7 +1,9 @@
+using System.Collections.Immutable;
+
 namespace Game.Core.Combat;
 
 public sealed record DeckState(
-    List<CardInstance> DrawPile,
-    List<CardInstance> Hand,
-    List<CardInstance> DiscardPile,
-    List<CardInstance> BurnPile);
+    ImmutableList<CardInstance> DrawPile,
+    ImmutableList<CardInstance> Hand,
+    ImmutableList<CardInstance> DiscardPile,
+    ImmutableList<CardInstance> BurnPile);

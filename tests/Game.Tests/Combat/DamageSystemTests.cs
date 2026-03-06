@@ -1,4 +1,5 @@
 using Game.Core.Combat;
+using System.Collections.Immutable;
 
 namespace Game.Tests.Combat;
 
@@ -77,7 +78,7 @@ public class DamageSystemTests
             HP: hp,
             MaxHP: 100,
             Armor: armor,
-            Resources: new Dictionary<ResourceType, int>(),
-            Deck: new DeckState([], [], [], []));
+            Resources: ImmutableDictionary<ResourceType, int>.Empty,
+            Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty));
     }
 }

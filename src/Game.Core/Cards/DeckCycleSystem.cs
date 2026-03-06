@@ -1,6 +1,7 @@
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
+using System.Collections.Immutable;
 
 namespace Game.Core.Cards;
 
@@ -32,9 +33,11 @@ public static class DeckCycleSystem
 
     private static DeckState Reshuffle(DeckState deck)
     {
-        deck.DrawPile.AddRange(deck.DiscardPile);
-        deck.DiscardPile.Clear();
-        return deck;
+        return deck with
+        {
+            DrawPile = deck.DrawPile.AddRange(deck.DiscardPile),
+            DiscardPile = ImmutableList<CardInstance>.Empty,
+        };
     }
 
     private static (DeckState Deck, GameRng Rng, IReadOnlyList<CardInstance> BurnedCards) Burn(DeckState deck, int count, GameRng rng)
@@ -47,8 +50,11 @@ public static class DeckCycleSystem
         {
             var (burnIndex, nextRng) = currentRng.NextInt(0, deck.DrawPile.Count);
             var burnedCard = deck.DrawPile[burnIndex];
-            deck.DrawPile.RemoveAt(burnIndex);
-            deck.BurnPile.Add(burnedCard);
+            deck = deck with
+            {
+                DrawPile = deck.DrawPile.RemoveAt(burnIndex),
+                BurnPile = deck.BurnPile.Add(burnedCard),
+            };
             burnedCards.Add(burnedCard);
             currentRng = nextRng;
         }

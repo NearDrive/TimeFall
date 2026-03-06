@@ -3,6 +3,7 @@ using Game.Core.Combat;
 using Game.Core.Common;
 using CardId = Game.Core.Cards.CardId;
 using Game.Core.Game;
+using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
@@ -36,13 +37,13 @@ public class DeckCycleSystemTests
         Assert.Equal(1, first.CombatState.ReshuffleCount);
         Assert.Single(firstEvents.OfType<CardBurned>());
 
-        PrepareNextReshuffle(first.CombatState.Player.Deck, 13, 24);
-        var second = DeckCycleSystem.EnsureDrawAvailable(first.CombatState.Player.Deck, first.Rng, first.CombatState, out var secondEvents);
+        var firstState = first.CombatState with { Player = first.CombatState.Player with { Deck = PrepareNextReshuffle(first.CombatState.Player.Deck, 13, 24) } };
+        var second = DeckCycleSystem.EnsureDrawAvailable(firstState.Player.Deck, first.Rng, firstState, out var secondEvents);
         Assert.Equal(2, second.CombatState.ReshuffleCount);
         Assert.Equal(2, secondEvents.OfType<CardBurned>().Count());
 
-        PrepareNextReshuffle(second.CombatState.Player.Deck, 25, 36);
-        var third = DeckCycleSystem.EnsureDrawAvailable(second.CombatState.Player.Deck, second.Rng, second.CombatState, out var thirdEvents);
+        var secondState = second.CombatState with { Player = second.CombatState.Player with { Deck = PrepareNextReshuffle(second.CombatState.Player.Deck, 25, 36) } };
+        var third = DeckCycleSystem.EnsureDrawAvailable(secondState.Player.Deck, second.Rng, secondState, out var thirdEvents);
         Assert.Equal(3, third.CombatState.ReshuffleCount);
         Assert.Equal(3, thirdEvents.OfType<CardBurned>().Count());
     }
@@ -71,18 +72,26 @@ public class DeckCycleSystemTests
 
             if (cycle < 2)
             {
-                PrepareNextReshuffle(combatState.Player.Deck, (cycle + 1) * 100, (cycle + 1) * 100 + 11);
+                combatState = combatState with
+                {
+                    Player = combatState.Player with
+                    {
+                        Deck = PrepareNextReshuffle(combatState.Player.Deck, (cycle + 1) * 100, (cycle + 1) * 100 + 11),
+                    },
+                };
             }
         }
 
         return combatState.Player.Deck.BurnPile.Select(c => c.DefinitionId.Value).ToList();
     }
 
-    private static void PrepareNextReshuffle(DeckState deck, int min, int max)
+    private static DeckState PrepareNextReshuffle(DeckState deck, int min, int max)
     {
-        deck.DrawPile.Clear();
-        deck.DiscardPile.Clear();
-        deck.DiscardPile.AddRange(Enumerable.Range(min, max - min + 1).Select(i => Card($"c{i}")));
+        return deck with
+        {
+            DrawPile = ImmutableList<CardInstance>.Empty,
+            DiscardPile = Enumerable.Range(min, max - min + 1).Select(i => Card($"c{i}")).ToImmutableList(),
+        };
     }
 
     private static CombatState CreateCombatState(List<CardInstance> draw, List<CardInstance> discard)
@@ -92,16 +101,16 @@ public class DeckCycleSystemTests
             HP: 10,
             MaxHP: 10,
             Armor: 0,
-            Resources: new Dictionary<ResourceType, int>(),
-            Deck: new DeckState(draw, new List<CardInstance>(), discard, new List<CardInstance>()));
+            Resources: ImmutableDictionary<ResourceType, int>.Empty,
+            Deck: new DeckState(draw.ToImmutableList(), ImmutableList<CardInstance>.Empty, discard.ToImmutableList(), ImmutableList<CardInstance>.Empty));
 
         var enemy = new CombatEntity(
             EntityId: "enemy",
             HP: 10,
             MaxHP: 10,
             Armor: 0,
-            Resources: new Dictionary<ResourceType, int>(),
-            Deck: new DeckState(new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
+            Resources: ImmutableDictionary<ResourceType, int>.Empty,
+            Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty));
 
         return new CombatState(TurnOwner.Player, 0, player, enemy, false, 0);
     }

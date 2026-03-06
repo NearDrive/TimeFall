@@ -3,6 +3,7 @@ using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
 using CardsCardId = Game.Core.Cards.CardId;
+using System.Collections.Immutable;
 
 namespace Game.Tests.Game;
 
@@ -29,6 +30,40 @@ public class StateHasherReplayTests
         {
             Assert.Equal(firstHashes[i], secondHashes[i]);
         }
+    }
+
+    [Fact]
+    public void Reducer_DoesNotMutatePreviousStateInstances()
+    {
+        var (started, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(2024));
+        var (combat, _) = GameReducer.Reduce(started, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+
+        var previous = combat;
+        var previousHash = StateHasher.Hash(previous);
+        var previousHandCount = previous.Combat!.Player.Deck.Hand.Count;
+
+        var (nextState, _) = GameReducer.Reduce(combat, new EndTurnAction());
+
+        Assert.Equal(previousHash, StateHasher.Hash(previous));
+        Assert.Equal(previousHandCount, previous.Combat!.Player.Deck.Hand.Count);
+        Assert.NotEqual(previousHash, StateHasher.Hash(nextState));
+    }
+
+    [Fact]
+    public void Replay_MultiTurnHashSnapshots_RemainDeterministic()
+    {
+        var actions = new List<GameAction> { new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions) };
+        for (var turn = 0; turn < 6; turn++)
+        {
+            actions.Add(new EndTurnAction());
+            actions.Add(new EndTurnAction());
+        }
+
+        var runA = ReplayHashes(actions, seed: 777);
+        var runB = ReplayHashes(actions, seed: 777);
+
+        Assert.Equal(runA, runB);
+        Assert.Equal(actions.Count + 2, runA.Length);
     }
 
     [Fact]
@@ -97,19 +132,19 @@ public class StateHasherReplayTests
         resources[second] = ResourceValue(second);
 
         var deck = new DeckState(
-            DrawPile: new List<CardInstance> { new(new CardsCardId("strike")), new(new CardsCardId("defend")) },
-            Hand: new List<CardInstance>(),
-            DiscardPile: new List<CardInstance>(),
-            BurnPile: new List<CardInstance>());
+            DrawPile: new[] { new CardInstance(new CardsCardId("strike")), new CardInstance(new CardsCardId("defend")) }.ToImmutableList(),
+            Hand: ImmutableList<CardInstance>.Empty,
+            DiscardPile: ImmutableList<CardInstance>.Empty,
+            BurnPile: ImmutableList<CardInstance>.Empty);
 
-        var player = new CombatEntity("player", 20, 20, 0, resources, deck);
+        var player = new CombatEntity("player", 20, 20, 0, resources.ToImmutableDictionary(), deck);
         var enemy = new CombatEntity(
             "enemy",
             10,
             10,
             0,
-            new Dictionary<ResourceType, int>(),
-            new DeckState(new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
+            ImmutableDictionary<ResourceType, int>.Empty,
+            new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty));
 
         return new GameState(
             Phase: GamePhase.Combat,
