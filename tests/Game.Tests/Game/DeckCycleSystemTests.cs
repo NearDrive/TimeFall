@@ -129,6 +129,131 @@ public class DeckCycleSystemTests
     }
 
     [Fact]
+    public void PlayerDeck_ReshufflesMultipleTimes_BeforeEnemy()
+    {
+        var state = CreateCombatState(draw: [], discard: Enumerable.Range(1, 12).Select(i => Card($"p{i}")).ToList()) with
+        {
+            Enemy = CreateEntity("enemy", [], Enumerable.Range(1, 12).Select(i => Card($"e{i}")).ToList()),
+        };
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, GameRng.FromSeed(501), out var playerFirstEvents);
+        var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, 100, 111), playerFirst.Rng, out var playerSecondEvents);
+        var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, 200, 211), playerSecond.Rng, out var playerThirdEvents);
+
+        Assert.Equal(0, state.Enemy.Deck.ReshuffleCount);
+        Assert.Empty(state.Enemy.Deck.BurnPile);
+        Assert.Equal(12, state.Enemy.Deck.DiscardPile.Count);
+        Assert.Single(playerFirstEvents.OfType<CardBurned>());
+        Assert.Equal(2, playerSecondEvents.OfType<CardBurned>().Count());
+        Assert.Equal(3, playerThirdEvents.OfType<CardBurned>().Count());
+        Assert.Equal(1, playerFirst.Deck.ReshuffleCount);
+        Assert.Equal(2, playerSecond.Deck.ReshuffleCount);
+        Assert.Equal(3, playerThird.Deck.ReshuffleCount);
+
+        var enemyFirst = DeckCycleSystem.EnsureDrawAvailable(state.Enemy.Deck, playerThird.Rng, out var enemyFirstEvents);
+        Assert.Equal(1, enemyFirst.Deck.ReshuffleCount);
+        Assert.Single(enemyFirstEvents.OfType<CardBurned>());
+    }
+
+    [Fact]
+    public void EnemyDeck_ReshufflesMultipleTimes_BeforePlayer()
+    {
+        var state = CreateCombatState(draw: [], discard: Enumerable.Range(1, 12).Select(i => Card($"p{i}")).ToList()) with
+        {
+            Enemy = CreateEntity("enemy", [], Enumerable.Range(1, 12).Select(i => Card($"e{i}")).ToList()),
+        };
+
+        var enemyFirst = DeckCycleSystem.EnsureDrawAvailable(state.Enemy.Deck, GameRng.FromSeed(601), out var enemyFirstEvents);
+        var enemySecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemyFirst.Deck, 300, 311), enemyFirst.Rng, out var enemySecondEvents);
+        var enemyThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemySecond.Deck, 400, 411), enemySecond.Rng, out var enemyThirdEvents);
+
+        Assert.Equal(0, state.Player.Deck.ReshuffleCount);
+        Assert.Empty(state.Player.Deck.BurnPile);
+        Assert.Equal(12, state.Player.Deck.DiscardPile.Count);
+        Assert.Single(enemyFirstEvents.OfType<CardBurned>());
+        Assert.Equal(2, enemySecondEvents.OfType<CardBurned>().Count());
+        Assert.Equal(3, enemyThirdEvents.OfType<CardBurned>().Count());
+        Assert.Equal(1, enemyFirst.Deck.ReshuffleCount);
+        Assert.Equal(2, enemySecond.Deck.ReshuffleCount);
+        Assert.Equal(3, enemyThird.Deck.ReshuffleCount);
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, enemyThird.Rng, out var playerFirstEvents);
+        Assert.Equal(1, playerFirst.Deck.ReshuffleCount);
+        Assert.Single(playerFirstEvents.OfType<CardBurned>());
+    }
+
+    [Fact]
+    public void PlayerReshuffles_EnemyNeverReshuffles()
+    {
+        var state = CreateCombatState(draw: [], discard: Enumerable.Range(1, 12).Select(i => Card($"p{i}")).ToList()) with
+        {
+            Enemy = CreateEntity("enemy", [], Enumerable.Range(1, 12).Select(i => Card($"e{i}")).ToList()),
+        };
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, GameRng.FromSeed(701), out var playerFirstEvents);
+        var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, 500, 511), playerFirst.Rng, out var playerSecondEvents);
+        var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, 600, 611), playerSecond.Rng, out var playerThirdEvents);
+
+        Assert.Equal(1, playerFirst.Deck.ReshuffleCount);
+        Assert.Equal(2, playerSecond.Deck.ReshuffleCount);
+        Assert.Equal(3, playerThird.Deck.ReshuffleCount);
+        Assert.Single(playerFirstEvents.OfType<CardBurned>());
+        Assert.Equal(2, playerSecondEvents.OfType<CardBurned>().Count());
+        Assert.Equal(3, playerThirdEvents.OfType<CardBurned>().Count());
+        Assert.Equal(0, state.Enemy.Deck.ReshuffleCount);
+        Assert.Empty(state.Enemy.Deck.BurnPile);
+        Assert.Equal(12, state.Enemy.Deck.DiscardPile.Count);
+    }
+
+    [Fact]
+    public void Reshuffle_WithEmptyDiscard_IsNoOp()
+    {
+        var state = CreateCombatState(draw: [], discard: []);
+        var rng = GameRng.FromSeed(801);
+
+        var cycle = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, rng, out var events);
+        var drawn = HandManager.Draw(state, rng, 1);
+
+        Assert.Equal(state.Player.Deck, cycle.Deck);
+        Assert.Equal(rng, cycle.Rng);
+        Assert.Empty(events);
+        Assert.Equal(0, cycle.Deck.ReshuffleCount);
+        Assert.Empty(drawn.DrawnCards);
+        Assert.Empty(drawn.Events);
+    }
+
+    [Fact]
+    public void BurnCount_Truncates_WhenDeckTooSmall()
+    {
+        var deck = new DeckState(
+            DrawPile: ImmutableList<CardInstance>.Empty,
+            Hand: ImmutableList<CardInstance>.Empty,
+            DiscardPile: new[] { Card("c1"), Card("c2") }.ToImmutableList(),
+            BurnPile: ImmutableList<CardInstance>.Empty,
+            ReshuffleCount: 5);
+
+        var cycle = DeckCycleSystem.EnsureDrawAvailable(deck, GameRng.FromSeed(901), out var events);
+
+        Assert.Equal(6, cycle.Deck.ReshuffleCount);
+        Assert.Equal(2, events.OfType<CardBurned>().Count());
+        Assert.Equal(2, cycle.Deck.BurnPile.Count);
+        Assert.Empty(cycle.Deck.DrawPile);
+    }
+
+    [Fact]
+    public void IndependentDeckCycles_RemainIndependentAcrossMultipleTurns()
+    {
+        var firstRun = SimulateIndependentDeckCycles(seed: 1001);
+        var secondRun = SimulateIndependentDeckCycles(seed: 1001);
+
+        Assert.Equal(firstRun, secondRun);
+        Assert.Equal(3, firstRun.PlayerReshuffles);
+        Assert.Equal(2, firstRun.EnemyReshuffles);
+        Assert.Equal(6, firstRun.PlayerBurnPileCount);
+        Assert.Equal(3, firstRun.EnemyBurnPileCount);
+    }
+
+    [Fact]
     public void Reshuffle_Burn_HappenBeforeSubsequentDraw()
     {
         var discard = new List<CardInstance>
@@ -188,6 +313,27 @@ public class DeckCycleSystemTests
         }
 
         return combatState.Player.Deck.BurnPile.Select(c => c.DefinitionId.Value).ToList();
+    }
+
+    private static (int PlayerReshuffles, int EnemyReshuffles, int PlayerBurnPileCount, int EnemyBurnPileCount) SimulateIndependentDeckCycles(int seed)
+    {
+        var state = CreateCombatState(draw: [], discard: Enumerable.Range(1, 12).Select(i => Card($"p{i}")).ToList()) with
+        {
+            Enemy = CreateEntity("enemy", [], Enumerable.Range(1, 12).Select(i => Card($"e{i}")).ToList()),
+        };
+        var rng = GameRng.FromSeed(seed);
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, rng, out _);
+        var enemyFirst = DeckCycleSystem.EnsureDrawAvailable(state.Enemy.Deck, playerFirst.Rng, out _);
+        var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, 700, 711), enemyFirst.Rng, out _);
+        var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, 800, 811), playerSecond.Rng, out _);
+        var enemySecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemyFirst.Deck, 900, 911), playerThird.Rng, out _);
+
+        return (
+            PlayerReshuffles: playerThird.Deck.ReshuffleCount,
+            EnemyReshuffles: enemySecond.Deck.ReshuffleCount,
+            PlayerBurnPileCount: playerThird.Deck.BurnPile.Count,
+            EnemyBurnPileCount: enemySecond.Deck.BurnPile.Count);
     }
 
     private static DeckState PrepareNextReshuffle(DeckState deck, int min, int max)

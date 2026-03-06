@@ -78,6 +78,37 @@ jobs:
           verify_lane "unit"
           verify_lane "integration"
 
+      - name: Verify deck edge-case tests are discoverable
+        shell: bash
+        run: |
+          DECK_FILTER="(FullyQualifiedName~DeckCycleSystemTests.PlayerDeck_ReshufflesMultipleTimes_BeforeEnemy|FullyQualifiedName~DeckCycleSystemTests.EnemyDeck_ReshufflesMultipleTimes_BeforePlayer|FullyQualifiedName~DeckCycleSystemTests.PlayerReshuffles_EnemyNeverReshuffles|FullyQualifiedName~DeckCycleSystemTests.Reshuffle_WithEmptyDiscard_IsNoOp|FullyQualifiedName~DeckCycleSystemTests.BurnCount_Truncates_WhenDeckTooSmall|FullyQualifiedName~DeckCycleSystemTests.IndependentDeckCycles_RemainIndependentAcrossMultipleTurns)"
+
+          output="$(dotnet test tests/Game.Tests/Game.Tests.csproj --configuration Release --no-build --list-tests --filter "$DECK_FILTER")"
+          echo "$output"
+
+          for test_name in \
+            "Game.Tests.Game.DeckCycleSystemTests.PlayerDeck_ReshufflesMultipleTimes_BeforeEnemy" \
+            "Game.Tests.Game.DeckCycleSystemTests.EnemyDeck_ReshufflesMultipleTimes_BeforePlayer" \
+            "Game.Tests.Game.DeckCycleSystemTests.PlayerReshuffles_EnemyNeverReshuffles" \
+            "Game.Tests.Game.DeckCycleSystemTests.Reshuffle_WithEmptyDiscard_IsNoOp" \
+            "Game.Tests.Game.DeckCycleSystemTests.BurnCount_Truncates_WhenDeckTooSmall" \
+            "Game.Tests.Game.DeckCycleSystemTests.IndependentDeckCycles_RemainIndependentAcrossMultipleTurns"
+          do
+            if ! echo "$output" | grep -Fq "$test_name"; then
+              echo "Required deck edge-case test not discovered: $test_name"
+              exit 1
+            fi
+          done
+
+      - name: Run deck edge-case tests
+        shell: bash
+        run: |
+          dotnet test tests/Game.Tests/Game.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --filter "(FullyQualifiedName~DeckCycleSystemTests.PlayerDeck_ReshufflesMultipleTimes_BeforeEnemy|FullyQualifiedName~DeckCycleSystemTests.EnemyDeck_ReshufflesMultipleTimes_BeforePlayer|FullyQualifiedName~DeckCycleSystemTests.PlayerReshuffles_EnemyNeverReshuffles|FullyQualifiedName~DeckCycleSystemTests.Reshuffle_WithEmptyDiscard_IsNoOp|FullyQualifiedName~DeckCycleSystemTests.BurnCount_Truncates_WhenDeckTooSmall|FullyQualifiedName~DeckCycleSystemTests.IndependentDeckCycles_RemainIndependentAcrossMultipleTurns)"
+
       - name: Run tests
         shell: bash
         run: |
