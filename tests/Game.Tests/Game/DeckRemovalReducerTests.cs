@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using Game.Core.Cards;
 using Game.Core.Combat;
-using Game.Core.Common;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
@@ -88,7 +87,7 @@ public class DeckRemovalReducerTests
             Phase = GamePhase.MapExploration,
             Map = map,
             Time = TimeState.Create(map),
-            Rng = GameRng.FromSeed(5),
+            Rng = global::Game.Core.Common.GameRng.FromSeed(5),
             RunDeck = cardIds.Select(id => new CardInstance(id)).ToImmutableList(),
             DeckEdit = null,
             Reward = null,

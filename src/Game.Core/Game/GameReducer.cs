@@ -397,11 +397,11 @@ public static class GameReducer
         }, events);
     }
 
-    private static CombatState CreateCombatState(CombatBlueprint blueprint, IReadOnlyList<CardInstance> rewardedCards)
+    private static CombatState CreateCombatState(CombatBlueprint blueprint, IReadOnlyList<CardInstance> runDeck)
     {
         var playerBlueprint = blueprint.Player with
         {
-            DrawPile = blueprint.Player.DrawPile.Concat(rewardedCards.Select(card => card.DefinitionId)).ToArray(),
+            DrawPile = runDeck.Select(card => card.DefinitionId).ToArray(),
         };
 
         var player = CreateCombatEntity(playerBlueprint);
