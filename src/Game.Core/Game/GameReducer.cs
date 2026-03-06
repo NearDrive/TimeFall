@@ -61,7 +61,7 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        var combatState = CreateCombatState(action.Blueprint);
+        var combatState = CreateCombatState(action.Blueprint, state.PlayerDeckDiscardPile);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
         var events = new List<GameEvent> { new EnteredCombat(null, null) };
         events.AddRange(drawResult.Events);
@@ -216,7 +216,7 @@ public static class GameReducer
                 return (movedState, events);
             }
 
-            var combatState = CreateCombatState(encounter.Blueprint);
+            var combatState = CreateCombatState(encounter.Blueprint, movedState.PlayerDeckDiscardPile);
             var drawResult = HandManager.Draw(combatState, movedState.Rng, 5);
             events.Add(new EnteredCombat(action.NodeId, node.Type));
             events.AddRange(drawResult.Events);
@@ -317,9 +317,14 @@ public static class GameReducer
         }, events);
     }
 
-    private static CombatState CreateCombatState(CombatBlueprint blueprint)
+    private static CombatState CreateCombatState(CombatBlueprint blueprint, IReadOnlyList<CardInstance> rewardedCards)
     {
-        var player = CreateCombatEntity(blueprint.Player);
+        var playerBlueprint = blueprint.Player with
+        {
+            DrawPile = blueprint.Player.DrawPile.Concat(rewardedCards.Select(card => card.DefinitionId)).ToArray(),
+        };
+
+        var player = CreateCombatEntity(playerBlueprint);
         var enemy = CreateCombatEntity(blueprint.Enemy);
         return new CombatState(TurnOwner.Player, player, enemy, false, 0);
     }

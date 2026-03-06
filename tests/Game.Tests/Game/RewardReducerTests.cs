@@ -83,6 +83,25 @@ public class RewardReducerTests
         Assert.Empty(result.Events);
     }
 
+
+    [Fact]
+    public void ClaimedRewardCard_IsIncludedInNextCombatDeck()
+    {
+        var rewardState = CreateRewardSelectionState(seed: 29);
+        var chosen = rewardState.Reward!.CardOptions[0];
+
+        var afterClaim = GameReducer.Reduce(rewardState, new ChooseRewardCardAction(chosen)).NewState;
+        var (nextCombat, _) = GameReducer.Reduce(afterClaim, new MoveToNodeAction(new NodeId("elite-1")));
+
+        Assert.Equal(GamePhase.Combat, nextCombat.Phase);
+
+        var deck = nextCombat.Combat!.Player.Deck;
+        var allCards = deck.DrawPile.Concat(deck.Hand).Concat(deck.DiscardPile).Concat(deck.BurnPile).ToArray();
+
+        Assert.Contains(allCards, card => card.DefinitionId == chosen);
+        Assert.Equal(11, allCards.Length);
+    }
+
     [Fact]
     public void RewardState_ClearsAfterChoice()
     {
@@ -101,7 +120,7 @@ public class RewardReducerTests
             Phase = GamePhase.MapExploration,
             Map = map,
             Time = TimeState.Create(map),
-            Rng = Game.Core.Common.GameRng.FromSeed(seed),
+            Rng = global::Game.Core.Common.GameRng.FromSeed(seed),
         };
 
         var (afterEntry, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
