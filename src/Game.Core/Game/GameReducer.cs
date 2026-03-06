@@ -4,6 +4,7 @@ using Game.Core.Common;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
 using Game.Core.Rewards;
+using NodeId = Game.Core.Map.NodeId;
 using System.Collections.Immutable;
 
 namespace Game.Core.Game;
