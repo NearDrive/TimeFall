@@ -6,6 +6,7 @@ using Game.Core.TimeSystem;
 using Game.Core.Rewards;
 using Game.Core.Decks;
 using NodeId = Game.Core.Map.NodeId;
+using CardId = Game.Core.Cards.CardId;
 using System.Collections.Immutable;
 
 namespace Game.Core.Game;
