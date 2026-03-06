@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Game.Core\Game.Core.csproj" />
+    <ProjectReference Include="..\..\src\Game.Data\Game.Data.csproj" />
   </ItemGroup>
 </Project>

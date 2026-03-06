@@ -37,7 +37,7 @@ public static class GameReducer
     {
         _ = action;
 
-        var combatState = CreateCombatState();
+        var combatState = CreateCombatState(action.Blueprint);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
         var events = new List<GameEvent> { new EnteredCombat() };
         events.AddRange(drawResult.Events);
@@ -148,47 +148,26 @@ public static class GameReducer
         return (state with { Combat = combatState }, events);
     }
 
-    private static CombatState CreateCombatState()
+    private static CombatState CreateCombatState(CombatBlueprint blueprint)
     {
-        var drawPile = new List<CardInstance>
-        {
-            new(new CardId("strike")),
-            new(new CardId("defend")),
-            new(new CardId("strike")),
-            new(new CardId("defend")),
-            new(new CardId("focus")),
-            new(new CardId("strike")),
-            new(new CardId("defend")),
-            new(new CardId("focus")),
-            new(new CardId("strike")),
-            new(new CardId("defend")),
-        };
-
-        var player = new CombatEntity(
-            EntityId: "player",
-            HP: 80,
-            MaxHP: 80,
-            Armor: 0,
-            Resources: new Dictionary<ResourceType, int> { [ResourceType.Energy] = 3 },
-            Deck: new DeckState(drawPile, new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
-
-        var enemyDeck = new List<CardInstance>
-        {
-            new(new CardId("attack")),
-            new(new CardId("attack")),
-            new(new CardId("attack")),
-            new(new CardId("defend")),
-        };
-
-        var enemy = new CombatEntity(
-            EntityId: "enemy-1",
-            HP: 30,
-            MaxHP: 30,
-            Armor: 0,
-            Resources: new Dictionary<ResourceType, int>(),
-            Deck: new DeckState(enemyDeck, new List<CardInstance>(), new List<CardInstance>(), new List<CardInstance>()));
-
+        var player = CreateCombatEntity(blueprint.Player);
+        var enemy = CreateCombatEntity(blueprint.Enemy);
         return new CombatState(TurnOwner.Player, 0, player, enemy, false, 0);
+    }
+
+    private static CombatEntity CreateCombatEntity(CombatantBlueprint blueprint)
+    {
+        return new CombatEntity(
+            EntityId: blueprint.EntityId,
+            HP: blueprint.HP,
+            MaxHP: blueprint.MaxHP,
+            Armor: blueprint.Armor,
+            Resources: blueprint.Resources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            Deck: new DeckState(
+                DrawPile: blueprint.DrawPile.Select(id => new CardInstance(id)).ToList(),
+                Hand: new List<CardInstance>(),
+                DiscardPile: new List<CardInstance>(),
+                BurnPile: new List<CardInstance>()));
     }
 
     private static CombatState Clone(CombatState combatState)

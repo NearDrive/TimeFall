@@ -5,12 +5,14 @@ namespace Game.Tests.Game;
 
 public class CombatReducerTests
 {
+    private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
+
     [Fact]
     public void BeginCombat_DrawsInitialFiveCards()
     {
         var initial = GameState.Initial;
 
-        var (newState, events) = GameReducer.Reduce(initial, new BeginCombatAction());
+        var (newState, events) = GameReducer.Reduce(initial, new BeginCombatAction(Content.OpeningCombat));
 
         Assert.Equal(GamePhase.Combat, newState.Phase);
         Assert.NotNull(newState.Combat);
@@ -23,7 +25,7 @@ public class CombatReducerTests
     [Fact]
     public void PlayCard_StrikeDamagesEnemyAndDiscardsCard()
     {
-        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
+        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat));
         var strikeIndex = stateAfterBegin.Combat!.Player.Deck.Hand.FindIndex(c => c.DefinitionId.Value == "strike");
 
         Assert.True(strikeIndex >= 0);
@@ -42,7 +44,7 @@ public class CombatReducerTests
     [Fact]
     public void PlayCard_NonStrikeDoesNothing()
     {
-        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
+        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat));
         var nonStrikeIndex = stateAfterBegin.Combat!.Player.Deck.Hand.FindIndex(c => c.DefinitionId.Value != "strike");
 
         Assert.True(nonStrikeIndex >= 0);
@@ -56,7 +58,7 @@ public class CombatReducerTests
     [Fact]
     public void EndTurn_DoesNotAutoDiscardHand()
     {
-        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
+        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat));
 
         var (enemyTurnState, _) = GameReducer.Reduce(combatState, new EndTurnAction());
         var handCountOnEnemyTurn = enemyTurnState.Combat!.Player.Deck.Hand.Count;
@@ -69,7 +71,7 @@ public class CombatReducerTests
     [Fact]
     public void OverflowRequiresDiscardBeforeContinuingTurns()
     {
-        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction());
+        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat));
 
         var (stateAfterEnemyTurn, _) = GameReducer.Reduce(stateAfterBegin, new EndTurnAction());
         var (stateBeforeOverflow, _) = GameReducer.Reduce(stateAfterEnemyTurn, new EndTurnAction());
@@ -95,7 +97,7 @@ public class CombatReducerTests
     public void EndTurn_PlayerToPlayer_EnemyDrawsAndAttacks()
     {
         var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(123));
-        var (combatState, _) = GameReducer.Reduce(seededState, new BeginCombatAction());
+        var (combatState, _) = GameReducer.Reduce(seededState, new BeginCombatAction(Content.OpeningCombat));
 
         var playerHpBefore = combatState.Combat!.Player.HP;
         var (afterEnemyTurn, events) = GameReducer.Reduce(combatState, new EndTurnAction());
@@ -120,7 +122,7 @@ public class CombatReducerTests
     private static (int PlayerHp, int EnemyCardsDrawn, int EnemyAttacksPlayed) SimulatePlayerEnemyTurns(int seed, int turns)
     {
         var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(seed));
-        var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction());
+        var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction(Content.OpeningCombat));
 
         var totalEnemyDraws = 0;
         var totalEnemyAttacks = 0;
