@@ -5,4 +5,5 @@ namespace Game.Data.Content;
 
 public sealed record GameContentBundle(
     IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions,
+    IReadOnlyList<CardId> RewardCardPool,
     CombatBlueprint OpeningCombat);

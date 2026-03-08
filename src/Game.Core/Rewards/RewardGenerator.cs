@@ -10,13 +10,18 @@ public static class RewardGenerator
 {
     public static (RewardState RewardState, GameRng Rng) CreateCardChoiceReward(
         IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions,
+        IReadOnlyList<CardId> rewardCardPool,
         GameRng rng,
         NodeId? sourceNodeId)
     {
-        var cardIds = cardDefinitions.Keys.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+        var cardIds = rewardCardPool
+            .Where(cardDefinitions.ContainsKey)
+            .Distinct()
+            .OrderBy(id => id.Value, StringComparer.Ordinal)
+            .ToArray();
         if (cardIds.Length == 0)
         {
-            throw new InvalidOperationException("Cannot generate card reward without card definitions.");
+            throw new InvalidOperationException("Cannot generate card reward without a configured reward pool.");
         }
 
         var options = ImmutableList.CreateBuilder<CardId>();

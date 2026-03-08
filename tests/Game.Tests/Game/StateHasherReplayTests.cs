@@ -156,7 +156,7 @@ public class StateHasherReplayTests
         resources[second] = ResourceValue(second);
 
         var deck = new DeckState(
-            DrawPile: new[] { new CardInstance(new CardsCardId("strike")), new CardInstance(new CardsCardId("defend")) }.ToImmutableList(),
+            DrawPile: new[] { new CardInstance(new CardsCardId("strike")), new CardInstance(new CardsCardId("guard")) }.ToImmutableList(),
             Hand: ImmutableList<CardInstance>.Empty,
             DiscardPile: ImmutableList<CardInstance>.Empty,
             BurnPile: ImmutableList<CardInstance>.Empty,
@@ -180,6 +180,7 @@ public class StateHasherReplayTests
             Map: SampleMapFactory.CreateDefaultState(),
             Time: TimeState.Create(SampleMapFactory.CreateDefaultState()),
             Reward: null,
+            RewardCardPool: ImmutableList<CardId>.Empty,
             RunDeck: ImmutableList<CardInstance>.Empty,
             DeckEdit: null,
             RunHp: 20,

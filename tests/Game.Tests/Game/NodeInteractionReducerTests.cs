@@ -69,14 +69,14 @@ public class NodeInteractionReducerTests
     {
         var state = CreateMapExplorationState() with
         {
-            RunDeck = ImmutableList.Create(new CardInstance(new CardId("strike")), new CardInstance(new CardId("defend"))),
+            RunDeck = ImmutableList.Create(new CardInstance(new CardId("strike")), new CardInstance(new CardId("guard"))),
         };
         var atShop = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("shop-1"))).NewState;
 
         var (afterRemoval, events) = GameReducer.Reduce(atShop, new UseShopRemovalAction(new CardId("strike")));
 
         Assert.Single(afterRemoval.RunDeck);
-        Assert.Equal(new CardId("defend"), afterRemoval.RunDeck[0].DefinitionId);
+        Assert.Equal(new CardId("guard"), afterRemoval.RunDeck[0].DefinitionId);
         Assert.Contains(events, e => e is ShopRemovalUsed { NodeId: var id, CardId: var cardId } && id == new NodeId("shop-1") && cardId == new CardId("strike"));
         Assert.Contains(new NodeId("shop-1"), afterRemoval.Map.ResolvedEncounterNodeIds);
     }

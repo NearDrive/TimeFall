@@ -52,8 +52,9 @@ public static class EnemyController
                 },
             };
 
-            var resolution = CardEffectResolver.Resolve(mutable, attackCard, TurnOwner.Enemy, cardDefinitions);
+            var resolution = CardEffectResolver.Resolve(mutable, attackCard, TurnOwner.Enemy, cardDefinitions, currentRng);
             mutable = resolution.CombatState;
+            currentRng = resolution.Rng;
             events.AddRange(resolution.Events);
             actionCount++;
         }
