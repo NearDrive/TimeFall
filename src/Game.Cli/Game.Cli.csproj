@@ -8,4 +8,10 @@
     <ProjectReference Include="..\Game.Core\Game.Core.csproj" />
     <ProjectReference Include="..\Game.Data\Game.Data.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Game.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
