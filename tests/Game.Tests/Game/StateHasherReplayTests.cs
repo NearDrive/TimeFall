@@ -180,7 +180,7 @@ public class StateHasherReplayTests
             Map: SampleMapFactory.CreateDefaultState(),
             Time: TimeState.Create(SampleMapFactory.CreateDefaultState()),
             Reward: null,
-            RewardCardPool: ImmutableList<CardId>.Empty,
+            RewardCardPool: ImmutableList<CardsCardId>.Empty,
             RunDeck: ImmutableList<CardInstance>.Empty,
             DeckEdit: null,
             RunHp: 20,
