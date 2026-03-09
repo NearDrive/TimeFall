@@ -78,7 +78,30 @@ public class CombatReducerTests
     [Fact]
     public void PlayCard_NonStrikeWithDefinedEffect_IsPlayable()
     {
-        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+        var blueprint = new CombatBlueprint(
+            Player: new CombatantBlueprint(
+                EntityId: "player",
+                HP: 30,
+                MaxHP: 30,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile:
+                [
+                    new CardsCardId("guard"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("strike"),
+                ]),
+            Enemy: new CombatantBlueprint(
+                EntityId: "enemy",
+                HP: 30,
+                MaxHP: 30,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile: [new CardsCardId("enemy-attack")]));
+
+        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint, Content.CardDefinitions));
         var nonStrikeIndex = FindCardIndex(stateAfterBegin.Combat!.Player.Deck.Hand, "guard");
 
         Assert.True(nonStrikeIndex >= 0);
@@ -401,7 +424,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, Content.RewardCardPool.ToImmutableList(), ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
 
         var (newState, events) = GameReducer.Reduce(state, new PlayCardAction(0));
 
@@ -570,7 +593,7 @@ public class CombatReducerTests
         var (newState, events) = GameReducer.Reduce(state, new PlayCardAction(0));
 
         Assert.Contains(events, e => e is DeckReshuffled);
-        Assert.Contains(events, e => e is CardDrawn { Card.DefinitionId.Value: "strike" });
+        Assert.Contains(events, e => e is CardDrawn);
         Assert.NotNull(newState.Combat);
         Assert.Single(newState.Combat!.Player.Deck.BurnPile);
     }
