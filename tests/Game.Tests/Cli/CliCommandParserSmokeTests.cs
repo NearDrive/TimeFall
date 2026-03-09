@@ -7,6 +7,8 @@ public sealed class CliCommandParserSmokeTests
 {
     [Theory]
     [InlineData("start 123", typeof(StartRunAction))]
+    [InlineData("start", typeof(StartRunAction))]
+    [InlineData("discard 0", typeof(DiscardOverflowAction))]
     [InlineData("move n1", typeof(MoveToNodeAction))]
     [InlineData("play 0", typeof(PlayCardAction))]
     [InlineData("end", typeof(EndTurnAction))]
@@ -24,9 +26,9 @@ public sealed class CliCommandParserSmokeTests
     [Fact]
     public void ParsesViewCommandForMap()
     {
-        var ok = CliCommandParser.TryParse("map", out var parsed, out var error);
+        var ok = CliCommandParser.TryParse("discardpile", out var parsed, out var error);
 
         Assert.True(ok, error);
-        Assert.Equal(CliView.Map, parsed.View);
+        Assert.Equal(CliView.Discard, parsed.View);
     }
 }

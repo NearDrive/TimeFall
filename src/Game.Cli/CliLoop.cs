@@ -43,6 +43,11 @@ internal sealed class CliLoop
             }
 
             var action = command.Action ?? ResolveContextualAction(command, state);
+            if (action is DiscardOverflowAction discardOverflowAction && !TryValidateOverflowDiscard(discardOverflowAction, state, out var overflowError))
+            {
+                Console.WriteLine(overflowError);
+                continue;
+            }
             if (action is null)
             {
                 Console.WriteLine("Command could not be resolved in current state.");
@@ -60,6 +65,38 @@ internal sealed class CliLoop
             eventLog.AddRange(newEvents);
             CliRenderer.RenderState(state, eventLog, _content.CardDefinitions);
         }
+    }
+
+
+    private static bool TryValidateOverflowDiscard(DiscardOverflowAction action, GameState state, out string error)
+    {
+        if (state.Phase != GamePhase.Combat || state.Combat is null || !state.Combat.NeedsOverflowDiscard)
+        {
+            error = "No overflow discard is currently required.";
+            return false;
+        }
+
+        if (action.Indexes.Length != state.Combat.RequiredOverflowDiscardCount)
+        {
+            error = $"Overflow discard requires exactly {state.Combat.RequiredOverflowDiscardCount} index(es).";
+            return false;
+        }
+
+        var uniqueCount = action.Indexes.Distinct().Count();
+        if (uniqueCount != action.Indexes.Length)
+        {
+            error = "Overflow discard indexes must be unique.";
+            return false;
+        }
+
+        if (action.Indexes.Any(i => i < 0 || i >= state.Combat.Player.Deck.Hand.Count))
+        {
+            error = $"Overflow discard indexes must be within 0..{state.Combat.Player.Deck.Hand.Count - 1}.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
     }
 
     private static GameAction? ResolveContextualAction(ParsedCommand command, GameState state)

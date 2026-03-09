@@ -66,7 +66,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) BeginCombat(GameState state, BeginCombatAction action)
     {
-        if (state.Combat is not null)
+        if (state.Combat is not null || state.Time.PlayerCaughtByTime)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -235,6 +235,14 @@ public static class GameReducer
         }
 
         var movedState = state with { Map = movedMap, Time = timeAdvance.TimeState, NodeInteraction = null };
+
+        // If Time catches the player on this movement step, we intentionally do not start
+        // the destination encounter. This keeps the move->time resolution order explicit
+        // and avoids entering normal node combat while already caught by Time.
+        if (timeAdvance.PlayerCaughtThisStep)
+        {
+            return (movedState, events);
+        }
 
         if (MapNodeEncounterSelector.IsCombatNode(node.Type) && !movedMap.ResolvedEncounterNodeIds.Contains(action.NodeId))
         {
