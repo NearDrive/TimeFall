@@ -4,6 +4,7 @@ using Game.Core.Common;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
 using Game.Core.Rewards;
+using Game.Core.Content;
 using Game.Core.Decks;
 using NodeId = Game.Core.Map.NodeId;
 using CardId = Game.Core.Cards.CardId;
@@ -13,19 +14,7 @@ namespace Game.Core.Game;
 
 public static class GameReducer
 {
-    private static readonly ImmutableArray<CardId> DefaultRunDeckCardIds =
-    [
-        new CardId("strike"),
-        new CardId("defend"),
-        new CardId("strike"),
-        new CardId("defend"),
-        new CardId("focus"),
-        new CardId("strike"),
-        new CardId("defend"),
-        new CardId("focus"),
-        new CardId("strike"),
-        new CardId("defend"),
-    ];
+    private static readonly ImmutableArray<CardId> DefaultRunDeckCardIds = PlaytestContent.StarterDeck;
 
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
@@ -64,6 +53,7 @@ public static class GameReducer
             mapState,
             TimeState.Create(mapState),
             null,
+            PlaytestContent.RewardCardPool.ToImmutableList(),
             ImmutableList<CardInstance>.Empty,
             null,
             GameState.DefaultRunMaxHp,
@@ -93,7 +83,19 @@ public static class GameReducer
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, Reward = null, DeckEdit = null, NodeInteraction = null }, events);
+        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, RewardCardPool = ResolveRewardCardPool(action).ToImmutableList(), Reward = null, DeckEdit = null, NodeInteraction = null }, events);
+    }
+
+    private static IReadOnlyList<CardId> ResolveRewardCardPool(BeginCombatAction action)
+    {
+        if (action.RewardCardPool is { Count: > 0 })
+        {
+            return action.RewardCardPool;
+        }
+
+        return action.CardDefinitions.Keys
+            .OrderBy(id => id.Value, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -136,7 +138,7 @@ public static class GameReducer
             },
         };
 
-        var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions);
+        var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions, state.Rng);
         combatState = resolution.CombatState;
 
         var events = new List<GameEvent>
@@ -145,7 +147,7 @@ public static class GameReducer
         };
         events.AddRange(resolution.Events);
 
-        return ResolveCombatPhase(state with { Combat = combatState }, events);
+        return ResolveCombatPhase(state with { Combat = combatState, Rng = resolution.Rng }, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) EndTurn(GameState state, EndTurnAction action)
@@ -255,6 +257,7 @@ public static class GameReducer
                 Combat = drawResult.CombatState,
                 Rng = drawResult.Rng,
                 CardDefinitions = encounter.CardDefinitions,
+                RewardCardPool = encounter.RewardCardPool.ToImmutableList(),
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
                 DeckEdit = null,
@@ -570,7 +573,7 @@ public static class GameReducer
                 resolvedEvents.Add(new EncounterResolved(nodeId, node.Type));
             }
 
-            var rewardResult = RewardGenerator.CreateCardChoiceReward(state.CardDefinitions, state.Rng, sourceNodeId);
+            var rewardResult = RewardGenerator.CreateCardChoiceReward(state.CardDefinitions, state.RewardCardPool, state.Rng, sourceNodeId);
             var rewardState = rewardResult.RewardState;
 
             resolvedEvents.Insert(0, new CombatEnded(sourceNodeId, sourceNodeType, true));

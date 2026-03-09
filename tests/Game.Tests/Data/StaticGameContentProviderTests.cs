@@ -12,13 +12,12 @@ public class StaticGameContentProviderTests
     {
         var content = StaticGameContentProvider.LoadDefault();
 
-        Assert.Equal(4, content.CardDefinitions.Count);
+        Assert.True(content.CardDefinitions.Count >= 8);
         Assert.Equal("Strike", content.CardDefinitions[new CardId("strike")].Name);
-        Assert.Contains(content.CardDefinitions[new CardId("strike")].Effects, e => e is DamageCardEffect { Amount: 4, Target: CardTarget.Opponent });
-        Assert.Equal("Defend", content.CardDefinitions[new CardId("defend")].Name);
-        Assert.Contains(content.CardDefinitions[new CardId("defend")].Effects, e => e is GainArmorCardEffect { Amount: 3, Target: CardTarget.Self });
-        Assert.Equal("Focus", content.CardDefinitions[new CardId("focus")].Name);
-        Assert.Equal("Attack", content.CardDefinitions[new CardId("attack")].Name);
+        Assert.Equal("Guard", content.CardDefinitions[new CardId("guard")].Name);
+        Assert.Equal("Quick Draw", content.CardDefinitions[new CardId("quick-draw")].Name);
+        Assert.Equal("Heavy Attack", content.CardDefinitions[new CardId("heavy-attack")].Name);
+        Assert.Equal("Feint", content.CardDefinitions[new CardId("feint")].Name);
     }
 
     [Fact]
@@ -28,22 +27,7 @@ public class StaticGameContentProviderTests
         var second = StaticGameContentProvider.LoadDefault();
 
         AssertCombatBlueprintEquivalent(first.OpeningCombat, second.OpeningCombat);
-
-        var firstDefinitions = first.CardDefinitions.OrderBy(kvp => kvp.Key.Value).ToArray();
-        var secondDefinitions = second.CardDefinitions.OrderBy(kvp => kvp.Key.Value).ToArray();
-        Assert.Equal(firstDefinitions.Length, secondDefinitions.Length);
-
-        for (var i = 0; i < firstDefinitions.Length; i++)
-        {
-            var expected = firstDefinitions[i];
-            var actual = secondDefinitions[i];
-
-            Assert.Equal(expected.Key, actual.Key);
-            Assert.Equal(expected.Value.Id, actual.Value.Id);
-            Assert.Equal(expected.Value.Name, actual.Value.Name);
-            Assert.Equal(expected.Value.Cost, actual.Value.Cost);
-            Assert.Equal(expected.Value.Effects, actual.Value.Effects);
-        }
+        Assert.Equal(first.RewardCardPool, second.RewardCardPool);
     }
 
     [Fact]

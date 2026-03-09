@@ -50,7 +50,7 @@ while (true)
 
             (state, var startedEvents) = GameReducer.Reduce(state, new StartRunAction(seed));
             newEvents.AddRange(startedEvents);
-            (state, var combatEvents) = GameReducer.Reduce(state, new BeginCombatAction(content.OpeningCombat, content.CardDefinitions));
+            (state, var combatEvents) = GameReducer.Reduce(state, new BeginCombatAction(content.OpeningCombat, content.CardDefinitions, content.RewardCardPool));
             newEvents.AddRange(combatEvents);
             break;
         }

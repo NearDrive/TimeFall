@@ -8,7 +8,7 @@ public abstract record GameAction;
 
 public sealed record StartRunAction(int Seed) : GameAction;
 
-public sealed record BeginCombatAction(CombatBlueprint Blueprint, IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions) : GameAction;
+public sealed record BeginCombatAction(CombatBlueprint Blueprint, IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions, IReadOnlyList<CardId>? RewardCardPool = null) : GameAction;
 
 public sealed record PlayCardAction(int HandIndex) : GameAction;
 

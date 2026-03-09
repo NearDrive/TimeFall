@@ -13,7 +13,7 @@ public class DeckRemovalReducerTests
     public void RemoveCardFromDeck_RemovesExactlyOneMatchingCard()
     {
         var strike = new CardId("strike");
-        var state = CreateMapStateWithRunDeck([strike, strike, new CardId("defend")]);
+        var state = CreateMapStateWithRunDeck([strike, strike, new CardId("guard")]);
 
         var entered = GameReducer.Reduce(state, new BeginDeckRemovalAction()).NewState;
         var result = GameReducer.Reduce(entered, new RemoveCardFromDeckAction(strike));
@@ -25,7 +25,7 @@ public class DeckRemovalReducerTests
     [Fact]
     public void RemoveCardFromDeck_IsRejected_WhenCardNotPresent()
     {
-        var state = CreateMapStateWithRunDeck([new CardId("strike"), new CardId("defend")]);
+        var state = CreateMapStateWithRunDeck([new CardId("strike"), new CardId("guard")]);
 
         var entered = GameReducer.Reduce(state, new BeginDeckRemovalAction()).NewState;
         var result = GameReducer.Reduce(entered, new RemoveCardFromDeckAction(new CardId("bash")));
@@ -37,10 +37,10 @@ public class DeckRemovalReducerTests
     [Fact]
     public void RemoveCardFromDeck_UpdatesRunDeckState()
     {
-        var state = CreateMapStateWithRunDeck([new CardId("strike"), new CardId("defend")]);
+        var state = CreateMapStateWithRunDeck([new CardId("strike"), new CardId("guard")]);
 
         var entered = GameReducer.Reduce(state, new BeginDeckRemovalAction()).NewState;
-        var result = GameReducer.Reduce(entered, new RemoveCardFromDeckAction(new CardId("defend")));
+        var result = GameReducer.Reduce(entered, new RemoveCardFromDeckAction(new CardId("guard")));
 
         Assert.Single(result.NewState.RunDeck);
         Assert.Equal(new CardId("strike"), result.NewState.RunDeck[0].DefinitionId);
@@ -83,7 +83,7 @@ public class DeckRemovalReducerTests
     [Fact]
     public void RemovalFlow_CannotRemoveWithoutEnteringRemovalState()
     {
-        var state = CreateMapStateWithRunDeck([new CardId("strike"), new CardId("defend")]);
+        var state = CreateMapStateWithRunDeck([new CardId("strike"), new CardId("guard")]);
 
         var result = GameReducer.Reduce(state, new RemoveCardFromDeckAction(new CardId("strike")));
 
