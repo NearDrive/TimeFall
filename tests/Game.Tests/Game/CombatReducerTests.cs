@@ -486,6 +486,95 @@ public class CombatReducerTests
         Assert.Equal(first, second);
     }
 
+
+    [Fact]
+    public void BeginCombat_WithoutExplicitRewardPool_FallsBackToProvidedDefinitions()
+    {
+        var alpha = new CardsCardId("alpha");
+        var beta = new CardsCardId("beta");
+        var cardDefinitions = new Dictionary<CardsCardId, CardDefinition>
+        {
+            [alpha] = new(alpha, "Alpha", 1, [new DamageCardEffect(4, CardTarget.Opponent)]),
+            [beta] = new(beta, "Beta", 1, [new GainArmorCardEffect(2, CardTarget.Self)]),
+        };
+
+        var blueprint = new CombatBlueprint(
+            Player: new CombatantBlueprint(
+                EntityId: "player",
+                HP: 20,
+                MaxHP: 20,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile: [alpha, alpha, alpha, alpha, beta]),
+            Enemy: new CombatantBlueprint(
+                EntityId: "enemy",
+                HP: 4,
+                MaxHP: 4,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile: [alpha]));
+
+        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(blueprint, cardDefinitions));
+        var alphaIndex = FindCardIndex(combatState.Combat!.Player.Deck.Hand, "alpha");
+
+        var (victoryState, _) = GameReducer.Reduce(combatState, new PlayCardAction(alphaIndex));
+
+        Assert.Equal(GamePhase.RewardSelection, victoryState.Phase);
+        Assert.NotNull(victoryState.Reward);
+        Assert.All(victoryState.Reward!.CardOptions, id => Assert.Contains(id, cardDefinitions.Keys));
+    }
+
+    [Fact]
+    public void PlayCard_QuickDraw_EmitsDeckCycleEvents_WhenDeckCycles()
+    {
+        var combatState = new CombatState(
+            TurnOwner: TurnOwner.Player,
+            Player: new CombatEntity(
+                EntityId: "player",
+                HP: 20,
+                MaxHP: 20,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(
+                    DrawPile: ImmutableList<CardInstance>.Empty,
+                    Hand: ImmutableList.Create(new CardInstance(new CardsCardId("quick-draw"))),
+                    DiscardPile: ImmutableList.Create(new CardInstance(new CardsCardId("strike"))),
+                    BurnPile: ImmutableList<CardInstance>.Empty,
+                    ReshuffleCount: 0)),
+            Enemy: new CombatEntity(
+                EntityId: "enemy",
+                HP: 20,
+                MaxHP: 20,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
+            NeedsOverflowDiscard: false,
+            RequiredOverflowDiscardCount: 0);
+
+        var state = new GameState(
+            GamePhase.Combat,
+            GameRng.FromSeed(11),
+            combatState,
+            null,
+            Content.CardDefinitions,
+            SampleMapFactory.CreateDefaultState(),
+            TimeState.Create(SampleMapFactory.CreateDefaultState()),
+            null,
+            ImmutableList<CardsCardId>.Empty,
+            ImmutableList<CardInstance>.Empty,
+            null,
+            20,
+            20,
+            null);
+
+        var (newState, events) = GameReducer.Reduce(state, new PlayCardAction(0));
+
+        Assert.Contains(events, e => e is DeckReshuffled);
+        Assert.Contains(events, e => e is CardDrawn { Card.DefinitionId.Value: "strike" });
+        Assert.NotNull(newState.Combat);
+        Assert.Equal(1, newState.Combat!.Player.Deck.BurnPile.Count);
+    }
+
     private static GameState CreateOverflowState(int requiredDiscardCount, int handSize)
     {
         var overflowCombatState = new CombatState(

@@ -107,7 +107,9 @@ public static class CardEffectResolver
         if (target == TurnOwner.Player)
         {
             var drawResult = HandManager.Draw(combatState, rng, effect.Amount);
-            var events = drawResult.DrawnCards.Select(card => (GameEvent)new CardDrawn(card)).ToArray();
+            var events = drawResult.Events
+                .Concat(drawResult.DrawnCards.Select(card => (GameEvent)new CardDrawn(card)))
+                .ToArray();
             return new DrawEffectResult(drawResult.CombatState, drawResult.Rng, events);
         }
 

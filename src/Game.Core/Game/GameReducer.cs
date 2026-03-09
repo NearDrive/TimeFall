@@ -83,7 +83,19 @@ public static class GameReducer
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, RewardCardPool = (action.RewardCardPool ?? PlaytestContent.RewardCardPool).ToImmutableList(), Reward = null, DeckEdit = null, NodeInteraction = null }, events);
+        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, RewardCardPool = ResolveRewardCardPool(action).ToImmutableList(), Reward = null, DeckEdit = null, NodeInteraction = null }, events);
+    }
+
+    private static IReadOnlyList<CardId> ResolveRewardCardPool(BeginCombatAction action)
+    {
+        if (action.RewardCardPool is { Count: > 0 })
+        {
+            return action.RewardCardPool;
+        }
+
+        return action.CardDefinitions.Keys
+            .OrderBy(id => id.Value, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -245,7 +257,7 @@ public static class GameReducer
                 Combat = drawResult.CombatState,
                 Rng = drawResult.Rng,
                 CardDefinitions = encounter.CardDefinitions,
-                RewardCardPool = encounter.RewardCardPool,
+                RewardCardPool = encounter.RewardCardPool.ToImmutableList(),
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
                 DeckEdit = null,
