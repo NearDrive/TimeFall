@@ -10,29 +10,30 @@ internal static class CliRenderer
     public static void RenderHelp()
     {
         Console.WriteLine("Commands:");
-        Console.WriteLine("  start <seed>        Start deterministic run");
+        Console.WriteLine("  start [seed]        Start run (default seed 1337)");
         Console.WriteLine("  state | status      Show run summary");
         Console.WriteLine("  help                Show commands");
         Console.WriteLine("  map                 Show current node and neighbors");
         Console.WriteLine("  move <nodeId>       Move to adjacent node");
         Console.WriteLine("  hand                Show combat hand");
-        Console.WriteLine("  play <index> [t]    Play card from hand");
+        Console.WriteLine("  play <index> [t]    Play card from hand (0-based index)");
         Console.WriteLine("  end                 End player turn");
         Console.WriteLine("  reward              Show reward options");
-        Console.WriteLine("  choose <id|index>   Claim reward card");
+        Console.WriteLine("  choose <id|index>   Claim reward card (index is 0-based)");
         Console.WriteLine("  skip                Skip active reward");
         Console.WriteLine("  rest                Use rest heal at rest node");
         Console.WriteLine("  shop                Show shop interaction summary");
         Console.WriteLine("  remove <id|index>   Remove card (shop/deck removal)");
         Console.WriteLine("  deck                Show run deck");
-        Console.WriteLine("  discard             Show combat discard pile");
+        Console.WriteLine("  discard <index...>  Discard overflow cards from hand (0-based)");
+        Console.WriteLine("  discardpile         Show combat discard pile");
         Console.WriteLine("  quit                Exit CLI");
     }
 
     public static void RenderState(GameState state, IReadOnlyList<GameEvent> recentEvents, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         Console.WriteLine($"Phase: {state.Phase}");
-        Console.WriteLine($"Run HP/Armor: {state.RunHp}/{state.RunMaxHp}");
+        Console.WriteLine($"Run HP: {state.RunHp}/{state.RunMaxHp}");
         Console.WriteLine($"Node: {state.Map.CurrentNodeId}");
 
         var neighbors = state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId).Select(n => n.Value);
@@ -131,8 +132,10 @@ internal static class CliRenderer
     private static void RenderCombat(CombatState combat, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         Console.WriteLine($"Combat turn: {combat.TurnOwner}");
-        Console.WriteLine($"Player HP/Armor: {combat.Player.HP}/{combat.Player.Armor}");
-        Console.WriteLine($"Enemy HP/Armor: {combat.Enemy.HP}/{combat.Enemy.Armor}");
+        Console.WriteLine($"Combat Player HP: {combat.Player.HP}");
+        Console.WriteLine($"Combat Player Armor: {combat.Player.Armor}");
+        Console.WriteLine($"Combat Enemy HP: {combat.Enemy.HP}");
+        Console.WriteLine($"Combat Enemy Armor: {combat.Enemy.Armor}");
         Console.WriteLine($"Enemy visible hand size: {combat.Enemy.Deck.Hand.Count}");
         Console.WriteLine($"Hand size: {combat.Player.Deck.Hand.Count}");
 

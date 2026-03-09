@@ -56,7 +56,7 @@ public class TimeSystemTests
     }
 
     [Fact]
-    public void PlayerCaughtByTime_WhenCurrentNodeCollapses()
+    public void TimeCaughtPlayer_Behavior_IsExplicitAndTested()
     {
         var state = CreateMapExplorationState();
 
@@ -65,7 +65,10 @@ public class TimeSystemTests
 
         Assert.True(afterElite.Time.PlayerCaughtByTime);
         Assert.True(afterElite.Time.TimeBossTriggerPending);
+        Assert.Equal(GamePhase.MapExploration, afterElite.Phase);
+        Assert.Null(afterElite.Combat);
         Assert.Contains(events, e => e is TimeCaughtPlayer { NodeId: var nodeId, Step: 2 } && nodeId == new NodeId("elite-1"));
+        Assert.DoesNotContain(events, e => e is EnteredCombat);
     }
 
     [Fact]

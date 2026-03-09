@@ -21,6 +21,8 @@ internal sealed record ParsedCommand(GameAction? Action, CliView? View, string? 
 
 internal static class CliCommandParser
 {
+    internal const int DefaultSeed = 1337;
+
     public static bool TryParse(string input, out ParsedCommand command, out string error)
     {
         command = new ParsedCommand(null, null);
@@ -47,12 +49,39 @@ internal static class CliCommandParser
             case "hand": command = new ParsedCommand(null, CliView.Hand); return true;
             case "reward": command = new ParsedCommand(null, CliView.Reward); return true;
             case "deck": command = new ParsedCommand(null, CliView.Deck); return true;
-            case "discard": command = new ParsedCommand(null, CliView.Discard); return true;
+            case "discard":
+                if (parts.Length < 2)
+                {
+                    error = "Usage: discard <index...>";
+                    return false;
+                }
+
+                var indexes = new int[parts.Length - 1];
+                for (var i = 1; i < parts.Length; i++)
+                {
+                    if (!int.TryParse(parts[i], out var index))
+                    {
+                        error = "Usage: discard <index...>";
+                        return false;
+                    }
+
+                    indexes[i - 1] = index;
+                }
+
+                command = new ParsedCommand(new DiscardOverflowAction(indexes), null);
+                return true;
+            case "discardpile": command = new ParsedCommand(null, CliView.Discard); return true;
             case "shop": command = new ParsedCommand(null, CliView.Shop); return true;
             case "start":
+                if (parts.Length == 1)
+                {
+                    command = new ParsedCommand(new StartRunAction(DefaultSeed), null);
+                    return true;
+                }
+
                 if (parts.Length != 2 || !int.TryParse(parts[1], out var seed))
                 {
-                    error = "Usage: start <seed>";
+                    error = "Usage: start [seed]";
                     return false;
                 }
 
