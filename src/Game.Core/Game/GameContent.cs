@@ -14,15 +14,15 @@ public sealed record CombatantBlueprint(
 
 public sealed record CombatBlueprint
 {
-    public CombatBlueprint(CombatantBlueprint player, CombatantBlueprint enemy)
-        : this(player, ImmutableList.Create(enemy))
+    public CombatBlueprint(CombatantBlueprint Player, CombatantBlueprint Enemy)
+        : this(Player, ImmutableList.Create(Enemy))
     {
     }
 
-    public CombatBlueprint(CombatantBlueprint player, IReadOnlyList<CombatantBlueprint> enemies)
+    public CombatBlueprint(CombatantBlueprint Player, IReadOnlyList<CombatantBlueprint> Enemies)
     {
-        Player = player;
-        Enemies = enemies;
+        this.Player = Player;
+        this.Enemies = Enemies;
     }
 
     public CombatantBlueprint Player { get; init; }
