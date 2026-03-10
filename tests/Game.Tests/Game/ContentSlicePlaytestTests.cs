@@ -55,7 +55,7 @@ public class ContentSlicePlaytestTests
     [Fact]
     public void StarterCombat_UsesExpectedEncounterShape()
     {
-        var combat = Game.Core.Content.PlaytestContent.OpeningCombat;
+        var combat = global::Game.Core.Content.PlaytestContent.OpeningCombat;
 
         Assert.Equal("enemy-standard-blade-raider", combat.Enemy.EntityId);
         Assert.Equal(28, combat.Enemy.HP);
