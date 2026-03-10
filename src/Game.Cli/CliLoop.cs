@@ -10,7 +10,7 @@ internal sealed class CliLoop
 
     public void Run()
     {
-        var state = GameState.Initial;
+        var state = GameState.CreateInitial(_content.CardDefinitions, _content.DeckDefinitions, _content.RewardCardPool);
         var eventLog = new List<GameEvent>();
 
         Console.WriteLine("Timefall CLI playtest harness. Type 'help' for commands.");
@@ -43,6 +43,11 @@ internal sealed class CliLoop
             }
 
             var action = ResolveContextualAction(command, state) ?? command.Action;
+            if (action is StartRunAction && state.SelectedDeckId is null)
+            {
+                Console.WriteLine("Select a deck first using 'select <deckId|index>'.");
+                continue;
+            }
             if (action is DiscardOverflowAction discardOverflowAction && !TryValidateOverflowDiscard(discardOverflowAction, state, out var overflowError))
             {
                 Console.WriteLine(overflowError);
@@ -108,6 +113,16 @@ internal sealed class CliLoop
 
         if (int.TryParse(command.Argument, out var index))
         {
+            if (state.Phase == GamePhase.DeckSelect)
+            {
+                if (index < 0 || index >= state.AvailableDeckIds.Count)
+                {
+                    return null;
+                }
+
+                return new SelectDeckAction(state.AvailableDeckIds[index]);
+            }
+
             if (command.Action is MoveToNodeAction && state.Phase == GamePhase.MapExploration)
             {
                 var adjacentNodes = state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId).ToArray();
@@ -157,6 +172,11 @@ internal sealed class CliLoop
             return new ChooseRewardCardAction(id);
         }
 
+        if (command.Action is SelectDeckAction)
+        {
+            return new SelectDeckAction(command.Argument);
+        }
+
         return command.Action;
     }
 
@@ -189,6 +209,9 @@ internal sealed class CliLoop
                 break;
             case CliView.Deck:
                 CliRenderer.RenderDeck(state, _content.CardDefinitions);
+                break;
+            case CliView.Decks:
+                CliRenderer.RenderDecks(state);
                 break;
             case CliView.Discard:
                 CliRenderer.RenderDiscard(state, _content.CardDefinitions);

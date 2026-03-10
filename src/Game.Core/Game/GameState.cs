@@ -20,6 +20,9 @@ public sealed record GameState(
     TimeState Time,
     RewardState? Reward,
     ImmutableList<CardId> RewardCardPool,
+    IReadOnlyDictionary<string, RunDeckDefinition> DeckDefinitions,
+    ImmutableList<string> AvailableDeckIds,
+    string? SelectedDeckId,
     ImmutableList<CardInstance> RunDeck,
     DeckEditState? DeckEdit,
     int RunHp,
@@ -41,9 +44,27 @@ public sealed record GameState(
         TimeState.Create(InitialMap),
         null,
         ImmutableList<CardId>.Empty,
+        ImmutableDictionary<string, RunDeckDefinition>.Empty,
+        ImmutableList<string>.Empty,
+        null,
         ImmutableList<CardInstance>.Empty,
         null,
         DefaultRunMaxHp,
         DefaultRunMaxHp,
         null);
+
+    public static GameState CreateInitial(
+        IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions,
+        IReadOnlyDictionary<string, RunDeckDefinition> deckDefinitions,
+        IReadOnlyList<CardId> rewardCardPool)
+    {
+        var availableDeckIds = deckDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToImmutableList();
+        return Initial with
+        {
+            CardDefinitions = cardDefinitions,
+            DeckDefinitions = deckDefinitions,
+            AvailableDeckIds = availableDeckIds,
+            RewardCardPool = rewardCardPool.ToImmutableList(),
+        };
+    }
 }

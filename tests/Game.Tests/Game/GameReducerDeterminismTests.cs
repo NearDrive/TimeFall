@@ -11,9 +11,10 @@ public class GameReducerDeterminismTests
     [Fact]
     public void StartRunAction_UsesProvidedSeedInRng()
     {
-        var initialState = GameState.Initial;
+        var initialState = GameStateTestFactory.CreateInitialWithContent();
+        var selectedState = GameReducer.Reduce(initialState, new SelectDeckAction(initialState.AvailableDeckIds[0])).NewState;
 
-        var (newState, events) = GameReducer.Reduce(initialState, new StartRunAction(1337));
+        var (newState, events) = GameReducer.Reduce(selectedState, new StartRunAction(1337));
 
         Assert.Equal(1337, newState.Rng.Seed);
         var runStarted = Assert.Single(events);
@@ -23,7 +24,8 @@ public class GameReducerDeterminismTests
     [Fact]
     public void Reduce_IsDeterministic_ForSameInitialStateAndAction()
     {
-        var initialState = GameState.Initial;
+        var initialState = GameStateTestFactory.CreateInitialWithContent();
+        initialState = GameReducer.Reduce(initialState, new SelectDeckAction(initialState.AvailableDeckIds[0])).NewState;
         var action = new StartRunAction(42);
 
         var first = GameReducer.Reduce(initialState, action);
@@ -36,8 +38,8 @@ public class GameReducerDeterminismTests
     [Fact]
     public void BeginCombat_IsDeterministic_ForSameSeedAndLoadedContent()
     {
-        var (runA, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(2024));
-        var (runB, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(2024));
+        var runA = GameStateTestFactory.CreateStartedRun(2024);
+        var runB = GameStateTestFactory.CreateStartedRun(2024);
 
         var first = GameReducer.Reduce(runA, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
         var second = GameReducer.Reduce(runB, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));

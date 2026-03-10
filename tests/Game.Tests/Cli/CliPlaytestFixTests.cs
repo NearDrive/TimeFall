@@ -227,13 +227,41 @@ public sealed class CliPlaytestFixTests
         Assert.Equal(CliCommandParser.DefaultSeed, start.Seed);
     }
 
+    [Fact]
+    public void CliDecksCommand_ShowsAvailableDecks()
+    {
+        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool);
+
+        var output = CaptureConsole(() => CliRenderer.RenderDecks(state));
+
+        Assert.Contains("deck-blades", output);
+        Assert.Contains("Resource: Momentum", output);
+    }
+
+    [Fact]
+    public void CliSelectCommand_CanUseIndexOrDeckId()
+    {
+        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool);
+
+        var byIndexParsed = CliCommandParser.TryParse("select 0", out var byIndex, out var byIndexError);
+        Assert.True(byIndexParsed, byIndexError);
+        var byIndexAction = CliLoop.ResolveContextualAction(byIndex, state);
+        Assert.IsType<SelectDeckAction>(byIndexAction);
+        Assert.Equal("deck-blades", ((SelectDeckAction)byIndexAction!).DeckId);
+
+        var byIdParsed = CliCommandParser.TryParse("select deck-blades", out var byId, out var byIdError);
+        Assert.True(byIdParsed, byIdError);
+        var byIdAction = CliLoop.ResolveContextualAction(byId, state);
+        Assert.IsType<SelectDeckAction>(byIdAction);
+        Assert.Equal("deck-blades", ((SelectDeckAction)byIdAction!).DeckId);
+    }
+
 
     private static GameState CreateMapExplorationState()
     {
         var map = SampleMapFactory.CreateDefaultState();
-        return GameState.Initial with
+        return GameStateTestFactory.CreateStartedRun() with
         {
-            Phase = GamePhase.MapExploration,
             Map = map,
             Time = TimeState.Create(map),
         };
@@ -241,7 +269,7 @@ public sealed class CliPlaytestFixTests
 
     private static GameState CreateOverflowPendingCombatState(int requiredDiscards)
     {
-        var started = GameReducer.Reduce(GameState.Initial, new StartRunAction(123)).NewState;
+        var started = GameStateTestFactory.CreateStartedRun(123);
         var combat = GameReducer.Reduce(started, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions)).NewState;
 
         return combat with

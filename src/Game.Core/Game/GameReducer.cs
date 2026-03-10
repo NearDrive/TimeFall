@@ -4,7 +4,6 @@ using Game.Core.Common;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
 using Game.Core.Rewards;
-using Game.Core.Content;
 using Game.Core.Decks;
 using NodeId = Game.Core.Map.NodeId;
 using CardId = Game.Core.Cards.CardId;
@@ -14,8 +13,6 @@ namespace Game.Core.Game;
 
 public static class GameReducer
 {
-    private static readonly ImmutableArray<CardId> DefaultRunDeckCardIds = PlaytestContent.StarterDeck;
-
     public static (GameState NewState, IReadOnlyList<GameEvent> Events) Reduce(GameState state, GameAction action)
     {
         if (IsBlockedByPendingCombatRequirement(state, action))
@@ -25,6 +22,7 @@ public static class GameReducer
 
         return action switch
         {
+            SelectDeckAction selectDeckAction => SelectDeck(state, selectDeckAction),
             StartRunAction startRunAction => StartRun(state, startRunAction),
             BeginCombatAction beginCombatAction => BeginCombat(state, beginCombatAction),
             PlayCardAction playCardAction => PlayCard(state, playCardAction),
@@ -41,9 +39,35 @@ public static class GameReducer
         };
     }
 
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) SelectDeck(GameState state, SelectDeckAction action)
+    {
+        if (state.Phase != GamePhase.DeckSelect)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (!state.DeckDefinitions.ContainsKey(action.DeckId))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { SelectedDeckId = action.DeckId }, new GameEvent[] { new DeckSelected(action.DeckId) });
+    }
+
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartRun(GameState state, StartRunAction action)
     {
+        if (state.Phase != GamePhase.DeckSelect)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var selectedDeck))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
         var mapState = SampleMapFactory.CreateDefaultState();
+        var initializedRunDeck = selectedDeck.StartingDeck.Select(id => new CardInstance(id)).ToImmutableList();
         var newState = new GameState(
             GamePhase.MapExploration,
             GameRng.FromSeed(action.Seed),
@@ -53,11 +77,14 @@ public static class GameReducer
             mapState,
             TimeState.Create(mapState),
             null,
-            PlaytestContent.RewardCardPool.ToImmutableList(),
-            ImmutableList<CardInstance>.Empty,
+            state.RewardCardPool,
+            state.DeckDefinitions,
+            state.AvailableDeckIds,
+            state.SelectedDeckId,
+            initializedRunDeck,
             null,
-            GameState.DefaultRunMaxHp,
-            GameState.DefaultRunMaxHp,
+            selectedDeck.BaseMaxHp,
+            selectedDeck.BaseMaxHp,
             null);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
@@ -546,11 +573,22 @@ public static class GameReducer
             HP = state.RunHp,
             MaxHP = state.RunMaxHp,
             DrawPile = runDeck.Select(card => card.DefinitionId).ToArray(),
+            Resources = ResolveStartingResources(state, blueprint.Player.Resources),
         };
 
         var player = CreateCombatEntity(playerBlueprint);
         var enemy = CreateCombatEntity(blueprint.Enemy);
         return new CombatState(TurnOwner.Player, player, enemy, false, 0);
+    }
+
+    private static IReadOnlyDictionary<ResourceType, int> ResolveStartingResources(GameState state, IReadOnlyDictionary<ResourceType, int> fallback)
+    {
+        if (state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var selectedDeck))
+        {
+            return fallback;
+        }
+
+        return selectedDeck.StartingResources;
     }
 
     private static GameState EnsureRunDeckInitialized(GameState state, CombatBlueprint blueprint)
@@ -574,7 +612,12 @@ public static class GameReducer
             return state;
         }
 
-        var initializedDeck = DefaultRunDeckCardIds
+        if (state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var selectedDeck))
+        {
+            return state;
+        }
+
+        var initializedDeck = selectedDeck.StartingDeck
             .Select(id => new CardInstance(id))
             .ToImmutableList();
 

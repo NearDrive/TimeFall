@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Game.Core.Cards;
+using Game.Core.Combat;
+using Game.Core.Game;
 
 namespace Game.Data.Content;
 
@@ -24,6 +26,32 @@ internal static class BladesContentLoader
         }
 
         return result;
+    }
+
+    public static RunDeckDefinition LoadDeck(string root)
+    {
+        var json = File.ReadAllText(Path.Combine(root, "blades.deck.json"));
+        var deck = JsonSerializer.Deserialize<JsonElement>(json);
+
+        var id = deck.GetProperty("id").GetString()!;
+        var name = deck.GetProperty("name").GetString()!;
+        var resourceType = Enum.Parse<ResourceType>(deck.GetProperty("resourceType").GetString()!, ignoreCase: true);
+        var baseMaxHp = deck.GetProperty("baseMaxHp").GetInt32();
+        var startingDeck = deck.GetProperty("startingDeck").EnumerateArray().Select(x => new CardId(x.GetString()!)).ToArray();
+
+        var startingResources = new Dictionary<ResourceType, int>
+        {
+            [resourceType] = resourceType == ResourceType.Momentum ? 0 : 3,
+        };
+
+        return new RunDeckDefinition(
+            Id: id,
+            Name: name,
+            Description: null,
+            ResourceType: resourceType,
+            BaseMaxHp: baseMaxHp,
+            StartingDeck: startingDeck,
+            StartingResources: startingResources);
     }
 
     private static CardCost ParseCost(JsonElement e)

@@ -10,6 +10,8 @@ internal static class CliRenderer
     public static void RenderHelp()
     {
         Console.WriteLine("Commands:");
+        Console.WriteLine("  decks               List available run decks");
+        Console.WriteLine("  select <id|index>   Select run deck in DeckSelect phase");
         Console.WriteLine("  start [seed]        Start run (default seed 1337)");
         Console.WriteLine("  state | status      Show run summary");
         Console.WriteLine("  help                Show commands");
@@ -33,6 +35,10 @@ internal static class CliRenderer
     public static void RenderState(GameState state, IReadOnlyList<GameEvent> recentEvents, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         Console.WriteLine($"Phase: {state.Phase}");
+        if (state.Phase == GamePhase.DeckSelect)
+        {
+            RenderDeckSelection(state);
+        }
         Console.WriteLine($"Run HP: {state.RunHp}/{state.RunMaxHp}");
         Console.WriteLine($"Node: {state.Map.CurrentNodeId}");
 
@@ -119,6 +125,26 @@ internal static class CliRenderer
         }
     }
 
+    public static void RenderDecks(GameState state)
+    {
+        if (state.AvailableDeckIds.Count == 0)
+        {
+            Console.WriteLine("No decks available in loaded content.");
+            return;
+        }
+
+        for (var i = 0; i < state.AvailableDeckIds.Count; i++)
+        {
+            var deckId = state.AvailableDeckIds[i];
+            var deck = state.DeckDefinitions[deckId];
+            Console.WriteLine($"[{i}] {deckId} — {deck.Name} (HP {deck.BaseMaxHp}, Resource: {deck.ResourceType})");
+        }
+
+        Console.WriteLine(state.SelectedDeckId is null
+            ? "Selected deck: (none)"
+            : $"Selected deck: {state.SelectedDeckId}");
+    }
+
     public static void RenderDiscard(GameState state, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         if (state.Combat is not { } combat)
@@ -163,6 +189,7 @@ internal static class CliRenderer
         return gameEvent switch
         {
             RunStarted e => $"Run started (seed {e.Seed})",
+            DeckSelected e => $"Deck selected: {e.DeckId}",
             TurnEnded e => $"---------------- {e.NextTurnOwner} turn begins ----------------",
             ResourceChanged e => $"{e.Owner} {e.ResourceType}: {e.Before} -> {e.After} ({e.Reason})",
             MomentumDecayApplied e => $"Momentum decay: gm {e.BeforeGm} -> {e.AfterGm}",
@@ -234,6 +261,16 @@ internal static class CliRenderer
     private static string GetCardName(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         return cardDefinitions.TryGetValue(id, out var def) ? def.Name : id.Value;
+    }
+
+    private static void RenderDeckSelection(GameState state)
+    {
+        Console.WriteLine("Deck selection:");
+        RenderDecks(state);
+        if (state.SelectedDeckId is null)
+        {
+            Console.WriteLine("No deck selected. Use 'decks' and 'select <id|index>' before 'start'.");
+        }
     }
 
 }
