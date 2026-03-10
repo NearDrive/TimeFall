@@ -1,4 +1,5 @@
 using Game.Core.Cards;
+using CardsCardId = Game.Core.Cards.CardId;
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Content;
@@ -123,5 +124,5 @@ public sealed class EnemyTurnFlowTests
             RequiredOverflowDiscardCount: 0);
     }
 
-    private static CardInstance ToCard(string id) => new(new CardId(id));
+    private static CardInstance ToCard(string id) => new(new CardsCardId(id));
 }
