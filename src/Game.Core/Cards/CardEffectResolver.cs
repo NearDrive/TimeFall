@@ -245,7 +245,7 @@ public static class CardEffectResolver
             return state.Enemies.FirstOrDefault(e => e.EntityId == enemyId);
         }
 
-        return state.Enemies.FirstOrDefault();
+        return state.Enemies.FirstOrDefault(e => e.HP > 0);
     }
 
     private static CombatState UpdateEnemyById(CombatState state, string? enemyId, Func<CombatEntity, CombatEntity> update)
