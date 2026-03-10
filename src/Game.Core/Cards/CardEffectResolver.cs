@@ -6,8 +6,11 @@ namespace Game.Core.Cards;
 
 public static class CardEffectResolver
 {
+    public static bool HasResolvableEffects(CardDefinition definition)
+        => definition.Effects.Count > 0;
+
     public static bool HasResolvableEffects(CardInstance card, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
-        => cardDefinitions.TryGetValue(card.DefinitionId, out var definition) && definition.Effects.Count > 0;
+        => cardDefinitions.TryGetValue(card.DefinitionId, out var definition) && HasResolvableEffects(definition);
 
     public static CardEffectResolution Resolve(
         CombatState combatState,

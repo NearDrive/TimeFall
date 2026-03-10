@@ -7,6 +7,17 @@ namespace Game.Core.Game;
 
 public abstract record GameEvent;
 
+public enum PlayCardRejectionReason
+{
+    NotInCombat,
+    NotPlayerTurn,
+    ActionBlockedByPendingDiscard,
+    InvalidHandIndex,
+    CardDefinitionMissing,
+    CardHasNoResolvableEffects,
+    CostNotPayable,
+}
+
 public sealed record DeckSelected(string DeckId) : GameEvent;
 
 public sealed record RunStarted(int Seed) : GameEvent;
@@ -14,6 +25,8 @@ public sealed record RunStarted(int Seed) : GameEvent;
 public sealed record EnteredCombat(NodeId? NodeId, NodeType? NodeType) : GameEvent;
 
 public sealed record CardDrawn(CardInstance Card) : GameEvent;
+
+public sealed record PlayCardRejected(PlayCardRejectionReason Reason, string Message) : GameEvent;
 
 public sealed record PlayerStrikePlayed(
     CardInstance Card,

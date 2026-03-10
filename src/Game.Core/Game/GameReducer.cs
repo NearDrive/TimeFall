@@ -17,6 +17,11 @@ public static class GameReducer
     {
         if (IsBlockedByPendingCombatRequirement(state, action))
         {
+            if (action is PlayCardAction)
+            {
+                return RejectPlayCard(state, PlayCardRejectionReason.ActionBlockedByPendingDiscard, "Discard overflow cards before playing more cards.");
+            }
+
             return (state, Array.Empty<GameEvent>());
         }
 
@@ -134,34 +139,34 @@ public static class GameReducer
     {
         if (state is not { Phase: GamePhase.Combat, Combat: { } combatState })
         {
-            return (state, Array.Empty<GameEvent>());
+            return RejectPlayCard(state, PlayCardRejectionReason.NotInCombat, "You can only play cards while in combat.");
         }
 
         if (combatState.TurnOwner != TurnOwner.Player)
         {
-            return (state, Array.Empty<GameEvent>());
+            return RejectPlayCard(state, PlayCardRejectionReason.NotPlayerTurn, "Cards can only be played on the player's turn.");
         }
 
         if (action.HandIndex < 0 || action.HandIndex >= combatState.Player.Deck.Hand.Count)
         {
-            return (state, Array.Empty<GameEvent>());
+            return RejectPlayCard(state, PlayCardRejectionReason.InvalidHandIndex, $"Hand index {action.HandIndex} is out of range.");
         }
 
         var card = combatState.Player.Deck.Hand[action.HandIndex];
-        if (!CardEffectResolver.HasResolvableEffects(card, state.CardDefinitions))
-        {
-            return (state, Array.Empty<GameEvent>());
-        }
-
         if (!state.CardDefinitions.TryGetValue(card.DefinitionId, out var cardDefinition))
         {
-            return (state, Array.Empty<GameEvent>());
+            return RejectPlayCard(state, PlayCardRejectionReason.CardDefinitionMissing, $"Card definition '{card.DefinitionId.Value}' was not found.");
+        }
+
+        if (!CardEffectResolver.HasResolvableEffects(cardDefinition))
+        {
+            return RejectPlayCard(state, PlayCardRejectionReason.CardHasNoResolvableEffects, $"Card '{cardDefinition.Name}' has no resolvable effects.");
         }
 
         var events = new List<GameEvent>();
         if (!TryPayCost(combatState, cardDefinition, events, out var costPaidState))
         {
-            return (state, Array.Empty<GameEvent>());
+            return RejectPlayCard(state, PlayCardRejectionReason.CostNotPayable, $"Cost for '{cardDefinition.Name}' cannot be paid.");
         }
 
         combatState = costPaidState;
@@ -334,8 +339,8 @@ public static class GameReducer
                 Phase = GamePhase.Combat,
                 Combat = drawResult.CombatState,
                 Rng = drawResult.Rng,
-                CardDefinitions = encounter.CardDefinitions,
-                RewardCardPool = encounter.RewardCardPool.ToImmutableList(),
+                CardDefinitions = movedState.CardDefinitions,
+                RewardCardPool = movedState.RewardCardPool,
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
                 DeckEdit = null,
@@ -728,6 +733,11 @@ public static class GameReducer
                 newState = combatState with { LastCardMomentumSpent = 0 };
                 return true;
         }
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) RejectPlayCard(GameState state, PlayCardRejectionReason reason, string message)
+    {
+        return (state, new GameEvent[] { new PlayCardRejected(reason, message) });
     }
 
     private static bool IsBlockedByPendingCombatRequirement(GameState state, GameAction action)

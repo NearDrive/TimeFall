@@ -61,6 +61,13 @@ internal sealed class CliLoop
 
             var previousState = state;
             (state, var newEvents) = GameReducer.Reduce(state, action);
+            var rejection = newEvents.OfType<PlayCardRejected>().LastOrDefault();
+            if (rejection is not null)
+            {
+                Console.WriteLine($"Play rejected: {rejection.Reason} ({rejection.Message})");
+                continue;
+            }
+
             if (ReferenceEquals(previousState, state) && newEvents.Count == 0)
             {
                 Console.WriteLine("Action rejected by game rules for current phase/state.");

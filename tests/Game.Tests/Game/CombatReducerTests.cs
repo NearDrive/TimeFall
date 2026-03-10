@@ -201,7 +201,9 @@ public class CombatReducerTests
         var result = GameReducer.Reduce(overflowState, new PlayCardAction(0));
 
         Assert.Equal(overflowState, result.NewState);
-        Assert.Empty(result.Events);
+        Assert.Single(result.Events);
+        var rejection = Assert.IsType<PlayCardRejected>(result.Events[0]);
+        Assert.Equal(PlayCardRejectionReason.ActionBlockedByPendingDiscard, rejection.Reason);
     }
 
     [Fact]
@@ -225,7 +227,9 @@ public class CombatReducerTests
         var playResult = GameReducer.Reduce(combatState, new PlayCardAction(handIndex));
 
         Assert.Equal(combatState, playResult.NewState);
-        Assert.Empty(playResult.Events);
+        Assert.Single(playResult.Events);
+        var rejection = Assert.IsType<PlayCardRejected>(playResult.Events[0]);
+        Assert.Equal(PlayCardRejectionReason.InvalidHandIndex, rejection.Reason);
 
         var overflowState = CreateOverflowState(requiredDiscardCount: 1, handSize: 8);
         var discardResult = GameReducer.Reduce(overflowState, new DiscardOverflowAction([handIndex]));
@@ -243,7 +247,8 @@ public class CombatReducerTests
         var endTurnResult = GameReducer.Reduce(state, new EndTurnAction());
 
         Assert.Equal(state, playResult.NewState);
-        Assert.Empty(playResult.Events);
+        Assert.Single(playResult.Events);
+        Assert.Equal(PlayCardRejectionReason.NotInCombat, Assert.IsType<PlayCardRejected>(playResult.Events[0]).Reason);
         Assert.Equal(state, endTurnResult.NewState);
         Assert.Empty(endTurnResult.Events);
     }
@@ -258,7 +263,8 @@ public class CombatReducerTests
         var discardResult = GameReducer.Reduce(overflowState, new DiscardOverflowAction([0]));
 
         Assert.Equal(overflowState, playResult.NewState);
-        Assert.Empty(playResult.Events);
+        Assert.Single(playResult.Events);
+        Assert.Equal(PlayCardRejectionReason.ActionBlockedByPendingDiscard, Assert.IsType<PlayCardRejected>(playResult.Events[0]).Reason);
         Assert.Equal(overflowState, endTurnResult.NewState);
         Assert.Empty(endTurnResult.Events);
         Assert.NotEqual(overflowState, discardResult.NewState);
