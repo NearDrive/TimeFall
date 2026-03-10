@@ -16,6 +16,9 @@ public enum PlayCardRejectionReason
     CardDefinitionMissing,
     CardHasNoResolvableEffects,
     CostNotPayable,
+    MissingTarget,
+    InvalidTarget,
+    TargetIsDead,
 }
 
 public sealed record DeckSelected(string DeckId) : GameEvent;

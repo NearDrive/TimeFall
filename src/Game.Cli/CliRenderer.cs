@@ -18,7 +18,7 @@ internal static class CliRenderer
         Console.WriteLine("  map                 Show current node and neighbors");
         Console.WriteLine("  move <nodeId|i>     Move to adjacent node (nodeId or 0-based adjacent index)");
         Console.WriteLine("  hand                Show combat hand");
-        Console.WriteLine("  play <index> [t]    Play card from hand (0-based index)");
+        Console.WriteLine("  play <index> [t]    Play card from hand (0-based index, optional target index)");
         Console.WriteLine("  end                 End player turn");
         Console.WriteLine("  reward              Show reward options");
         Console.WriteLine("  choose <id|index>   Claim reward card (index is 0-based)");
@@ -167,12 +167,16 @@ internal static class CliRenderer
         Console.WriteLine($"Combat Player Armor: {combat.Player.Armor}");
         var gm = combat.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
         Console.WriteLine($"Momentum: {MomentumMath.DerivedMomentumFromGm(gm)} (gm: {gm})");
-        Console.WriteLine($"Combat Enemy HP: {combat.Enemy.HP}");
-        Console.WriteLine($"Combat Enemy Armor: {combat.Enemy.Armor}");
         Console.WriteLine($"Player statuses: {FormatStatuses(combat.Player)}");
-        Console.WriteLine($"Enemy statuses: {FormatStatuses(combat.Enemy)}");
         Console.WriteLine($"Player piles: draw {combat.Player.Deck.DrawPile.Count} | hand {combat.Player.Deck.Hand.Count} | discard {combat.Player.Deck.DiscardPile.Count} | burn {combat.Player.Deck.BurnPile.Count}");
-        Console.WriteLine($"Enemy piles: draw {combat.Enemy.Deck.DrawPile.Count} | hand {combat.Enemy.Deck.Hand.Count} | discard {combat.Enemy.Deck.DiscardPile.Count} | burn {combat.Enemy.Deck.BurnPile.Count}");
+        Console.WriteLine("Enemies:");
+        for (var i = 0; i < combat.Enemies.Count; i++)
+        {
+            var enemy = combat.Enemies[i];
+            Console.WriteLine($"  [{i}] {enemy.EntityId} — HP {enemy.HP}, Armor {enemy.Armor}");
+            Console.WriteLine($"      Statuses: {FormatStatuses(enemy)}");
+            Console.WriteLine($"      Piles: draw {enemy.Deck.DrawPile.Count} | hand {enemy.Deck.Hand.Count} | discard {enemy.Deck.DiscardPile.Count} | burn {enemy.Deck.BurnPile.Count}");
+        }
 
         if (combat.NeedsOverflowDiscard)
         {

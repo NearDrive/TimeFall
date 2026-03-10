@@ -110,6 +110,11 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
+        if (action.Blueprint.Enemies.Count < 1 || action.Blueprint.Enemies.Count > 3)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
         var stateWithDeck = EnsureRunDeckInitialized(state, action.Blueprint);
         var combatState = CreateCombatState(stateWithDeck, action.Blueprint, stateWithDeck.RunDeck);
         var drawResult = HandManager.Draw(combatState, state.Rng, 5);
@@ -165,6 +170,37 @@ public static class GameReducer
             return RejectPlayCard(state, PlayCardRejectionReason.CardHasNoResolvableEffects, $"Card '{cardDefinition.Name}' has no resolvable effects.");
         }
 
+        string? selectedEnemyId = null;
+        if (CardEffectResolver.RequiresEnemyTarget(cardDefinition))
+        {
+            if (action.TargetIndex is null)
+            {
+                if (combatState.Enemies.Count == 1)
+                {
+                    selectedEnemyId = combatState.Enemies[0].EntityId;
+                }
+                else
+                {
+                    return RejectPlayCard(state, PlayCardRejectionReason.MissingTarget, "This card requires an enemy target.");
+                }
+            }
+            else
+            {
+                if (action.TargetIndex.Value < 0 || action.TargetIndex.Value >= combatState.Enemies.Count)
+                {
+                    return RejectPlayCard(state, PlayCardRejectionReason.InvalidTarget, $"Target index {action.TargetIndex.Value} is out of range.");
+                }
+
+                var targetEnemy = combatState.Enemies[action.TargetIndex.Value];
+                if (targetEnemy.HP <= 0)
+                {
+                    return RejectPlayCard(state, PlayCardRejectionReason.TargetIsDead, $"Target index {action.TargetIndex.Value} is dead.");
+                }
+
+                selectedEnemyId = targetEnemy.EntityId;
+            }
+        }
+
         var events = new List<GameEvent>();
         if (!TryPayCost(combatState, cardDefinition, events, out var costPaidState))
         {
@@ -184,8 +220,8 @@ public static class GameReducer
             },
         };
 
-        var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions, state.Rng);
-        combatState = resolution.CombatState;
+        var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions, state.Rng, selectedEnemyId);
+        combatState = PruneDeadEnemies(resolution.CombatState);
 
         if (cardDefinition.HasLabel("Attack"))
         {
@@ -236,7 +272,7 @@ public static class GameReducer
         combatState = combatState with { TurnOwner = TurnOwner.Enemy, PlayedAttackThisTurn = false, AttacksPlayedThisTurn = 0, AllAttacksBonusDamageThisTurn = 0, AllAttacksDoubleThisTurn = false, NextAttackBonusDamageThisTurn = 0, NextAttackDoubleThisTurn = false };
         events.Add(new TurnEnded(TurnOwner.Enemy));
         combatState = ApplyStartOfTurnStatuses(combatState, TurnOwner.Enemy, events);
-        if (combatState.Enemy.HP <= 0)
+        if (combatState.Enemies.Count == 0)
         {
             return ResolveCombatPhase(state with { Combat = combatState, Rng = state.Rng }, events);
         }
@@ -247,7 +283,7 @@ public static class GameReducer
         events.AddRange(enemyTurnStart.DrawnCards.Select(card => new CardDrawn(card)));
 
         var enemyResult = EnemyController.ExecuteTurn(combatState, enemyTurnStart.Rng, state.CardDefinitions);
-        combatState = enemyResult.CombatState;
+        combatState = PruneDeadEnemies(enemyResult.CombatState);
         events.AddRange(enemyResult.Events);
 
         if (combatState.Player.HP <= 0)
@@ -257,7 +293,7 @@ public static class GameReducer
 
         combatState = combatState with { TurnOwner = TurnOwner.Player };
         events.Add(new TurnEnded(TurnOwner.Player));
-        combatState = ApplyStartOfTurnStatuses(combatState, TurnOwner.Player, events);
+        combatState = PruneDeadEnemies(ApplyStartOfTurnStatuses(combatState, TurnOwner.Player, events));
         if (combatState.Player.HP <= 0)
         {
             return ResolveCombatPhase(state with { Combat = combatState, Rng = enemyResult.Rng }, events);
@@ -604,8 +640,8 @@ public static class GameReducer
         };
 
         var player = CreateCombatEntity(playerBlueprint);
-        var enemy = CreateCombatEntity(blueprint.Enemy);
-        return new CombatState(TurnOwner.Player, player, enemy, false, 0);
+        var enemies = blueprint.Enemies.Select(CreateCombatEntity).ToImmutableList();
+        return new CombatState(TurnOwner.Player, player, enemies, false, 0);
     }
 
     private static IReadOnlyDictionary<ResourceType, int> ResolveStartingResources(GameState state, IReadOnlyDictionary<ResourceType, int> fallback)
@@ -679,7 +715,7 @@ public static class GameReducer
             return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null, Reward = null, RunHp = 0, NodeInteraction = null }, events);
         }
 
-        if (state.Combat.Enemy.HP <= 0)
+        if (state.Combat.Enemies.Count == 0)
         {
             NodeId? sourceNodeId = state.ActiveCombatNodeId;
             NodeType? sourceNodeType = null;
@@ -786,13 +822,19 @@ public static class GameReducer
             return TickBleed(combatState, turnOwner, events, affectsPlayer: true);
         }
 
-        return TickBleed(combatState, turnOwner, events, affectsPlayer: false);
+        var mutable = combatState;
+        for (var i = 0; i < mutable.Enemies.Count; i++)
+        {
+            mutable = TickEnemyBleed(mutable, i, events);
+        }
+
+        return PruneDeadEnemies(mutable);
     }
 
     private static CombatState TickBleed(CombatState combatState, TurnOwner turnOwner, ICollection<GameEvent> events, bool affectsPlayer)
     {
-        var entity = affectsPlayer ? combatState.Player : combatState.Enemy;
-        if (entity.Bleed <= 0)
+        var entity = affectsPlayer ? combatState.Player : combatState.Enemies.FirstOrDefault();
+        if (entity is null || entity.Bleed <= 0)
         {
             return combatState;
         }
@@ -808,9 +850,44 @@ public static class GameReducer
         }
 
         var updated = entity with { HP = afterHp, Bleed = nextBleed };
-        return affectsPlayer
-            ? combatState with { Player = updated }
-            : combatState with { Enemy = updated };
+        if (affectsPlayer)
+        {
+            return combatState with { Player = updated };
+        }
+
+        return combatState with { Enemies = combatState.Enemies.SetItem(0, updated) };
+    }
+
+
+    private static CombatState TickEnemyBleed(CombatState combatState, int enemyIndex, ICollection<GameEvent> events)
+    {
+        if (enemyIndex < 0 || enemyIndex >= combatState.Enemies.Count)
+        {
+            return combatState;
+        }
+
+        var entity = combatState.Enemies[enemyIndex];
+        if (entity.Bleed <= 0)
+        {
+            return combatState;
+        }
+
+        var beforeHp = entity.HP;
+        var bleedDamage = Math.Min(entity.Bleed, entity.HP);
+        var afterHp = Math.Max(0, beforeHp - entity.Bleed);
+        var nextBleed = Math.Max(0, entity.Bleed - 1);
+        events.Add(new StatusTriggered(TurnOwner.Enemy, "Bleed", bleedDamage, beforeHp, afterHp));
+        if (nextBleed == 0)
+        {
+            events.Add(new StatusExpired(TurnOwner.Enemy, "Bleed"));
+        }
+
+        return combatState with { Enemies = combatState.Enemies.SetItem(enemyIndex, entity with { HP = afterHp, Bleed = nextBleed }) };
+    }
+
+    private static CombatState PruneDeadEnemies(CombatState combatState)
+    {
+        return combatState with { Enemies = combatState.Enemies.Where(enemy => enemy.HP > 0).ToImmutableList() };
     }
 
     private static (CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events) StartPlayerTurn(CombatState combatState, GameRng rng)
