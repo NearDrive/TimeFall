@@ -53,4 +53,56 @@ public sealed class MapGraph
 
         return neighbors.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
     }
+
+    public ImmutableDictionary<NodeId, int> GetDistancesFrom(NodeId startNodeId)
+    {
+        if (!_nodes.ContainsKey(startNodeId))
+        {
+            throw new ArgumentException("Start node must exist in graph.", nameof(startNodeId));
+        }
+
+        var distances = new Dictionary<NodeId, int>
+        {
+            [startNodeId] = 0,
+        };
+        var queue = new Queue<NodeId>();
+        queue.Enqueue(startNodeId);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            var nextDistance = distances[current] + 1;
+
+            foreach (var neighbor in GetNeighbors(current))
+            {
+                if (distances.ContainsKey(neighbor))
+                {
+                    continue;
+                }
+
+                distances[neighbor] = nextDistance;
+                queue.Enqueue(neighbor);
+            }
+        }
+
+        return distances.ToImmutableDictionary();
+    }
+
+    public bool TryGetShortestPathDistance(NodeId from, NodeId to, out int distance)
+    {
+        distance = -1;
+        if (!_nodes.ContainsKey(from) || !_nodes.ContainsKey(to))
+        {
+            return false;
+        }
+
+        var distances = GetDistancesFrom(from);
+        if (!distances.TryGetValue(to, out var foundDistance))
+        {
+            return false;
+        }
+
+        distance = foundDistance;
+        return true;
+    }
 }

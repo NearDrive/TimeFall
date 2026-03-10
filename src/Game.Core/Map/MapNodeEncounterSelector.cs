@@ -190,42 +190,9 @@ public static class MapNodeEncounterSelector
 
     private static int GetDistanceFromStart(MapState mapState)
     {
-        var startNode = mapState.Graph.Nodes.FirstOrDefault(node => node.Type == NodeType.Start);
-        if (startNode is null)
-        {
-            return 1;
-        }
-
-        if (startNode.Id == mapState.CurrentNodeId)
-        {
-            return 0;
-        }
-
-        var queue = new Queue<(NodeId NodeId, int Distance)>();
-        var visited = new HashSet<NodeId> { startNode.Id };
-        queue.Enqueue((startNode.Id, 0));
-
-        while (queue.Count > 0)
-        {
-            var (currentNodeId, currentDistance) = queue.Dequeue();
-            foreach (var neighbor in mapState.Graph.GetNeighbors(currentNodeId))
-            {
-                if (!visited.Add(neighbor))
-                {
-                    continue;
-                }
-
-                var nextDistance = currentDistance + 1;
-                if (neighbor == mapState.CurrentNodeId)
-                {
-                    return nextDistance;
-                }
-
-                queue.Enqueue((neighbor, nextDistance));
-            }
-        }
-
-        return 1;
+        return mapState.TryGetDistanceFromStart(mapState.CurrentNodeId, out var distance)
+            ? distance
+            : 1;
     }
 
     private static string? SelectByWeight(IReadOnlyList<WeightedEnemy> pool, GameRng rng, out GameRng nextRng)
