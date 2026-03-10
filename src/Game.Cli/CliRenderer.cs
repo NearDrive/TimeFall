@@ -44,7 +44,7 @@ internal static class CliRenderer
 
         var collapsed = state.Time.CollapsedNodeIds.Select(n => n.Value).ToArray();
         Console.WriteLine($"Collapsed: {(collapsed.Length > 0 ? string.Join(", ", collapsed) : "(none)")}");
-        Console.WriteLine($"Time step: {state.Time.CurrentStep} | Caught: {state.Time.PlayerCaughtByTime}");
+        Console.WriteLine($"Time step: {state.Time.CurrentStep} | Progress: {state.Time.MapTurnsSinceTimeAdvance}/{state.Time.TimeAdvanceInterval} | Caught: {state.Time.PlayerCaughtByTime}");
 
         if (state.Combat is { } combat)
         {

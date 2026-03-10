@@ -226,12 +226,15 @@ public static class GameReducer
             events.Add(new EncounterTriggered(action.NodeId, node.Type));
         }
 
-        var timeAdvance = TimeAdvancer.Advance(state.Time, movedMap.CurrentNodeId);
-        events.Add(new TimeAdvanced(timeAdvance.TimeState.CurrentStep));
-
-        foreach (var collapsedNode in timeAdvance.NewlyCollapsedNodes)
+        var timeAdvance = TimeAdvancer.AdvanceForMapMove(state.Time, movedMap.CurrentNodeId);
+        if (timeAdvance.TimeAdvancedThisMove)
         {
-            events.Add(new NodeCollapsed(collapsedNode));
+            events.Add(new TimeAdvanced(timeAdvance.TimeState.CurrentStep));
+
+            foreach (var collapsedNode in timeAdvance.NewlyCollapsedNodes)
+            {
+                events.Add(new NodeCollapsed(collapsedNode));
+            }
         }
 
         if (timeAdvance.PlayerCaughtThisStep)
