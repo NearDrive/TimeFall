@@ -99,7 +99,7 @@ internal sealed class CliLoop
         return true;
     }
 
-    private static GameAction? ResolveContextualAction(ParsedCommand command, GameState state)
+    internal static GameAction? ResolveContextualAction(ParsedCommand command, GameState state)
     {
         if (command.Argument is null)
         {
@@ -108,6 +108,15 @@ internal sealed class CliLoop
 
         if (int.TryParse(command.Argument, out var index))
         {
+            if (command.Action is MoveToNodeAction && state.Phase == GamePhase.MapExploration)
+            {
+                var adjacentNodes = state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId).ToArray();
+                if (index >= 0 && index < adjacentNodes.Length)
+                {
+                    return new MoveToNodeAction(adjacentNodes[index]);
+                }
+            }
+
             if (state.Phase == GamePhase.RewardSelection && state.Reward is { } reward)
             {
                 if (index < 0 || index >= reward.CardOptions.Count)

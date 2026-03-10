@@ -90,11 +90,11 @@ internal static class CliCommandParser
             case "move":
                 if (parts.Length != 2)
                 {
-                    error = "Usage: move <nodeId>";
+                    error = "Usage: move <nodeId|adjacentIndex>";
                     return false;
                 }
 
-                command = new ParsedCommand(new MoveToNodeAction(new NodeId(parts[1])), null);
+                command = new ParsedCommand(new MoveToNodeAction(new NodeId(parts[1])), null, parts[1]);
                 return true;
             case "play":
                 if (parts.Length < 2 || parts.Length > 3 || !int.TryParse(parts[1], out var handIndex))

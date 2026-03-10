@@ -14,7 +14,7 @@ internal static class CliRenderer
         Console.WriteLine("  state | status      Show run summary");
         Console.WriteLine("  help                Show commands");
         Console.WriteLine("  map                 Show current node and neighbors");
-        Console.WriteLine("  move <nodeId>       Move to adjacent node");
+        Console.WriteLine("  move <nodeId|i>     Move to adjacent node (nodeId or 0-based adjacent index)");
         Console.WriteLine("  hand                Show combat hand");
         Console.WriteLine("  play <index> [t]    Play card from hand (0-based index)");
         Console.WriteLine("  end                 End player turn");
@@ -36,8 +36,11 @@ internal static class CliRenderer
         Console.WriteLine($"Run HP: {state.RunHp}/{state.RunMaxHp}");
         Console.WriteLine($"Node: {state.Map.CurrentNodeId}");
 
-        var neighbors = state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId).Select(n => n.Value);
-        Console.WriteLine($"Adjacent: {(neighbors.Any() ? string.Join(", ", neighbors) : "(none)")}");
+        var neighbors = state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId).ToArray();
+        var adjacentSummary = neighbors.Length == 0
+            ? "(none)"
+            : string.Join(", ", neighbors.Select((nodeId, index) => $"[{index}] {nodeId.Value}"));
+        Console.WriteLine($"Adjacent: {adjacentSummary}");
 
         var collapsed = state.Time.CollapsedNodeIds.Select(n => n.Value).ToArray();
         Console.WriteLine($"Collapsed: {(collapsed.Length > 0 ? string.Join(", ", collapsed) : "(none)")}");
@@ -79,12 +82,14 @@ internal static class CliRenderer
     public static void RenderMap(GameState state)
     {
         Console.WriteLine($"Current node: {state.Map.CurrentNodeId}");
-        foreach (var neighborId in state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId))
+        var neighbors = state.Map.Graph.GetNeighbors(state.Map.CurrentNodeId).ToArray();
+        for (var i = 0; i < neighbors.Length; i++)
         {
+            var neighborId = neighbors[i];
             state.Map.Graph.TryGetNode(neighborId, out var node);
             var collapsed = state.Time.CollapsedNodeIds.Contains(neighborId) ? " [collapsed]" : string.Empty;
             var resolved = state.Map.ResolvedEncounterNodeIds.Contains(neighborId) ? " [resolved]" : string.Empty;
-            Console.WriteLine($"- {neighborId} ({node?.Type}){collapsed}{resolved}");
+            Console.WriteLine($"- [{i}] {neighborId} ({node?.Type}){collapsed}{resolved}");
         }
     }
 
