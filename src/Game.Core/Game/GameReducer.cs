@@ -71,7 +71,7 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        var mapState = SampleMapFactory.CreateDefaultState();
+        var mapState = SampleMapFactory.CreateZone1State(action.Seed);
         var initializedRunDeck = selectedDeck.StartingDeck.Select(id => new CardInstance(id)).ToImmutableList();
         var newState = new GameState(
             GamePhase.MapExploration,
