@@ -85,6 +85,17 @@ public sealed class CliPlaytestFixTests
     }
 
 
+
+    [Fact]
+    public void CliRenderer_ShowsTimeProgress()
+    {
+        var state = CreateMapExplorationState();
+
+        var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
+
+        Assert.Contains("Time step: 0 | Progress: 0/4 | Caught: False", output);
+    }
+
     [Fact]
     public void CliMove_CanUseAdjacentIndex()
     {

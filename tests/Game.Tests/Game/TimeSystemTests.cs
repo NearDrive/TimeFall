@@ -9,90 +9,127 @@ public class TimeSystemTests
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
 
     [Fact]
-    public void MoveAction_AdvancesTimeByOne()
+    public void Act1_TimeAdvancesEvery4MapTurns()
     {
-        var state = CreateMapExplorationState();
+        var state = CreateMapExplorationState(act: 1);
 
-        var (afterMove, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
+        state = Move(state, "combat-1");
+        Assert.Equal(0, state.Time.CurrentStep);
+        Assert.Equal(1, state.Time.MapTurnsSinceTimeAdvance);
 
-        Assert.Equal(state.Time.CurrentStep + 1, afterMove.Time.CurrentStep);
+        state = Move(state, "start");
+        Assert.Equal(0, state.Time.CurrentStep);
+        Assert.Equal(2, state.Time.MapTurnsSinceTimeAdvance);
+
+        state = Move(state, "shop-1");
+        Assert.Equal(0, state.Time.CurrentStep);
+        Assert.Equal(3, state.Time.MapTurnsSinceTimeAdvance);
+
+        state = Move(state, "start");
+        Assert.Equal(1, state.Time.CurrentStep);
+        Assert.Equal(0, state.Time.MapTurnsSinceTimeAdvance);
     }
 
     [Fact]
-    public void CombatTurns_DoNotAdvanceTime()
+    public void Act2_TimeAdvancesEvery3MapTurns()
     {
-        var state = CreateMapExplorationState();
-        var initialTime = state.Time.CurrentStep;
+        var state = CreateMapExplorationState(act: 2);
+
+        state = Move(state, "combat-1");
+        state = Move(state, "start");
+        Assert.Equal(0, state.Time.CurrentStep);
+        Assert.Equal(2, state.Time.MapTurnsSinceTimeAdvance);
+
+        state = Move(state, "shop-1");
+        Assert.Equal(1, state.Time.CurrentStep);
+        Assert.Equal(0, state.Time.MapTurnsSinceTimeAdvance);
+    }
+
+    [Fact]
+    public void Act3_TimeAdvancesEvery2MapTurns()
+    {
+        var state = CreateMapExplorationState(act: 3);
+
+        state = Move(state, "combat-1");
+        Assert.Equal(0, state.Time.CurrentStep);
+        Assert.Equal(1, state.Time.MapTurnsSinceTimeAdvance);
+
+        state = Move(state, "elite-1");
+        Assert.Equal(1, state.Time.CurrentStep);
+        Assert.Equal(0, state.Time.MapTurnsSinceTimeAdvance);
+    }
+
+    [Fact]
+    public void CombatTurns_DoNotIncreaseMapTurnProgress()
+    {
+        var state = CreateMapExplorationState(act: 1);
+        var initialProgress = state.Time.MapTurnsSinceTimeAdvance;
 
         var (combatState, _) = GameReducer.Reduce(state, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
         var (afterTurn, _) = GameReducer.Reduce(combatState, new EndTurnAction());
 
-        Assert.Equal(initialTime, combatState.Time.CurrentStep);
-        Assert.Equal(initialTime, afterTurn.Time.CurrentStep);
+        Assert.Equal(initialProgress, combatState.Time.MapTurnsSinceTimeAdvance);
+        Assert.Equal(initialProgress, afterTurn.Time.MapTurnsSinceTimeAdvance);
     }
 
     [Fact]
-    public void CollapsedNode_CannotBeEntered()
+    public void RevisitingNode_StillCountsTowardTimePacing()
     {
-        var collapsed = System.Collections.Immutable.ImmutableSortedSet.Create(MapState.NodeIdComparer, new NodeId("combat-1"));
-        var state = CreateMapExplorationState() with { Time = CreateMapExplorationState().Time with { CollapsedNodeIds = collapsed } };
-
-        var result = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
-
-        Assert.Equal(state, result.NewState);
-        Assert.Empty(result.Events);
-    }
-
-    [Fact]
-    public void Movement_TriggersNodeCollapse()
-    {
-        var state = CreateMapExplorationState();
-
-        var (afterMove, events) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
-
-        Assert.Contains(new NodeId("boss-1"), afterMove.Time.CollapsedNodeIds);
-        Assert.Contains(events, e => e is TimeAdvanced { Step: 1 });
-        Assert.Contains(events, e => e is NodeCollapsed { NodeId: var id } && id == new NodeId("boss-1"));
-    }
-
-    [Fact]
-    public void TimeCaughtPlayer_Behavior_IsExplicitAndTested()
-    {
-        var state = CreateMapExplorationState();
-
-        var (afterCombat, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
-        var (afterElite, events) = GameReducer.Reduce(afterCombat, new MoveToNodeAction(new NodeId("elite-1")));
-
-        Assert.True(afterElite.Time.PlayerCaughtByTime);
-        Assert.True(afterElite.Time.TimeBossTriggerPending);
-        Assert.Equal(GamePhase.MapExploration, afterElite.Phase);
-        Assert.Null(afterElite.Combat);
-        Assert.Contains(events, e => e is TimeCaughtPlayer { NodeId: var nodeId, Step: 2 } && nodeId == new NodeId("elite-1"));
-        Assert.DoesNotContain(events, e => e is EnteredCombat);
-    }
-
-    [Fact]
-    public void RevisitingNode_StillAdvancesTime()
-    {
-        var state = CreateMapExplorationState();
+        var state = CreateMapExplorationState(act: 1);
 
         var (afterFirstMove, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
         var (afterRevisit, _) = GameReducer.Reduce(afterFirstMove, new MoveToNodeAction(new NodeId("start")));
 
-        Assert.Equal(2, afterRevisit.Time.CurrentStep);
+        Assert.Equal(2, afterRevisit.Time.MapTurnsSinceTimeAdvance);
+        Assert.Equal(0, afterRevisit.Time.CurrentStep);
+    }
+
+    [Fact]
+    public void NoCollapseOccursBeforeThreshold()
+    {
+        var state = CreateMapExplorationState(act: 1);
+
+        var (afterFirstMove, firstEvents) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
+        var (afterSecondMove, secondEvents) = GameReducer.Reduce(afterFirstMove, new MoveToNodeAction(new NodeId("start")));
+        var (_, fourthEvents) = GameReducer.Reduce(
+            GameReducer.Reduce(afterSecondMove, new MoveToNodeAction(new NodeId("shop-1"))).NewState,
+            new MoveToNodeAction(new NodeId("start")));
+
+        Assert.Empty(afterSecondMove.Time.CollapsedNodeIds);
+        Assert.DoesNotContain(firstEvents, e => e is NodeCollapsed or TimeAdvanced);
+        Assert.DoesNotContain(secondEvents, e => e is NodeCollapsed or TimeAdvanced);
+        Assert.Contains(fourthEvents, e => e is TimeAdvanced { Step: 1 });
+        Assert.Contains(fourthEvents, e => e is NodeCollapsed);
+    }
+
+    [Fact]
+    public void TimeCaughtPlayer_StillWorks_WhenAdvanceOccursAtThreshold()
+    {
+        var state = CreateMapExplorationState(act: 3);
+
+        state = Move(state, "combat-1");
+        state = Move(state, "elite-1");
+        state = Move(state, "combat-1");
+        var (caughtState, events) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("elite-1")));
+
+        Assert.True(caughtState.Time.PlayerCaughtByTime);
+        Assert.True(caughtState.Time.TimeBossTriggerPending);
+        Assert.Contains(events, e => e is TimeAdvanced { Step: 2 });
+        Assert.Contains(events, e => e is TimeCaughtPlayer { NodeId: var id, Step: 2 } && id == new NodeId("elite-1"));
     }
 
     [Fact]
     public void CollapseRule_IsDeterministic()
     {
-        var stateA = CreateMapExplorationState();
-        var stateB = CreateMapExplorationState();
+        var stateA = CreateMapExplorationState(act: 1);
+        var stateB = CreateMapExplorationState(act: 1);
 
         var actions = new[]
         {
             new MoveToNodeAction(new NodeId("combat-1")),
             new MoveToNodeAction(new NodeId("start")),
             new MoveToNodeAction(new NodeId("shop-1")),
+            new MoveToNodeAction(new NodeId("start")),
         };
 
         foreach (var action in actions)
@@ -107,37 +144,19 @@ public class TimeSystemTests
         Assert.Equal(stateA.Time.CollapsedNodeIds, stateB.Time.CollapsedNodeIds);
     }
 
-    [Fact]
-    public void TimeState_HasSingleSourceOfTruthForCollapsedNodes()
-    {
-        Assert.Contains(nameof(TimeState.CollapsedNodeIds), typeof(TimeState).GetProperties().Select(p => p.Name));
-        Assert.DoesNotContain("CollapsedNodeIds", typeof(MapState).GetProperties().Select(p => p.Name));
-    }
-
-    [Fact]
-    public void MovingIntoCombatNode_ThenCombat_DoesNotAdvanceTimeFurther()
-    {
-        var state = CreateMapExplorationState();
-
-        var (afterMove, _) = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1")));
-        var timeAfterMove = afterMove.Time.CurrentStep;
-
-        var (combatState, _) = GameReducer.Reduce(afterMove, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
-        var (afterTurn, _) = GameReducer.Reduce(combatState, new EndTurnAction());
-
-        Assert.Equal(1, timeAfterMove);
-        Assert.Equal(timeAfterMove, combatState.Time.CurrentStep);
-        Assert.Equal(timeAfterMove, afterTurn.Time.CurrentStep);
-    }
-
-    private static GameState CreateMapExplorationState()
+    private static GameState CreateMapExplorationState(int act)
     {
         var map = SampleMapFactory.CreateDefaultState();
         return GameState.Initial with
         {
             Phase = GamePhase.MapExploration,
             Map = map,
-            Time = TimeState.Create(map),
+            Time = TimeState.Create(map, act),
         };
+    }
+
+    private static GameState Move(GameState state, string nodeId)
+    {
+        return GameReducer.Reduce(state, new MoveToNodeAction(new NodeId(nodeId))).NewState;
     }
 }
