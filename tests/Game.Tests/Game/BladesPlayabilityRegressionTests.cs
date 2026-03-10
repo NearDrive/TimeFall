@@ -22,7 +22,7 @@ public sealed class BladesPlayabilityRegressionTests
         var enemyHpBefore = inCombat.Combat.Enemy.HP;
         var result = GameReducer.Reduce(inCombat, new PlayCardAction(strikeIndex));
 
-        Assert.Equal(inCombat.Combat.TurnOwner, TurnOwner.Player);
+        Assert.Equal(TurnOwner.Player, inCombat.Combat.TurnOwner);
         Assert.NotEqual(inCombat, result.NewState);
         Assert.DoesNotContain(result.Events, e => e is PlayCardRejected);
         Assert.Contains(result.Events, e => e is PlayerStrikePlayed);
@@ -58,7 +58,7 @@ public sealed class BladesPlayabilityRegressionTests
     public void BladesCardDefinitionLookup_ResolvesCorrectlyFromHandInstance()
     {
         var inCombat = EnterCombatFromBladesRun();
-        var cardInHand = Assert.Single(inCombat.Combat!.Player.Deck.Hand.Where(c => c.DefinitionId.Value == "blades-strike"));
+        var cardInHand = Assert.Single(inCombat.Combat!.Player.Deck.Hand, c => c.DefinitionId.Value == "blades-strike");
 
         var found = inCombat.CardDefinitions.TryGetValue(cardInHand.DefinitionId, out var definition);
 
