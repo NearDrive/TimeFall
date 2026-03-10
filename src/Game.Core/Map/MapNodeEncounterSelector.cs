@@ -1,5 +1,5 @@
 using Game.Core.Cards;
-using Game.Core.Common;
+using GameRng = Game.Core.Common.GameRng;
 using Game.Core.Content;
 using Game.Core.Game;
 
