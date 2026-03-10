@@ -1,5 +1,6 @@
 using Game.Core.Content;
 using Game.Core.Cards;
+using Game.Core.Game;
 
 namespace Game.Data.Content;
 
