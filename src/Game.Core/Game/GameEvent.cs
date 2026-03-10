@@ -58,6 +58,12 @@ public sealed record EnemyAttackPlayed(
     int PlayerArmorAfterHit,
     int DamageBlockedByArmor) : GameEvent;
 
+public sealed record StatusApplied(TurnOwner Source, TurnOwner Target, string StatusName, int Amount) : GameEvent;
+
+public sealed record StatusTriggered(TurnOwner Target, string StatusName, int Amount, int HpBefore, int HpAfter) : GameEvent;
+
+public sealed record StatusExpired(TurnOwner Target, string StatusName) : GameEvent;
+
 public sealed record MovedToNode(NodeId NodeId) : GameEvent;
 
 public sealed record EncounterTriggered(NodeId NodeId, NodeType NodeType) : GameEvent;

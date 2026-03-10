@@ -65,7 +65,10 @@ public static class CardEffectResolver
                 case DrawCardsCardEffect e:
                     var d = ApplyDrawEffect(mutable, e, actor, currentRng); mutable = d.CombatState; currentRng = d.Rng; events.AddRange(d.Events); break;
                 case HealCardEffect e: mutable = ApplyHeal(mutable, e, actor); break;
-                case ApplyBleedCardEffect e: mutable = ApplyBleed(mutable, e, actor); break;
+                case ApplyBleedCardEffect e:
+                    mutable = ApplyBleed(mutable, e, actor);
+                    events.Add(new StatusApplied(actor, ResolveTarget(e.Target, actor), "Bleed", e.Amount));
+                    break;
                 case GainGeneratedMomentumCardEffect e: mutable = ApplyGmGain(mutable, e.Amount, actor, e.Target, events, "Card effect"); break;
                 case ReflectNextEnemyAttackDamageCardEffect e:
                     if (ResolveTarget(e.Target, actor) == TurnOwner.Player) mutable = mutable with { Player = mutable.Player with { ReflectNextEnemyAttackDamage = e.Amount } };
@@ -126,7 +129,8 @@ public static class CardEffectResolver
             var hitResult = ignoreArmor
                 ? DamageSystem.ApplyArmorIgnoringHit(combatState.Player, modified)
                 : DamageSystem.ApplyHit(combatState.Player, modified);
-            events.Add(new EnemyAttackPlayed(card, modified, beforeHp, hitResult.UpdatedEntity.HP, beforeArmor, hitResult.UpdatedEntity.Armor, 0));
+            var blocked = hitResult.Events.OfType<DamageDealt>().Select(e => Math.Max(0, e.Incoming - e.Taken)).FirstOrDefault();
+            events.Add(new EnemyAttackPlayed(card, modified, beforeHp, hitResult.UpdatedEntity.HP, beforeArmor, hitResult.UpdatedEntity.Armor, blocked));
             var state = combatState with { Player = hitResult.UpdatedEntity };
             if (state.Player.ReflectNextEnemyAttackDamage > 0)
             {
@@ -140,7 +144,8 @@ public static class CardEffectResolver
         var enemyHitResult = ignoreArmor
             ? DamageSystem.ApplyArmorIgnoringHit(combatState.Enemy, modified)
             : DamageSystem.ApplyHit(combatState.Enemy, modified);
-        events.Add(new PlayerStrikePlayed(card, modified, enemyBeforeHp, enemyHitResult.UpdatedEntity.HP, enemyBeforeArmor, enemyHitResult.UpdatedEntity.Armor, 0));
+        var enemyBlocked = enemyHitResult.Events.OfType<DamageDealt>().Select(e => Math.Max(0, e.Incoming - e.Taken)).FirstOrDefault();
+        events.Add(new PlayerStrikePlayed(card, modified, enemyBeforeHp, enemyHitResult.UpdatedEntity.HP, enemyBeforeArmor, enemyHitResult.UpdatedEntity.Armor, enemyBlocked));
         return combatState with
         {
             Enemy = enemyHitResult.UpdatedEntity,
@@ -172,9 +177,12 @@ public static class CardEffectResolver
     private static CombatState ApplyBleed(CombatState state, ApplyBleedCardEffect effect, TurnOwner actor)
     {
         var target = ResolveTarget(effect.Target, actor);
-        return target == TurnOwner.Player
-            ? state with { Player = state.Player with { Bleed = state.Player.Bleed + effect.Amount } }
-            : state with { Enemy = state.Enemy with { Bleed = state.Enemy.Bleed + effect.Amount } };
+        if (target == TurnOwner.Player)
+        {
+            return state with { Player = state.Player with { Bleed = state.Player.Bleed + effect.Amount } };
+        }
+
+        return state with { Enemy = state.Enemy with { Bleed = state.Enemy.Bleed + effect.Amount } };
     }
 
     private static DrawEffectResult ApplyDrawEffect(CombatState combatState, DrawCardsCardEffect effect, TurnOwner actor, GameRng rng)

@@ -169,6 +169,8 @@ internal static class CliRenderer
         Console.WriteLine($"Momentum: {MomentumMath.DerivedMomentumFromGm(gm)} (gm: {gm})");
         Console.WriteLine($"Combat Enemy HP: {combat.Enemy.HP}");
         Console.WriteLine($"Combat Enemy Armor: {combat.Enemy.Armor}");
+        Console.WriteLine($"Player statuses: {FormatStatuses(combat.Player)}");
+        Console.WriteLine($"Enemy statuses: {FormatStatuses(combat.Enemy)}");
         Console.WriteLine($"Player piles: draw {combat.Player.Deck.DrawPile.Count} | hand {combat.Player.Deck.Hand.Count} | discard {combat.Player.Deck.DiscardPile.Count} | burn {combat.Player.Deck.BurnPile.Count}");
         Console.WriteLine($"Enemy piles: draw {combat.Enemy.Deck.DrawPile.Count} | hand {combat.Enemy.Deck.Hand.Count} | discard {combat.Enemy.Deck.DiscardPile.Count} | burn {combat.Enemy.Deck.BurnPile.Count}");
 
@@ -198,6 +200,9 @@ internal static class CliRenderer
             CardDiscarded e => $"Plays/discards {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
             PlayerStrikePlayed e => $"[Player] Uses {GetCardName(e.Card.DefinitionId, cardDefinitions)} -> Enemy HP {e.EnemyHpBeforeHit} -> {e.EnemyHpAfterHit}, Armor {e.EnemyArmorBeforeHit} -> {e.EnemyArmorAfterHit} ({e.Damage} incoming, {e.DamageBlockedByArmor} blocked)",
             EnemyAttackPlayed e => $"[Enemy] Uses {GetCardName(e.Card.DefinitionId, cardDefinitions)} -> Player HP {e.PlayerHpBeforeHit} -> {e.PlayerHpAfterHit}, Armor {e.PlayerArmorBeforeHit} -> {e.PlayerArmorAfterHit} ({e.Damage} incoming, {e.DamageBlockedByArmor} blocked)",
+            StatusApplied e => $"[{e.Source}] Applies {e.StatusName} {e.Amount} to {e.Target}",
+            StatusTriggered e => $"[{e.Target}] {e.StatusName} triggers for {e.Amount} damage (HP {e.HpBefore} -> {e.HpAfter})",
+            StatusExpired e => $"[{e.Target}] {e.StatusName} expires",
             DeckReshuffled => "Deck reshuffled",
             CardBurned e => $"Burns {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
             MovedToNode e => $"Moved to {e.NodeId.Value}",
@@ -261,6 +266,27 @@ internal static class CliRenderer
     private static string GetCardName(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         return cardDefinitions.TryGetValue(id, out var def) ? def.Name : id.Value;
+    }
+
+    private static string FormatStatuses(CombatEntity entity)
+    {
+        var statuses = new List<(string Name, int Value)>();
+        if (entity.Bleed > 0)
+        {
+            statuses.Add(("Bleed", entity.Bleed));
+        }
+
+        if (entity.ReflectNextEnemyAttackDamage > 0)
+        {
+            statuses.Add(("Reflect", entity.ReflectNextEnemyAttackDamage));
+        }
+
+        if (statuses.Count == 0)
+        {
+            return "(none)";
+        }
+
+        return string.Join(", ", statuses.OrderBy(s => s.Name, StringComparer.Ordinal).Select(s => $"{s.Name} {s.Value}"));
     }
 
     private static void RenderDeckSelection(GameState state)
