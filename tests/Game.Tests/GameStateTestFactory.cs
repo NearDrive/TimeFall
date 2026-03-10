@@ -9,7 +9,7 @@ internal static class GameStateTestFactory
 
     public static GameState CreateInitialWithContent()
     {
-        return GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool);
+        return GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool, Content.EnemyDefinitions, Content.Zone1SpawnTable);
     }
 
     public static GameState CreateStartedRun(int seed = 1337)

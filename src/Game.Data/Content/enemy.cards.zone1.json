@@ -1,0 +1,229 @@
+[
+  {
+    "id": "enemy-raider-slash",
+    "name": "Raider Slash",
+    "labels": ["Attack"],
+    "rulesText": "Deal 5 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 5, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-raider-rush",
+    "name": "Raider Rush",
+    "labels": ["Attack", "Deck"],
+    "rulesText": "Deal 3 damage. Draw 1 card.",
+    "effects": [
+      { "type": "DealDamage", "amount": 3, "target": "EnemyPlayer" },
+      { "type": "DrawCards", "amount": 1, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-brace",
+    "name": "Brace",
+    "labels": ["Defense"],
+    "rulesText": "Gain 4 armor.",
+    "effects": [
+      { "type": "GainArmor", "amount": 4, "target": "Self" }
+    ]
+  },
+
+  {
+    "id": "enemy-shield-jab",
+    "name": "Shield Jab",
+    "labels": ["Attack"],
+    "rulesText": "Deal 4 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 4, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-fortify",
+    "name": "Fortify",
+    "labels": ["Defense"],
+    "rulesText": "Gain 4 armor.",
+    "effects": [
+      { "type": "GainArmor", "amount": 4, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-brace-up",
+    "name": "Brace Up",
+    "labels": ["Defense"],
+    "rulesText": "Gain 6 armor.",
+    "effects": [
+      { "type": "GainArmor", "amount": 6, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-slow-swing",
+    "name": "Slow Swing",
+    "labels": ["Attack"],
+    "rulesText": "Deal 7 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 7, "target": "EnemyPlayer" }
+    ]
+  },
+
+  {
+    "id": "enemy-cut",
+    "name": "Cut",
+    "labels": ["Attack"],
+    "rulesText": "Deal 4 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 4, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-serrated-knife",
+    "name": "Serrated Knife",
+    "labels": ["Attack", "Status"],
+    "rulesText": "Deal 3 damage. Apply Bleed 2.",
+    "effects": [
+      { "type": "DealDamage", "amount": 3, "target": "EnemyPlayer" },
+      { "type": "ApplyBleed", "amount": 2, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-lunge",
+    "name": "Lunge",
+    "labels": ["Attack"],
+    "rulesText": "Deal 6 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 6, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-stalk",
+    "name": "Stalk",
+    "labels": ["Utility", "Deck"],
+    "rulesText": "Draw 1 card. Next attack gains +2 damage.",
+    "effects": [
+      { "type": "DrawCards", "amount": 1, "target": "Self" },
+      { "type": "NextAttackBonusDamageThisTurn", "amount": 2, "target": "Self" }
+    ]
+  },
+
+  {
+    "id": "enemy-duel-strike",
+    "name": "Duel Strike",
+    "labels": ["Attack"],
+    "rulesText": "Deal 6 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 6, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-heavy-attack",
+    "name": "Heavy Attack",
+    "labels": ["Attack"],
+    "rulesText": "Deal 9 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 9, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-counter-stance",
+    "name": "Counter Stance",
+    "labels": ["Defense", "Utility"],
+    "rulesText": "Gain 5 armor. Reflect 3 damage on the next hit taken.",
+    "effects": [
+      { "type": "GainArmor", "amount": 5, "target": "Self" },
+      { "type": "ReflectNextEnemyAttackDamage", "amount": 3, "target": "Self" }
+    ]
+  },
+
+  {
+    "id": "enemy-reap",
+    "name": "Reap",
+    "labels": ["Attack"],
+    "rulesText": "Deal 5 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 5, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-deep-cut",
+    "name": "Deep Cut",
+    "labels": ["Attack", "Status"],
+    "rulesText": "Deal 4 damage. Apply Bleed 3.",
+    "effects": [
+      { "type": "DealDamage", "amount": 4, "target": "EnemyPlayer" },
+      { "type": "ApplyBleed", "amount": 3, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-harvest",
+    "name": "Harvest",
+    "labels": ["Recovery"],
+    "rulesText": "Heal 6 HP.",
+    "effects": [
+      { "type": "Heal", "amount": 6, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-execution-windup",
+    "name": "Execution Windup",
+    "labels": ["Utility"],
+    "rulesText": "Next attack gains +4 damage.",
+    "effects": [
+      { "type": "NextAttackBonusDamageThisTurn", "amount": 4, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-execution",
+    "name": "Execution",
+    "labels": ["Attack"],
+    "rulesText": "Deal 10 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 10, "target": "EnemyPlayer" }
+    ]
+  },
+
+  {
+    "id": "enemy-warden-strike",
+    "name": "Warden Strike",
+    "labels": ["Attack"],
+    "rulesText": "Deal 6 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 6, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-royal-guard",
+    "name": "Royal Guard",
+    "labels": ["Defense"],
+    "rulesText": "Gain 6 armor.",
+    "effects": [
+      { "type": "GainArmor", "amount": 6, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-crushing-blow",
+    "name": "Crushing Blow",
+    "labels": ["Attack"],
+    "rulesText": "Deal 10 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 10, "target": "EnemyPlayer" }
+    ]
+  },
+  {
+    "id": "enemy-rally",
+    "name": "Rally",
+    "labels": ["Utility", "Defense", "Deck"],
+    "rulesText": "Draw 2 cards. Gain 4 armor.",
+    "effects": [
+      { "type": "DrawCards", "amount": 2, "target": "Self" },
+      { "type": "GainArmor", "amount": 4, "target": "Self" }
+    ]
+  },
+  {
+    "id": "enemy-judgment",
+    "name": "Judgment",
+    "labels": ["Attack"],
+    "rulesText": "Deal 14 damage.",
+    "effects": [
+      { "type": "DealDamage", "amount": 14, "target": "EnemyPlayer" }
+    ]
+  }
+]

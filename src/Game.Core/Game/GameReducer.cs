@@ -90,7 +90,9 @@ public static class GameReducer
             null,
             selectedDeck.BaseMaxHp,
             selectedDeck.BaseMaxHp,
-            null);
+            null,
+            state.EnemyDefinitions,
+            state.Zone1SpawnTable);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
@@ -331,12 +333,22 @@ public static class GameReducer
 
         if (MapNodeEncounterSelector.IsCombatNode(node.Type) && !movedMap.ResolvedEncounterNodeIds.Contains(action.NodeId))
         {
-            var selected = MapNodeEncounterSelector.TrySelect(node.Type, out var encounter);
+            var selected = MapNodeEncounterSelector.TrySelect(
+                node.Type,
+                movedMap,
+                movedState.Rng,
+                movedState.EnemyDefinitions,
+                movedState.Zone1SpawnTable,
+                movedState.CardDefinitions,
+                movedState.RewardCardPool,
+                out var encounter,
+                out var encounterRng);
             if (!selected)
             {
                 return (movedState, events);
             }
 
+            movedState = movedState with { Rng = encounterRng };
             movedState = EnsureRunDeckInitialized(movedState, encounter.Blueprint);
             var combatState = CreateCombatState(movedState, encounter.Blueprint, movedState.RunDeck);
             var drawResult = HandManager.Draw(combatState, movedState.Rng, 5);
@@ -349,8 +361,8 @@ public static class GameReducer
                 Phase = GamePhase.Combat,
                 Combat = drawResult.CombatState,
                 Rng = drawResult.Rng,
-                CardDefinitions = movedState.CardDefinitions,
-                RewardCardPool = movedState.RewardCardPool,
+                CardDefinitions = encounter.CardDefinitions,
+                RewardCardPool = encounter.RewardCardPool.ToImmutableList(),
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
                 DeckEdit = null,

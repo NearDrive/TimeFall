@@ -83,7 +83,7 @@ public sealed class BladesPlayabilityRegressionTests
 
     private static GameState EnterCombatFromBladesRun()
     {
-        var initial = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool);
+        var initial = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool, Content.EnemyDefinitions, Content.Zone1SpawnTable);
         var selected = GameReducer.Reduce(initial, new SelectDeckAction("deck-blades")).NewState;
         var started = GameReducer.Reduce(selected, new StartRunAction(1337)).NewState;
 

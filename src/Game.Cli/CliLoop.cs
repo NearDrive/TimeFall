@@ -10,7 +10,7 @@ internal sealed class CliLoop
 
     public void Run()
     {
-        var state = GameState.CreateInitial(_content.CardDefinitions, _content.DeckDefinitions, _content.RewardCardPool);
+        var state = GameState.CreateInitial(_content.CardDefinitions, _content.DeckDefinitions, _content.RewardCardPool, _content.EnemyDefinitions, _content.Zone1SpawnTable);
         var eventLog = new List<GameEvent>();
 
         Console.WriteLine("Timefall CLI playtest harness. Type 'help' for commands.");

@@ -1,0 +1,121 @@
+[
+  {
+    "id": "zone1-raider",
+    "name": "Raider",
+    "zone": 1,
+    "tier": "TierI",
+    "category": "Normal",
+    "role": "Pressure",
+    "hp": 26,
+    "startingArmor": 0,
+    "deck": [
+      "enemy-raider-slash",
+      "enemy-raider-slash",
+      "enemy-raider-slash",
+      "enemy-raider-slash",
+      "enemy-raider-rush",
+      "enemy-raider-rush",
+      "enemy-brace"
+    ]
+  },
+  {
+    "id": "zone1-bastion-guard",
+    "name": "Bastion Guard",
+    "zone": 1,
+    "tier": "TierI",
+    "category": "Normal",
+    "role": "Armor",
+    "hp": 30,
+    "startingArmor": 2,
+    "deck": [
+      "enemy-shield-jab",
+      "enemy-shield-jab",
+      "enemy-shield-jab",
+      "enemy-fortify",
+      "enemy-fortify",
+      "enemy-brace-up",
+      "enemy-slow-swing"
+    ]
+  },
+  {
+    "id": "zone1-bloodletter",
+    "name": "Bloodletter",
+    "zone": 1,
+    "tier": "TierII",
+    "category": "Normal",
+    "role": "Bleed",
+    "hp": 24,
+    "startingArmor": 0,
+    "deck": [
+      "enemy-cut",
+      "enemy-cut",
+      "enemy-cut",
+      "enemy-serrated-knife",
+      "enemy-serrated-knife",
+      "enemy-lunge",
+      "enemy-stalk"
+    ]
+  },
+  {
+    "id": "zone1-iron-duelist",
+    "name": "Iron Duelist",
+    "zone": 1,
+    "tier": "EliteTierI",
+    "category": "Elite",
+    "role": "TempoArmor",
+    "hp": 42,
+    "startingArmor": 2,
+    "deck": [
+      "enemy-duel-strike",
+      "enemy-duel-strike",
+      "enemy-duel-strike",
+      "enemy-fortify",
+      "enemy-fortify",
+      "enemy-heavy-attack",
+      "enemy-heavy-attack",
+      "enemy-counter-stance"
+    ]
+  },
+  {
+    "id": "zone1-flesh-reaper",
+    "name": "Flesh Reaper",
+    "zone": 1,
+    "tier": "EliteTierI",
+    "category": "Elite",
+    "role": "BleedAttrition",
+    "hp": 38,
+    "startingArmor": 0,
+    "deck": [
+      "enemy-reap",
+      "enemy-reap",
+      "enemy-reap",
+      "enemy-deep-cut",
+      "enemy-deep-cut",
+      "enemy-harvest",
+      "enemy-execution-windup",
+      "enemy-execution"
+    ]
+  },
+  {
+    "id": "zone1-warden-of-the-gate",
+    "name": "Warden of the Gate",
+    "zone": 1,
+    "tier": "Boss",
+    "category": "Boss",
+    "role": "DefensePunish",
+    "hp": 70,
+    "startingArmor": 4,
+    "deck": [
+      "enemy-warden-strike",
+      "enemy-warden-strike",
+      "enemy-warden-strike",
+      "enemy-royal-guard",
+      "enemy-royal-guard",
+      "enemy-royal-guard",
+      "enemy-crushing-blow",
+      "enemy-crushing-blow",
+      "enemy-rally",
+      "enemy-judgment"
+    ]
+  }
+]

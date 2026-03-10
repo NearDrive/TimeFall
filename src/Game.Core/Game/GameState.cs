@@ -27,7 +27,9 @@ public sealed record GameState(
     DeckEditState? DeckEdit,
     int RunHp,
     int RunMaxHp,
-    NodeInteractionState? NodeInteraction)
+    NodeInteractionState? NodeInteraction,
+    IReadOnlyDictionary<string, EnemyDefinition> EnemyDefinitions,
+    ZoneSpawnTable? Zone1SpawnTable)
 {
     public const int DefaultRunMaxHp = 80;
     public const int RestHealAmount = 20;
@@ -51,12 +53,16 @@ public sealed record GameState(
         null,
         DefaultRunMaxHp,
         DefaultRunMaxHp,
+        null,
+        ImmutableDictionary<string, EnemyDefinition>.Empty,
         null);
 
     public static GameState CreateInitial(
         IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions,
         IReadOnlyDictionary<string, RunDeckDefinition> deckDefinitions,
-        IReadOnlyList<CardId> rewardCardPool)
+        IReadOnlyList<CardId> rewardCardPool,
+        IReadOnlyDictionary<string, EnemyDefinition>? enemyDefinitions = null,
+        ZoneSpawnTable? zone1SpawnTable = null)
     {
         var availableDeckIds = deckDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToImmutableList();
         return Initial with
@@ -65,6 +71,8 @@ public sealed record GameState(
             DeckDefinitions = deckDefinitions,
             AvailableDeckIds = availableDeckIds,
             RewardCardPool = rewardCardPool.ToImmutableList(),
+            EnemyDefinitions = enemyDefinitions ?? ImmutableDictionary<string, EnemyDefinition>.Empty,
+            Zone1SpawnTable = zone1SpawnTable,
         };
     }
 }
