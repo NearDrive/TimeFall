@@ -90,7 +90,9 @@ public static class GameReducer
             null,
             selectedDeck.BaseMaxHp,
             selectedDeck.BaseMaxHp,
-            null);
+            null,
+            state.EnemyDefinitions,
+            state.Zone1SpawnTable);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
