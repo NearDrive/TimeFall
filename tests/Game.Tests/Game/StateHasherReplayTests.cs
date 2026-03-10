@@ -190,6 +190,8 @@ public class StateHasherReplayTests
             DeckEdit: null,
             RunHp: 20,
             RunMaxHp: 20,
-            NodeInteraction: null);
+            NodeInteraction: null,
+            EnemyDefinitions: Content.EnemyDefinitions,
+            Zone1SpawnTable: Content.Zone1SpawnTable);
     }
 }
