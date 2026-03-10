@@ -1,6 +1,7 @@
-using Game.Core.Common;
+using GameRng = Game.Core.Common.GameRng;
 using Game.Core.Game;
 using Game.Core.Map;
+using MapNodeId = Game.Core.Map.NodeId;
 using Game.Data.Content;
 
 namespace Game.Tests.Game;
@@ -165,14 +166,14 @@ public class EncounterGenerationTests
 
     private static MapState CreateMapStateAtDistance(int distanceFromStart)
     {
-        var start = new Node(new NodeId("start"), NodeType.Start);
+        var start = new Node(new MapNodeId("start"), NodeType.Start);
         var nodes = new List<Node> { start };
-        var connections = new List<(NodeId A, NodeId B)>();
+        var connections = new List<(MapNodeId A, MapNodeId B)>();
 
         var previous = start;
         for (var i = 1; i <= distanceFromStart; i++)
         {
-            var node = new Node(new NodeId($"step-{i}"), NodeType.Combat);
+            var node = new Node(new MapNodeId($"step-{i}"), NodeType.Combat);
             nodes.Add(node);
             connections.Add((previous.Id, node.Id));
             previous = node;
