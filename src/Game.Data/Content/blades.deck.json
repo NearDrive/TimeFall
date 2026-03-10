@@ -1,0 +1,21 @@
+{
+  "id": "deck-blades",
+  "name": "Blades",
+  "resourceType": "Momentum",
+  "baseMaxHp": 120,
+  "resourceRules": {
+    "generatedMomentumField": "GeneratedMomentum",
+    "derivedMomentumFormula": "floor(log2(gm)) + 1 when gm > 0 else 0",
+    "attackLabelGeneratesGm": 1,
+    "endTurnWithoutAttackDecay": "floor(gm / 2)"
+  },
+  "cardPool": {
+    "commons": ["blades-strike","blades-guard","blades-quick-slash","blades-feint","blades-focus","blades-flurry"],
+    "uncommons": ["blades-flow-strike","blades-twin-slash","blades-blade-dance","blades-momentum-step","blades-tempo-cut","blades-edge-pressure","blades-sidestep","blades-riposte","blades-accelerate","blades-blood-draw","blades-piercing-strike","blades-blade-tempo","blades-skirmish","blades-flash-cut","blades-blade-flow","blades-pressure-combo","blades-tactical-retreat","blades-draw-cut","blades-forward-assault","blades-tempo-guard","blades-momentum-burst","blades-bleeding-cut","blades-precision-strike","blades-quick-footwork"],
+    "rares": ["blades-execution-cut","blades-storm-blades","blades-rising-tempo","blades-relentless-assault","blades-kill-window","blades-crimson-flow","blades-momentum-overload","blades-blade-barrage","blades-predator-strike","blades-tactical-flow","blades-pressure-storm","blades-blood-rush"],
+    "epics": ["blades-bladed-frenzy","blades-predator-flow","blades-blade-storm","blades-blood-tempo","blades-perfect-flow","blades-vampiric-dance"],
+    "legendaries": ["blades-master-of-blades","blades-infinite-dance","blades-killing-crescendo"]
+  },
+  "startingDeck": ["blades-strike","blades-strike","blades-strike","blades-strike","blades-strike","blades-strike","blades-guard","blades-guard","blades-feint","blades-focus"],
+  "unlockRules": {"firstRunAvailableRarity": "Common","newlyDiscoveredCardsUnlockForFutureRuns": true}
+}

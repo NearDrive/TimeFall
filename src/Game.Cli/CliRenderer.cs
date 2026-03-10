@@ -139,6 +139,8 @@ internal static class CliRenderer
         Console.WriteLine($"Combat turn: {combat.TurnOwner}");
         Console.WriteLine($"Combat Player HP: {combat.Player.HP}");
         Console.WriteLine($"Combat Player Armor: {combat.Player.Armor}");
+        var gm = combat.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
+        Console.WriteLine($"Momentum: {MomentumMath.DerivedMomentumFromGm(gm)} (gm: {gm})");
         Console.WriteLine($"Combat Enemy HP: {combat.Enemy.HP}");
         Console.WriteLine($"Combat Enemy Armor: {combat.Enemy.Armor}");
         Console.WriteLine($"Player piles: draw {combat.Player.Deck.DrawPile.Count} | hand {combat.Player.Deck.Hand.Count} | discard {combat.Player.Deck.DiscardPile.Count} | burn {combat.Player.Deck.BurnPile.Count}");
@@ -162,6 +164,8 @@ internal static class CliRenderer
         {
             RunStarted e => $"Run started (seed {e.Seed})",
             TurnEnded e => $"---------------- {e.NextTurnOwner} turn begins ----------------",
+            ResourceChanged e => $"{e.Owner} {e.ResourceType}: {e.Before} -> {e.After} ({e.Reason})",
+            MomentumDecayApplied e => $"Momentum decay: gm {e.BeforeGm} -> {e.AfterGm}",
             EnteredCombat e => $"Entered combat at {e.NodeId?.Value ?? "unknown"} ({e.NodeType?.ToString() ?? "n/a"})",
             CardDrawn e => $"Draws {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
             CardDiscarded e => $"Plays/discards {GetCardName(e.Card.DefinitionId, cardDefinitions)}",

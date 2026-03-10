@@ -4,4 +4,5 @@ public enum ResourceType
 {
     Energy = 0,
     Generic = 1,
+    Momentum = 2,
 }

@@ -5,4 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Game.Core\Game.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Content/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

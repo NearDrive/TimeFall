@@ -8,4 +8,6 @@ public sealed record CombatEntity(
     int MaxHP,
     int Armor,
     ImmutableDictionary<ResourceType, int> Resources,
-    DeckState Deck);
+    DeckState Deck,
+    int Bleed = 0,
+    int ReflectNextEnemyAttackDamage = 0);

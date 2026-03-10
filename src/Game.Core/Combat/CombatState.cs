@@ -5,4 +5,12 @@ public sealed record CombatState(
     CombatEntity Player,
     CombatEntity Enemy,
     bool NeedsOverflowDiscard,
-    int RequiredOverflowDiscardCount);
+    int RequiredOverflowDiscardCount,
+    int AttacksPlayedThisTurn = 0,
+    bool PlayedAttackThisTurn = false,
+    int NextAttackBonusDamageThisTurn = 0,
+    bool NextAttackDoubleThisTurn = false,
+    int AllAttacksBonusDamageThisTurn = 0,
+    bool AllAttacksDoubleThisTurn = false,
+    int LastCardMomentumSpent = 0,
+    int LastCardDamageDealt = 0);
