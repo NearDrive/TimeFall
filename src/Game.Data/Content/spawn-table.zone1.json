@@ -1,0 +1,38 @@
+{
+  "zone": 1,
+  "normalEncounterPools": {
+    "early": {
+      "TierI": [
+        { "enemyId": "zone1-raider", "weight": 60 },
+        { "enemyId": "zone1-bastion-guard", "weight": 40 }
+      ]
+    },
+    "mid": {
+      "TierI": [
+        { "enemyId": "zone1-raider", "weight": 35 },
+        { "enemyId": "zone1-bastion-guard", "weight": 35 }
+      ],
+      "TierII": [
+        { "enemyId": "zone1-bloodletter", "weight": 30 }
+      ]
+    },
+    "late": {
+      "TierI": [
+        { "enemyId": "zone1-raider", "weight": 20 },
+        { "enemyId": "zone1-bastion-guard", "weight": 25 }
+      ],
+      "TierII": [
+        { "enemyId": "zone1-bloodletter", "weight": 55 }
+      ]
+    }
+  },
+  "eliteEncounterPools": {
+    "EliteTierI": [
+      { "enemyId": "zone1-iron-duelist", "weight": 50 },
+      { "enemyId": "zone1-flesh-reaper", "weight": 50 }
+    ]
+  },
+  "bossEncounter": {
+    "enemyId": "zone1-warden-of-the-gate"
+  }
+}

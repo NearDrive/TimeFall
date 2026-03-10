@@ -230,7 +230,7 @@ public sealed class CliPlaytestFixTests
     [Fact]
     public void CliDecksCommand_ShowsAvailableDecks()
     {
-        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool);
+        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool, Content.EnemyDefinitions, Content.Zone1SpawnTable);
 
         var output = CaptureConsole(() => CliRenderer.RenderDecks(state));
 
@@ -241,7 +241,7 @@ public sealed class CliPlaytestFixTests
     [Fact]
     public void CliSelectCommand_CanUseIndexOrDeckId()
     {
-        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool);
+        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool, Content.EnemyDefinitions, Content.Zone1SpawnTable);
 
         var byIndexParsed = CliCommandParser.TryParse("select 0", out var byIndex, out var byIndexError);
         Assert.True(byIndexParsed, byIndexError);
