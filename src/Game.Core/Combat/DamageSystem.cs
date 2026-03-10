@@ -29,6 +29,20 @@ public static class DamageSystem
 
         return (updated, events);
     }
+    public static (CombatEntity UpdatedEntity, IReadOnlyList<DamageEvent> Events) ApplyArmorIgnoringHit(CombatEntity target, int incomingDamage)
+    {
+        var normalizedIncoming = Math.Max(0, incomingDamage);
+        var newHp = Math.Max(0, target.HP - normalizedIncoming);
+        var updated = target with { HP = newHp };
+        var events = new List<DamageEvent> { new DamageDealt(normalizedIncoming, normalizedIncoming) };
+        if (target.HP > 0 && newHp == 0)
+        {
+            events.Add(new EntityDied(target.EntityId));
+        }
+
+        return (updated, events);
+    }
+
 }
 
 public abstract record DamageEvent;

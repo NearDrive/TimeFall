@@ -24,6 +24,10 @@ public sealed record PlayerStrikePlayed(
 
 public sealed record TurnEnded(TurnOwner NextTurnOwner) : GameEvent;
 
+public sealed record ResourceChanged(TurnOwner Owner, ResourceType ResourceType, int Before, int After, string Reason) : GameEvent;
+
+public sealed record MomentumDecayApplied(int BeforeGm, int AfterGm) : GameEvent;
+
 public sealed record CardDiscarded(CardInstance Card) : GameEvent;
 
 public sealed record DeckReshuffled : GameEvent;

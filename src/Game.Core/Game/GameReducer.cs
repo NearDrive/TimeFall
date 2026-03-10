@@ -126,6 +126,18 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
+        if (!state.CardDefinitions.TryGetValue(card.DefinitionId, out var cardDefinition))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var events = new List<GameEvent>();
+        if (!TryPayCost(combatState, cardDefinition, events, out var costPaidState))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        combatState = costPaidState;
         combatState = combatState with
         {
             Player = combatState.Player with
@@ -141,10 +153,20 @@ public static class GameReducer
         var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions, state.Rng);
         combatState = resolution.CombatState;
 
-        var events = new List<GameEvent>
+        if (cardDefinition.HasLabel("Attack"))
         {
-            new CardDiscarded(card),
-        };
+            var before = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
+            var after = before + 1;
+            combatState = combatState with
+            {
+                Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, after) },
+                AttacksPlayedThisTurn = combatState.AttacksPlayedThisTurn + 1,
+                PlayedAttackThisTurn = true,
+            };
+            events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, "Attack label bonus"));
+        }
+
+        events.Add(new CardDiscarded(card));
         events.AddRange(resolution.Events);
 
         return ResolveCombatPhase(state with { Combat = combatState, Rng = resolution.Rng }, events);
@@ -164,8 +186,21 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        combatState = combatState with { TurnOwner = TurnOwner.Enemy };
-        var events = new List<GameEvent> { new TurnEnded(TurnOwner.Enemy) };
+        var events = new List<GameEvent>();
+        if (!combatState.PlayedAttackThisTurn)
+        {
+            var before = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
+            var after = before / 2;
+            if (before != after)
+            {
+                combatState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, after) } };
+                events.Add(new MomentumDecayApplied(before, after));
+                events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, "End turn decay"));
+            }
+        }
+
+        combatState = combatState with { TurnOwner = TurnOwner.Enemy, PlayedAttackThisTurn = false, AttacksPlayedThisTurn = 0, AllAttacksBonusDamageThisTurn = 0, AllAttacksDoubleThisTurn = false, NextAttackBonusDamageThisTurn = 0, NextAttackDoubleThisTurn = false };
+        events.Add(new TurnEnded(TurnOwner.Enemy));
 
         var enemyTurnStart = EnemyController.DrawAtTurnStart(combatState, state.Rng);
         combatState = enemyTurnStart.CombatState;
@@ -610,6 +645,46 @@ public static class GameReducer
         }
 
         return (state, events);
+    }
+
+    private static bool TryPayCost(CombatState combatState, CardDefinition definition, List<GameEvent> events, out CombatState newState)
+    {
+        var gm = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
+        var momentum = MomentumMath.DerivedMomentumFromGm(gm);
+        var spentMomentum = 0;
+
+        switch (definition.PlayCostOrDefault)
+        {
+            case RequireMomentumCost r when momentum < r.Minimum:
+                newState = combatState;
+                return false;
+            case SpendMomentumCost s:
+                if (momentum < s.Amount)
+                {
+                    newState = combatState;
+                    return false;
+                }
+
+                var costGm = MomentumMath.Threshold(s.Amount);
+                var afterSpend = Math.Max(0, gm - costGm);
+                events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, afterSpend, $"Spend {s.Amount} Momentum"));
+                newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterSpend) }, LastCardMomentumSpent = s.Amount };
+                return true;
+            case SpendAllMomentumCost:
+                events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, 0, "Spend all Momentum"));
+                newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, 0) }, LastCardMomentumSpent = momentum };
+                return true;
+            case SpendUpToMomentumCost u:
+                spentMomentum = Math.Min(u.Max, momentum);
+                var spendUpToGm = MomentumMath.Threshold(spentMomentum);
+                var afterUpTo = Math.Max(0, gm - spendUpToGm);
+                events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, afterUpTo, $"Spend up to {u.Max} Momentum ({spentMomentum})"));
+                newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterUpTo) }, LastCardMomentumSpent = spentMomentum };
+                return true;
+            default:
+                newState = combatState with { LastCardMomentumSpent = 0 };
+                return true;
+        }
     }
 
     private static bool IsBlockedByPendingCombatRequirement(GameState state, GameAction action)
