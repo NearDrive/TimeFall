@@ -53,7 +53,7 @@ public class CombatStartShuffleTests
         return GameReducer.Reduce(started, action).NewState;
     }
 
-    private static IReadOnlyList<CardId> GetPlayerDeckOrder(Game.Core.Combat.CombatState combat)
+    private static IReadOnlyList<CardId> GetPlayerDeckOrder(global::Game.Core.Combat.CombatState combat)
     {
         return combat.Player.Deck.Hand
             .Concat(combat.Player.Deck.DrawPile)
