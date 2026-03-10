@@ -141,8 +141,8 @@ internal static class CliRenderer
         Console.WriteLine($"Combat Player Armor: {combat.Player.Armor}");
         Console.WriteLine($"Combat Enemy HP: {combat.Enemy.HP}");
         Console.WriteLine($"Combat Enemy Armor: {combat.Enemy.Armor}");
-        Console.WriteLine($"Enemy visible hand size: {combat.Enemy.Deck.Hand.Count}");
-        Console.WriteLine($"Hand size: {combat.Player.Deck.Hand.Count}");
+        Console.WriteLine($"Player piles: draw {combat.Player.Deck.DrawPile.Count} | hand {combat.Player.Deck.Hand.Count} | discard {combat.Player.Deck.DiscardPile.Count} | burn {combat.Player.Deck.BurnPile.Count}");
+        Console.WriteLine($"Enemy piles: draw {combat.Enemy.Deck.DrawPile.Count} | hand {combat.Enemy.Deck.Hand.Count} | discard {combat.Enemy.Deck.DiscardPile.Count} | burn {combat.Enemy.Deck.BurnPile.Count}");
 
         if (combat.NeedsOverflowDiscard)
         {

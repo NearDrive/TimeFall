@@ -53,19 +53,19 @@ public class ContentSlicePlaytestTests
 
 
     [Fact]
-    public void StarterCombat_UsesExpectedEncounterShape()
+    public void StarterEncounter_UsesExpectedBalancedSetup()
     {
         var combat = global::Game.Core.Content.PlaytestContent.OpeningCombat;
 
         Assert.Equal("enemy-standard-blade-raider", combat.Enemy.EntityId);
         Assert.Equal(28, combat.Enemy.HP);
         Assert.Equal(
-            ["enemy-attack", "enemy-attack", "enemy-attack", "enemy-heavy-attack", "enemy-fortify"],
+            ["enemy-attack", "enemy-attack", "enemy-attack", "enemy-attack", "enemy-heavy-attack", "enemy-heavy-attack", "enemy-fortify"],
             combat.Enemy.DrawPile.Select(id => id.Value).ToArray());
     }
 
     [Fact]
-    public void StarterCombat_DoesNotImmediatelyDegenerateIntoNoPressureEnemyState()
+    public void FirstEncounter_RemainsInteractive_ForInitialSequence()
     {
         var state = CreateMapExplorationState();
         var enteredCombat = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1"))).NewState;
@@ -95,6 +95,37 @@ public class ContentSlicePlaytestTests
 
         Assert.True(enemyAttackEvents.Count >= 3, "Enemy should keep producing attacks across opening turns.");
         Assert.True(current.RunHp < GameState.DefaultRunMaxHp, "Enemy pressure should reduce run HP during opening sequence.");
+    }
+
+    [Fact]
+    public void EnemyBurnRule_RemainsEnabled()
+    {
+        var state = CreateMapExplorationState();
+        var enteredCombat = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1"))).NewState;
+        var combat = enteredCombat.Combat!;
+
+        var exhaustedEnemyDeck = combat with
+        {
+            Enemy = combat.Enemy with
+            {
+                Deck = combat.Enemy.Deck with
+                {
+                    DrawPile = [],
+                    Hand = [],
+                    DiscardPile = combat.Enemy.Deck.DiscardPile
+                        .Add(new CardInstance(new CardId("enemy-attack")))
+                        .Add(new CardInstance(new CardId("enemy-fortify"))),
+                    BurnPile = [],
+                    ReshuffleCount = 0,
+                },
+            },
+        };
+
+        var cycled = EnemyController.ExecuteTurn(exhaustedEnemyDeck, enteredCombat.Rng, enteredCombat.CardDefinitions);
+
+        Assert.True(cycled.Events.OfType<DeckReshuffled>().Any());
+        Assert.True(cycled.Events.OfType<CardBurned>().Any(), "Enemy deck cycle should still burn cards.");
+        Assert.True(cycled.CombatState.Enemy.Deck.BurnPile.Count > 0);
     }
 
     [Fact]

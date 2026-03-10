@@ -119,7 +119,7 @@ public class CombatReducerTests
     [Fact]
     public void EndTurn_DoesNotAutoDiscardHand()
     {
-        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+        var (combatState, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(CreateStableOpeningCombat(), Content.CardDefinitions));
 
         var (enemyTurnState, _) = GameReducer.Reduce(combatState, new EndTurnAction());
         var handCountOnEnemyTurn = enemyTurnState.Combat!.Player.Deck.Hand.Count;
@@ -175,15 +175,12 @@ public class CombatReducerTests
     [Fact]
     public void EndTurn_IsBlocked_WhenOverflowDiscardPending()
     {
-        var (stateAfterBegin, _) = GameReducer.Reduce(GameState.Initial, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
-
-        var (stateAfterEnemyTurn, _) = GameReducer.Reduce(stateAfterBegin, new EndTurnAction());
-        var (stateBeforeOverflow, _) = GameReducer.Reduce(stateAfterEnemyTurn, new EndTurnAction());
-        var (overflowState, _) = GameReducer.Reduce(stateBeforeOverflow, new EndTurnAction());
-        var (blockedState, blockedEvents) = GameReducer.Reduce(overflowState, new EndTurnAction());
+        var overflowState = CreateOverflowState(requiredDiscardCount: 1, handSize: 8);
 
         Assert.True(overflowState.Combat!.NeedsOverflowDiscard);
         Assert.Equal(1, overflowState.Combat.RequiredOverflowDiscardCount);
+
+        var (blockedState, blockedEvents) = GameReducer.Reduce(overflowState, new EndTurnAction());
         Assert.Equal(overflowState, blockedState);
         Assert.Empty(blockedEvents);
 
@@ -347,7 +344,7 @@ public class CombatReducerTests
     public void EndTurn_PlayerToPlayer_EnemyDrawsAndAttacks()
     {
         var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(123));
-        var (combatState, _) = GameReducer.Reduce(seededState, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+        var (combatState, _) = GameReducer.Reduce(seededState, new BeginCombatAction(CreateStableOpeningCombat(), Content.CardDefinitions));
 
         var playerHpBefore = combatState.Combat!.Player.HP;
         var (afterEnemyTurn, events) = GameReducer.Reduce(combatState, new EndTurnAction());
@@ -627,6 +624,39 @@ public class CombatReducerTests
         return new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
     }
 
+
+    private static CombatBlueprint CreateStableOpeningCombat()
+    {
+        return new CombatBlueprint(
+            Player: new CombatantBlueprint(
+                EntityId: "player",
+                HP: 40,
+                MaxHP: 40,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile:
+                [
+                    new CardsCardId("strike"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("strike"),
+                    new CardsCardId("guard"),
+                    new CardsCardId("guard"),
+                    new CardsCardId("quick-draw"),
+                ]),
+            Enemy: new CombatantBlueprint(
+                EntityId: "enemy",
+                HP: 30,
+                MaxHP: 30,
+                Armor: 0,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile:
+                [
+                    new CardsCardId("enemy-attack"),
+                    new CardsCardId("enemy-attack"),
+                ]));
+    }
+
     private static int FindCardIndex(IReadOnlyList<CardInstance> cards, string id)
     {
         for (var i = 0; i < cards.Count; i++)
@@ -643,7 +673,7 @@ public class CombatReducerTests
     private static (int PlayerHp, int EnemyCardsDrawn, int EnemyAttacksPlayed) SimulatePlayerEnemyTurns(int seed, int turns)
     {
         var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(seed));
-        var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
+        var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction(CreateStableOpeningCombat(), Content.CardDefinitions));
 
         var totalEnemyDraws = 0;
         var totalEnemyAttacks = 0;

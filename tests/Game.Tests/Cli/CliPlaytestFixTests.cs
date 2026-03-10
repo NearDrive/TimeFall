@@ -41,6 +41,21 @@ public sealed class CliPlaytestFixTests
         Assert.NotEqual(afterDiscard, afterPlay);
     }
 
+
+    [Fact]
+    public void CliRenderer_Combat_ShowsPileSizes()
+    {
+        var state = CreateOverflowPendingCombatState(requiredDiscards: 1);
+
+        var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
+
+        Assert.Contains("Player piles: draw", output);
+        Assert.Contains("| hand", output);
+        Assert.Contains("| discard", output);
+        Assert.Contains("| burn", output);
+        Assert.Contains("Enemy piles: draw", output);
+    }
+
     [Fact]
     public void Renderer_UsesCorrectHpLabels()
     {
