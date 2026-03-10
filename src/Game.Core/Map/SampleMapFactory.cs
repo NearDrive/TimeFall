@@ -120,16 +120,16 @@ public static class SampleMapFactory
             .Select(node => node.Id)
             .ToList();
 
-        AssignNodeType(assignableNodeIds, nodes, NodeType.Elite, eliteCount, ref rng);
-        AssignNodeType(assignableNodeIds, nodes, NodeType.Rest, restCount, ref rng);
-        AssignNodeType(assignableNodeIds, nodes, NodeType.Event, eventCount, ref rng);
-        AssignNodeType(assignableNodeIds, nodes, NodeType.Shop, shopCount, ref rng);
+        AssignNodeType(assignableNodeIds, nodes, connections, NodeType.Elite, eliteCount, ref rng, minimumDistanceFromStart: 2);
+        AssignNodeType(assignableNodeIds, nodes, connections, NodeType.Rest, restCount, ref rng);
+        AssignNodeType(assignableNodeIds, nodes, connections, NodeType.Event, eventCount, ref rng);
+        AssignNodeType(assignableNodeIds, nodes, connections, NodeType.Shop, shopCount, ref rng);
 
         var graph = new MapGraph(nodes, connections);
         return MapState.Create(graph, new NodeId("start"), new NodeId("boss"));
     }
 
-    private static void AssignNodeType(List<NodeId> availableNodeIds, List<Node> nodes, NodeType targetType, int count, ref GameRng rng)
+    private static void AssignNodeType(List<NodeId> availableNodeIds, List<Node> nodes, List<(NodeId A, NodeId B)> connections, NodeType targetType, int count, ref GameRng rng, int minimumDistanceFromStart = 1)
     {
         for (var i = 0; i < count; i++)
         {
@@ -138,8 +138,20 @@ public static class SampleMapFactory
                 throw new InvalidOperationException("No nodes left for assignment.");
             }
 
-            var preferred = availableNodeIds
-                .Select((id, index) => new { id, index, distance = ExtractNumericSuffix(id.Value) })
+            var graph = new MapGraph(nodes, connections);
+            var distances = graph.GetDistancesFrom(new NodeId("start"));
+            var eligibleNodes = availableNodeIds
+                .Select((id, index) => new { id, index })
+                .Where(entry => distances.TryGetValue(entry.id, out var distance) && distance >= minimumDistanceFromStart)
+                .ToArray();
+
+            if (eligibleNodes.Length == 0)
+            {
+                throw new InvalidOperationException($"No nodes available for {targetType} at minimum distance {minimumDistanceFromStart}.");
+            }
+
+            var preferred = eligibleNodes
+                .Select(entry => new { entry.id, entry.index, distance = ExtractNumericSuffix(entry.id.Value) })
                 .OrderBy(entry => entry.distance)
                 .ThenBy(entry => entry.id.Value, StringComparer.Ordinal)
                 .ToArray();

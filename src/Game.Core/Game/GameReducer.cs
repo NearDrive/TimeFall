@@ -116,8 +116,8 @@ public static class GameReducer
         }
 
         var stateWithDeck = EnsureRunDeckInitialized(state, action.Blueprint);
-        var combatState = CreateCombatState(stateWithDeck, action.Blueprint, stateWithDeck.RunDeck);
-        var drawResult = HandManager.Draw(combatState, state.Rng, 5);
+        var (combatState, combatRng) = CreateCombatState(stateWithDeck, action.Blueprint, stateWithDeck.RunDeck, stateWithDeck.Rng);
+        var drawResult = HandManager.Draw(combatState, combatRng, 5);
         var events = new List<GameEvent> { new EnteredCombat(null, null) };
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
@@ -129,12 +129,25 @@ public static class GameReducer
     {
         if (action.RewardCardPool is { Count: > 0 })
         {
-            return action.RewardCardPool;
+            return action.RewardCardPool
+                .Where(id => action.CardDefinitions.TryGetValue(id, out var definition) && IsRewardEligibleCardDefinition(new KeyValuePair<CardId, CardDefinition>(id, definition)))
+                .Distinct()
+                .OrderBy(id => id.Value, StringComparer.Ordinal)
+                .ToArray();
         }
 
-        return action.CardDefinitions.Keys
+        return action.CardDefinitions
+            .Where(IsRewardEligibleCardDefinition)
+            .Select(x => x.Key)
             .OrderBy(id => id.Value, StringComparer.Ordinal)
             .ToArray();
+    }
+
+
+    private static bool IsRewardEligibleCardDefinition(KeyValuePair<CardId, CardDefinition> card)
+    {
+        return !string.IsNullOrWhiteSpace(card.Value.DeckAffinity)
+            && !card.Key.Value.StartsWith("enemy-", StringComparison.Ordinal);
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -386,8 +399,8 @@ public static class GameReducer
 
             movedState = movedState with { Rng = encounterRng };
             movedState = EnsureRunDeckInitialized(movedState, encounter.Blueprint);
-            var combatState = CreateCombatState(movedState, encounter.Blueprint, movedState.RunDeck);
-            var drawResult = HandManager.Draw(combatState, movedState.Rng, 5);
+            var (combatState, combatRng) = CreateCombatState(movedState, encounter.Blueprint, movedState.RunDeck, movedState.Rng);
+            var drawResult = HandManager.Draw(combatState, combatRng, 5);
             events.Add(new EnteredCombat(action.NodeId, node.Type));
             events.AddRange(drawResult.Events);
             events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
@@ -629,7 +642,7 @@ public static class GameReducer
         }, events);
     }
 
-    private static CombatState CreateCombatState(GameState state, CombatBlueprint blueprint, IReadOnlyList<CardInstance> runDeck)
+    private static (CombatState CombatState, GameRng Rng) CreateCombatState(GameState state, CombatBlueprint blueprint, IReadOnlyList<CardInstance> runDeck, GameRng rng)
     {
         var playerBlueprint = blueprint.Player with
         {
@@ -639,9 +652,16 @@ public static class GameReducer
             Resources = ResolveStartingResources(state, blueprint.Player.Resources),
         };
 
-        var player = CreateCombatEntity(playerBlueprint);
-        var enemies = blueprint.Enemies.Select(CreateCombatEntity).ToImmutableList();
-        return new CombatState(TurnOwner.Player, player, enemies, false, 0);
+        var (player, nextRng) = CreateCombatEntity(playerBlueprint, rng, shuffleOnCreate: true);
+        var enemies = ImmutableList.CreateBuilder<CombatEntity>();
+        foreach (var enemyBlueprint in blueprint.Enemies)
+        {
+            var (enemy, enemyRng) = CreateCombatEntity(enemyBlueprint, nextRng, shuffleOnCreate: true);
+            enemies.Add(enemy);
+            nextRng = enemyRng;
+        }
+
+        return (new CombatState(TurnOwner.Player, player, enemies.ToImmutable(), false, 0), nextRng);
     }
 
     private static IReadOnlyDictionary<ResourceType, int> ResolveStartingResources(GameState state, IReadOnlyDictionary<ResourceType, int> fallback)
@@ -687,20 +707,30 @@ public static class GameReducer
         return state with { RunDeck = initializedDeck };
     }
 
-    private static CombatEntity CreateCombatEntity(CombatantBlueprint blueprint)
+    private static (CombatEntity Entity, GameRng Rng) CreateCombatEntity(CombatantBlueprint blueprint, GameRng rng, bool shuffleOnCreate)
     {
-        return new CombatEntity(
+        var drawPile = blueprint.DrawPile.Select(id => new CardInstance(id)).ToArray();
+        var nextRng = rng;
+
+        if (shuffleOnCreate)
+        {
+            var shuffled = DeckCycleSystem.ShuffleInitialDrawPile(drawPile, rng);
+            drawPile = shuffled.Shuffled.ToArray();
+            nextRng = shuffled.Rng;
+        }
+
+        return (new CombatEntity(
             EntityId: blueprint.EntityId,
             HP: blueprint.HP,
             MaxHP: blueprint.MaxHP,
             Armor: blueprint.Armor,
             Resources: blueprint.Resources.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value),
             Deck: new DeckState(
-                DrawPile: blueprint.DrawPile.Select(id => new CardInstance(id)).ToImmutableList(),
+                DrawPile: drawPile.ToImmutableList(),
                 Hand: ImmutableList<CardInstance>.Empty,
                 DiscardPile: ImmutableList<CardInstance>.Empty,
                 BurnPile: ImmutableList<CardInstance>.Empty,
-                ReshuffleCount: 0));
+                ReshuffleCount: 0)), nextRng);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ResolveCombatPhase(GameState state, IReadOnlyList<GameEvent> events)

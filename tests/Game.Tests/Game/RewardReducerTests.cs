@@ -2,6 +2,8 @@ using Game.Core.Cards;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
+using Game.Core.Rewards;
+using Game.Data.Content;
 
 namespace Game.Tests.Game;
 
@@ -31,6 +33,33 @@ public class RewardReducerTests
         var second = CreateRewardSelectionState(seed: 1337);
 
         Assert.Equal(first.Reward!.CardOptions, second.Reward!.CardOptions);
+    }
+
+
+    [Fact]
+    public void RewardGeneration_ExcludesNpcCards()
+    {
+        var cardDefinitions = StaticGameContentProvider.LoadDefault().CardDefinitions;
+        var rewardPool = new[] { new CardId("enemy-reap"), new CardId("blades-strike") };
+
+        var result = RewardGenerator.CreateCardChoiceReward(cardDefinitions, rewardPool, global::Game.Core.Common.GameRng.FromSeed(5), sourceNodeId: null);
+
+        Assert.DoesNotContain(result.RewardState.CardOptions, cardId => cardId.Value.StartsWith("enemy-", StringComparison.Ordinal));
+        Assert.DoesNotContain(new CardId("enemy-reap"), result.RewardState.CardOptions);
+    }
+
+    [Fact]
+    public void RewardGeneration_UsesOnlyAllowedPlayerPools()
+    {
+        var content = StaticGameContentProvider.LoadDefault();
+
+        Assert.NotEmpty(content.RewardCardPool);
+        Assert.All(content.RewardCardPool, cardId =>
+        {
+            var definition = content.CardDefinitions[cardId];
+            Assert.False(cardId.Value.StartsWith("enemy-", StringComparison.Ordinal));
+            Assert.False(string.IsNullOrWhiteSpace(definition.DeckAffinity));
+        });
     }
 
     [Fact]

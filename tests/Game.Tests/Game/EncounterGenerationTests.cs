@@ -39,6 +39,69 @@ public class EncounterGenerationTests
         }
     }
 
+
+    [Fact]
+    public void NormalEncounterGenerator_AvoidsDuplicateArmorWalls()
+    {
+        var mapState = CreateMapStateAtDistance(distanceFromStart: 2);
+
+        for (var seed = 1; seed <= 150; seed++)
+        {
+            var selected = MapNodeEncounterSelector.TrySelect(
+                NodeType.Combat,
+                mapState,
+                GameRng.FromSeed(seed),
+                Content.EnemyDefinitions,
+                Content.Zone1SpawnTable,
+                Content.CardDefinitions,
+                Content.RewardCardPool,
+                out var encounter,
+                out _);
+
+            Assert.True(selected);
+            var armorCount = encounter.Blueprint.Enemies
+                .Select(enemy => Content.EnemyDefinitions[enemy.EntityId])
+                .Count(enemy => string.Equals(enemy.Role, "Armor", StringComparison.OrdinalIgnoreCase));
+
+            Assert.True(armorCount <= 1, $"Seed {seed} generated more than one Armor-role enemy.");
+        }
+    }
+
+    [Fact]
+    public void ValidMixedNormalGroups_StillGenerate()
+    {
+        var mapState = CreateMapStateAtDistance(distanceFromStart: 2);
+
+        var foundMixed = false;
+        for (var seed = 1; seed <= 300; seed++)
+        {
+            var selected = MapNodeEncounterSelector.TrySelect(
+                NodeType.Combat,
+                mapState,
+                GameRng.FromSeed(seed),
+                Content.EnemyDefinitions,
+                Content.Zone1SpawnTable,
+                Content.CardDefinitions,
+                Content.RewardCardPool,
+                out var encounter,
+                out _);
+
+            Assert.True(selected);
+            var roles = encounter.Blueprint.Enemies
+                .Select(enemy => Content.EnemyDefinitions[enemy.EntityId].Role)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (encounter.Blueprint.Enemies.Count > 1 && roles.Length > 1)
+            {
+                foundMixed = true;
+                break;
+            }
+        }
+
+        Assert.True(foundMixed);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(2)]

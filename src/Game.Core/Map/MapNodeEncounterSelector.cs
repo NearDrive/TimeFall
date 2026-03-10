@@ -42,7 +42,7 @@ public static class MapNodeEncounterSelector
 
         IReadOnlyList<string>? selectedEnemyIds = nodeType switch
         {
-            NodeType.Combat => SelectNormalEnemyGroup(zoneSpawnTable, mapState, rng, out nextRng),
+            NodeType.Combat => SelectNormalEnemyGroup(zoneSpawnTable, mapState, rng, enemyDefinitions, out nextRng),
             NodeType.Elite => SelectEliteEnemy(zoneSpawnTable, rng, out nextRng) is { } elite ? [elite] : null,
             NodeType.Boss => [zoneSpawnTable.BossEnemyId],
             _ => null,
@@ -77,7 +77,7 @@ public static class MapNodeEncounterSelector
         return nodeType is NodeType.Combat or NodeType.Elite or NodeType.Boss;
     }
 
-    private static IReadOnlyList<string>? SelectNormalEnemyGroup(ZoneSpawnTable table, MapState mapState, GameRng rng, out GameRng nextRng)
+    private static IReadOnlyList<string>? SelectNormalEnemyGroup(ZoneSpawnTable table, MapState mapState, GameRng rng, IReadOnlyDictionary<string, EnemyDefinition> enemyDefinitions, out GameRng nextRng)
     {
         var distanceFromStart = GetDistanceFromStart(mapState);
         var budget = Math.Max(1, distanceFromStart);
@@ -131,7 +131,10 @@ public static class MapNodeEncounterSelector
             }
 
             var tierCandidate = tierCandidates.First(candidate => StringComparer.Ordinal.Equals(candidate.Tier, selectedTier));
-            var selectedEnemyId = SelectByWeight(tierCandidate.Pool, currentRng, out currentRng);
+            var selectedEnemyId = SelectByWeight(
+                tierCandidate.Pool.Where(candidate => IsEnemyAllowedForNormalGroup(candidate.EnemyId, result, enemyDefinitions)).ToArray(),
+                currentRng,
+                out currentRng);
             if (selectedEnemyId is null)
             {
                 break;
@@ -143,6 +146,27 @@ public static class MapNodeEncounterSelector
 
         nextRng = currentRng;
         return result.Count > 0 ? result : null;
+    }
+
+
+    private static bool IsEnemyAllowedForNormalGroup(
+        string enemyId,
+        IReadOnlyCollection<string> currentGroup,
+        IReadOnlyDictionary<string, EnemyDefinition> enemyDefinitions)
+    {
+        if (!enemyDefinitions.TryGetValue(enemyId, out var candidate))
+        {
+            return false;
+        }
+
+        if (!string.Equals(candidate.Role, "Armor", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return currentGroup
+            .Select(existingId => enemyDefinitions.TryGetValue(existingId, out var existing) ? existing : null)
+            .All(existing => existing is null || !string.Equals(existing.Role, "Armor", StringComparison.OrdinalIgnoreCase));
     }
 
     private static int SelectDesiredGroupSize(int budget, int maxGroupSize, GameRng rng, out GameRng nextRng)
