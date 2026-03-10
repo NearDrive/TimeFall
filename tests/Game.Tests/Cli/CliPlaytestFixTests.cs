@@ -1,6 +1,9 @@
 using System.Collections.Immutable;
 using System.IO;
 using Game.Cli;
+using Game.Core.Combat;
+using Game.Core.Content;
+using Game.Core.Rewards;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
@@ -114,9 +117,9 @@ public sealed class CliPlaytestFixTests
     {
         var state = CreateMapExplorationState() with
         {
-            Reward = new Game.Core.Rewards.RewardState(
-                Game.Core.Rewards.RewardType.CardChoice,
-                ImmutableList.Create(Game.Core.Content.PlaytestContent.StrikeCardId, Game.Core.Content.PlaytestContent.QuickDrawCardId),
+            Reward = new RewardState(
+                RewardType.CardChoice,
+                ImmutableList.Create(PlaytestContent.StrikeCardId, PlaytestContent.QuickDrawCardId),
                 false,
                 new NodeId("combat-1"))
         };
@@ -132,8 +135,8 @@ public sealed class CliPlaytestFixTests
     {
         var events = new GameEvent[]
         {
-            new TurnEnded(Game.Core.Combat.TurnOwner.Enemy),
-            new EnemyAttackPlayed(new Game.Core.Combat.CardInstance(Game.Core.Content.PlaytestContent.EnemyAttackCardId), 5, 80, 75, 2, 1, 2),
+            new TurnEnded(TurnOwner.Enemy),
+            new EnemyAttackPlayed(new CardInstance(PlaytestContent.EnemyAttackCardId), 5, 80, 75, 2, 1, 2),
         };
 
         var output = CaptureConsole(() => CliRenderer.RenderState(CreateMapExplorationState(), events, Content.CardDefinitions));
@@ -149,8 +152,8 @@ public sealed class CliPlaytestFixTests
     {
         var events = new GameEvent[]
         {
-            new TurnEnded(Game.Core.Combat.TurnOwner.Enemy),
-            new TurnEnded(Game.Core.Combat.TurnOwner.Player),
+            new TurnEnded(TurnOwner.Enemy),
+            new TurnEnded(TurnOwner.Player),
         };
 
         var output = CaptureConsole(() => CliRenderer.RenderState(CreateMapExplorationState(), events, Content.CardDefinitions));
@@ -162,7 +165,7 @@ public sealed class CliPlaytestFixTests
     [Fact]
     public void DamageEvent_Rendering_ShowsHpAndArmorImpact()
     {
-        var evt = new EnemyAttackPlayed(new Game.Core.Combat.CardInstance(Game.Core.Content.PlaytestContent.EnemyHeavyAttackCardId), 9, 72, 65, 2, 1, 2);
+        var evt = new EnemyAttackPlayed(new CardInstance(PlaytestContent.EnemyHeavyAttackCardId), 9, 72, 65, 2, 1, 2);
 
         var rendered = CliRenderer.FormatEvent(evt, Content.CardDefinitions);
 
