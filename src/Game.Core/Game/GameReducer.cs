@@ -233,6 +233,11 @@ public static class GameReducer
 
         combatState = combatState with { TurnOwner = TurnOwner.Enemy, PlayedAttackThisTurn = false, AttacksPlayedThisTurn = 0, AllAttacksBonusDamageThisTurn = 0, AllAttacksDoubleThisTurn = false, NextAttackBonusDamageThisTurn = 0, NextAttackDoubleThisTurn = false };
         events.Add(new TurnEnded(TurnOwner.Enemy));
+        combatState = ApplyStartOfTurnStatuses(combatState, TurnOwner.Enemy, events);
+        if (combatState.Enemy.HP <= 0)
+        {
+            return ResolveCombatPhase(state with { Combat = combatState, Rng = state.Rng }, events);
+        }
 
         var enemyTurnStart = EnemyController.DrawAtTurnStart(combatState, state.Rng);
         combatState = enemyTurnStart.CombatState;
@@ -250,6 +255,11 @@ public static class GameReducer
 
         combatState = combatState with { TurnOwner = TurnOwner.Player };
         events.Add(new TurnEnded(TurnOwner.Player));
+        combatState = ApplyStartOfTurnStatuses(combatState, TurnOwner.Player, events);
+        if (combatState.Player.HP <= 0)
+        {
+            return ResolveCombatPhase(state with { Combat = combatState, Rng = enemyResult.Rng }, events);
+        }
 
         var playerTurnStart = StartPlayerTurn(combatState, enemyResult.Rng);
         combatState = playerTurnStart.CombatState;
@@ -755,6 +765,40 @@ public static class GameReducer
         };
 
         return new NodeInteractionState(nodeId, nodeType, options);
+    }
+
+    private static CombatState ApplyStartOfTurnStatuses(CombatState combatState, TurnOwner turnOwner, ICollection<GameEvent> events)
+    {
+        if (turnOwner == TurnOwner.Player)
+        {
+            return TickBleed(combatState, turnOwner, events, affectsPlayer: true);
+        }
+
+        return TickBleed(combatState, turnOwner, events, affectsPlayer: false);
+    }
+
+    private static CombatState TickBleed(CombatState combatState, TurnOwner turnOwner, ICollection<GameEvent> events, bool affectsPlayer)
+    {
+        var entity = affectsPlayer ? combatState.Player : combatState.Enemy;
+        if (entity.Bleed <= 0)
+        {
+            return combatState;
+        }
+
+        var beforeHp = entity.HP;
+        var bleedDamage = Math.Min(entity.Bleed, entity.HP);
+        var afterHp = Math.Max(0, beforeHp - entity.Bleed);
+        var nextBleed = Math.Max(0, entity.Bleed - 1);
+        events.Add(new StatusTriggered(turnOwner, "Bleed", bleedDamage, beforeHp, afterHp));
+        if (nextBleed == 0)
+        {
+            events.Add(new StatusExpired(turnOwner, "Bleed"));
+        }
+
+        var updated = entity with { HP = afterHp, Bleed = nextBleed };
+        return affectsPlayer
+            ? combatState with { Player = updated }
+            : combatState with { Enemy = updated };
     }
 
     private static (CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events) StartPlayerTurn(CombatState combatState, GameRng rng)
