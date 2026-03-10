@@ -42,7 +42,7 @@ internal sealed class CliLoop
                 continue;
             }
 
-            var action = command.Action ?? ResolveContextualAction(command, state);
+            var action = ResolveContextualAction(command, state) ?? command.Action;
             if (action is DiscardOverflowAction discardOverflowAction && !TryValidateOverflowDiscard(discardOverflowAction, state, out var overflowError))
             {
                 Console.WriteLine(overflowError);

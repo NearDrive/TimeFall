@@ -89,6 +89,13 @@ public sealed class CliPlaytestFixTests
     public void CliMove_CanUseAdjacentIndex()
     {
         var state = CreateMapExplorationState();
+        var parsedFirst = CliCommandParser.TryParse("move 0", out var firstCommand, out var firstError);
+        Assert.True(parsedFirst, firstError);
+
+        var resolvedFirst = CliLoop.ResolveContextualAction(firstCommand, state);
+        var firstMove = Assert.IsType<MoveToNodeAction>(resolvedFirst);
+        Assert.Equal(new NodeId("combat-1"), firstMove.NodeId);
+
         var parsed = CliCommandParser.TryParse("move 1", out var command, out var error);
 
         Assert.True(parsed, error);

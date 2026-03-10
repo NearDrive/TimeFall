@@ -167,7 +167,12 @@ public static class GameReducer
         combatState = combatState with { TurnOwner = TurnOwner.Enemy };
         var events = new List<GameEvent> { new TurnEnded(TurnOwner.Enemy) };
 
-        var enemyResult = EnemyController.ExecuteTurn(combatState, state.Rng, state.CardDefinitions);
+        var enemyTurnStart = EnemyController.DrawAtTurnStart(combatState, state.Rng);
+        combatState = enemyTurnStart.CombatState;
+        events.AddRange(enemyTurnStart.Events);
+        events.AddRange(enemyTurnStart.DrawnCards.Select(card => new CardDrawn(card)));
+
+        var enemyResult = EnemyController.ExecuteTurn(combatState, enemyTurnStart.Rng, state.CardDefinitions);
         combatState = enemyResult.CombatState;
         events.AddRange(enemyResult.Events);
 
