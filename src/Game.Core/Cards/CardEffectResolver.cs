@@ -65,13 +65,33 @@ public static class CardEffectResolver
 
         if (target == TurnOwner.Player)
         {
+            var beforeHp = combatState.Player.HP;
+            var beforeArmor = combatState.Player.Armor;
             var hitResult = DamageSystem.ApplyHit(combatState.Player, effect.Amount);
-            events.Add(new EnemyAttackPlayed(card, effect.Amount, hitResult.UpdatedEntity.HP));
+            var blocked = Math.Max(0, effect.Amount - Math.Max(0, beforeHp - hitResult.UpdatedEntity.HP));
+            events.Add(new EnemyAttackPlayed(
+                card,
+                effect.Amount,
+                beforeHp,
+                hitResult.UpdatedEntity.HP,
+                beforeArmor,
+                hitResult.UpdatedEntity.Armor,
+                blocked));
             return combatState with { Player = hitResult.UpdatedEntity };
         }
 
+        var enemyBeforeHp = combatState.Enemy.HP;
+        var enemyBeforeArmor = combatState.Enemy.Armor;
         var enemyHitResult = DamageSystem.ApplyHit(combatState.Enemy, effect.Amount);
-        events.Add(new PlayerStrikePlayed(card, effect.Amount, enemyHitResult.UpdatedEntity.HP));
+        var enemyBlocked = Math.Max(0, effect.Amount - Math.Max(0, enemyBeforeHp - enemyHitResult.UpdatedEntity.HP));
+        events.Add(new PlayerStrikePlayed(
+            card,
+            effect.Amount,
+            enemyBeforeHp,
+            enemyHitResult.UpdatedEntity.HP,
+            enemyBeforeArmor,
+            enemyHitResult.UpdatedEntity.Armor,
+            enemyBlocked));
         return combatState with { Enemy = enemyHitResult.UpdatedEntity };
     }
 

@@ -13,7 +13,14 @@ public sealed record EnteredCombat(NodeId? NodeId, NodeType? NodeType) : GameEve
 
 public sealed record CardDrawn(CardInstance Card) : GameEvent;
 
-public sealed record PlayerStrikePlayed(CardInstance Card, int Damage, int EnemyHpAfterHit) : GameEvent;
+public sealed record PlayerStrikePlayed(
+    CardInstance Card,
+    int Damage,
+    int EnemyHpBeforeHit,
+    int EnemyHpAfterHit,
+    int EnemyArmorBeforeHit,
+    int EnemyArmorAfterHit,
+    int DamageBlockedByArmor) : GameEvent;
 
 public sealed record TurnEnded(TurnOwner NextTurnOwner) : GameEvent;
 
@@ -23,7 +30,14 @@ public sealed record DeckReshuffled : GameEvent;
 
 public sealed record CardBurned(CardInstance Card) : GameEvent;
 
-public sealed record EnemyAttackPlayed(CardInstance Card, int Damage, int PlayerHpAfterHit) : GameEvent;
+public sealed record EnemyAttackPlayed(
+    CardInstance Card,
+    int Damage,
+    int PlayerHpBeforeHit,
+    int PlayerHpAfterHit,
+    int PlayerArmorBeforeHit,
+    int PlayerArmorAfterHit,
+    int DamageBlockedByArmor) : GameEvent;
 
 public sealed record MovedToNode(NodeId NodeId) : GameEvent;
 

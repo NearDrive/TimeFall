@@ -1,5 +1,9 @@
+using System.Collections.Immutable;
 using System.IO;
 using Game.Cli;
+using Game.Core.Combat;
+using Game.Core.Content;
+using Game.Core.Rewards;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
@@ -94,6 +98,81 @@ public sealed class CliPlaytestFixTests
         var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
 
         Assert.Contains("Time step: 0 | Progress: 0/4 | Caught: False", output);
+    }
+
+
+    [Fact]
+    public void CliRenderer_Hand_ShowsCardDescriptions()
+    {
+        var state = CreateOverflowPendingCombatState(requiredDiscards: 1);
+
+        var output = CaptureConsole(() => CliRenderer.RenderHand(state, Content.CardDefinitions));
+
+        Assert.Contains("Strike — Deal 4 damage", output);
+        Assert.Contains("Guard — Gain 3 armor (self)", output);
+    }
+
+    [Fact]
+    public void CliRenderer_RewardOptions_ShowDescriptions()
+    {
+        var state = CreateMapExplorationState() with
+        {
+            Reward = new RewardState(
+                RewardType.CardChoice,
+                ImmutableList.Create(PlaytestContent.StrikeCardId, PlaytestContent.QuickDrawCardId),
+                false,
+                new NodeId("combat-1"))
+        };
+
+        var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
+
+        Assert.Contains("Strike — Deal 4 damage", output);
+        Assert.Contains("Quick Draw — Draw 1 card (self)", output);
+    }
+
+    [Fact]
+    public void CliRenderer_CombatLog_IsMoreDescriptive()
+    {
+        var events = new GameEvent[]
+        {
+            new TurnEnded(TurnOwner.Enemy),
+            new EnemyAttackPlayed(new CardInstance(PlaytestContent.EnemyAttackCardId), 5, 80, 75, 2, 1, 2),
+        };
+
+        var output = CaptureConsole(() => CliRenderer.RenderState(CreateMapExplorationState(), events, Content.CardDefinitions));
+
+        Assert.Contains("Enemy turn begins", output);
+        Assert.Contains("[Enemy] Uses Enemy Attack", output);
+        Assert.Contains("Player HP 80 -> 75", output);
+        Assert.Contains("2 blocked", output);
+    }
+
+    [Fact]
+    public void CliRenderer_TurnBoundaries_AreVisible()
+    {
+        var events = new GameEvent[]
+        {
+            new TurnEnded(TurnOwner.Enemy),
+            new TurnEnded(TurnOwner.Player),
+        };
+
+        var output = CaptureConsole(() => CliRenderer.RenderState(CreateMapExplorationState(), events, Content.CardDefinitions));
+
+        Assert.Contains("---------------- Enemy turn begins ----------------", output);
+        Assert.Contains("---------------- Player turn begins ----------------", output);
+    }
+
+    [Fact]
+    public void DamageEvent_Rendering_ShowsHpAndArmorImpact()
+    {
+        var evt = new EnemyAttackPlayed(new CardInstance(PlaytestContent.EnemyHeavyAttackCardId), 9, 72, 65, 2, 1, 2);
+
+        var rendered = CliRenderer.FormatEvent(evt, Content.CardDefinitions);
+
+        Assert.Contains("9 incoming", rendered);
+        Assert.Contains("Player HP 72 -> 65", rendered);
+        Assert.Contains("Armor 2 -> 1", rendered);
+        Assert.Contains("2 blocked", rendered);
     }
 
     [Fact]
