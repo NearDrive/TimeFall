@@ -30,15 +30,20 @@ public static class EnemyEncounterFactory
 {
     public static CombatBlueprint CreateBlueprint(EnemyDefinition enemyDefinition)
     {
+        return CreateBlueprint([enemyDefinition]);
+    }
+
+    public static CombatBlueprint CreateBlueprint(IReadOnlyList<EnemyDefinition> enemyDefinitions)
+    {
         return new CombatBlueprint(
             Player: CreatePlayerBlueprint(),
-            Enemies: [new CombatantBlueprint(
+            Enemies: enemyDefinitions.Select(enemyDefinition => new CombatantBlueprint(
                 EntityId: enemyDefinition.Id,
                 HP: enemyDefinition.Hp,
                 MaxHP: enemyDefinition.Hp,
                 Armor: enemyDefinition.StartingArmor,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                DrawPile: enemyDefinition.Deck)]);
+                DrawPile: enemyDefinition.Deck)).ToArray());
     }
 
     private static CombatantBlueprint CreatePlayerBlueprint()

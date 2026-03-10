@@ -40,21 +40,32 @@ public static class MapNodeEncounterSelector
             return true;
         }
 
-        var selectedEnemyId = nodeType switch
+        IReadOnlyList<string>? selectedEnemyIds = nodeType switch
         {
-            NodeType.Combat => SelectNormalEnemy(zoneSpawnTable, mapState, rng, out nextRng),
-            NodeType.Elite => SelectEliteEnemy(zoneSpawnTable, rng, out nextRng),
-            NodeType.Boss => zoneSpawnTable.BossEnemyId,
+            NodeType.Combat => SelectNormalEnemyGroup(zoneSpawnTable, mapState, rng, out nextRng),
+            NodeType.Elite => SelectEliteEnemy(zoneSpawnTable, rng, out nextRng) is { } elite ? [elite] : null,
+            NodeType.Boss => [zoneSpawnTable.BossEnemyId],
             _ => null,
         };
 
-        if (selectedEnemyId is null || !enemyDefinitions.TryGetValue(selectedEnemyId, out var enemyDefinition))
+        if (selectedEnemyIds is null || selectedEnemyIds.Count == 0)
         {
             return false;
         }
 
+        var selectedEnemies = new List<EnemyDefinition>(selectedEnemyIds.Count);
+        foreach (var enemyId in selectedEnemyIds)
+        {
+            if (!enemyDefinitions.TryGetValue(enemyId, out var enemyDefinition))
+            {
+                return false;
+            }
+
+            selectedEnemies.Add(enemyDefinition);
+        }
+
         selectedEncounter = new SelectedEncounter(
-            Blueprint: EnemyEncounterFactory.CreateBlueprint(enemyDefinition),
+            Blueprint: EnemyEncounterFactory.CreateBlueprint(selectedEnemies),
             CardDefinitions: cardDefinitions,
             RewardCardPool: rewardCardPool);
 
@@ -66,17 +77,94 @@ public static class MapNodeEncounterSelector
         return nodeType is NodeType.Combat or NodeType.Elite or NodeType.Boss;
     }
 
-    private static string? SelectNormalEnemy(ZoneSpawnTable table, MapState mapState, GameRng rng, out GameRng nextRng)
+    private static IReadOnlyList<string>? SelectNormalEnemyGroup(ZoneSpawnTable table, MapState mapState, GameRng rng, out GameRng nextRng)
     {
-        var band = GetNormalBand(mapState);
+        var distanceFromStart = GetDistanceFromStart(mapState);
+        var budget = Math.Max(1, distanceFromStart);
+        var band = GetNormalBandByDistance(distanceFromStart);
+
         if (!table.NormalEncounterPools.TryGetValue(band, out var bandPools))
         {
             nextRng = rng;
             return null;
         }
 
-        var weightedPool = bandPools.Values.SelectMany(x => x).ToArray();
-        return SelectByWeight(weightedPool, rng, out nextRng);
+        var maxGroupSize = Math.Min(3, budget);
+        var desiredGroupSize = SelectDesiredGroupSize(budget, maxGroupSize, rng, out var groupSizeRng);
+
+        var result = new List<string>(desiredGroupSize);
+        var remainingBudget = budget;
+        var currentRng = groupSizeRng;
+
+        for (var index = 0; index < desiredGroupSize; index++)
+        {
+            var remainingSlots = desiredGroupSize - index;
+            var maxTierValueForSlot = remainingBudget - (remainingSlots - 1);
+            if (maxTierValueForSlot <= 0)
+            {
+                break;
+            }
+
+            var tierCandidates = bandPools
+                .Select(kvp => new
+                {
+                    Tier = kvp.Key,
+                    Value = EnemyTierBudget.GetNormalTierValue(kvp.Key),
+                    Pool = kvp.Value,
+                })
+                .Where(candidate => candidate.Value > 0 && candidate.Value <= maxTierValueForSlot && candidate.Pool.Count > 0)
+                .ToArray();
+
+            if (tierCandidates.Length == 0)
+            {
+                break;
+            }
+
+            var tierWeightedPool = tierCandidates
+                .Select(candidate => new WeightedEnemy(candidate.Tier, Math.Max(1, candidate.Pool.Sum(entry => Math.Max(0, entry.Weight)))))
+                .ToArray();
+
+            var selectedTier = SelectByWeight(tierWeightedPool, currentRng, out currentRng);
+            if (selectedTier is null)
+            {
+                break;
+            }
+
+            var tierCandidate = tierCandidates.First(candidate => StringComparer.Ordinal.Equals(candidate.Tier, selectedTier));
+            var selectedEnemyId = SelectByWeight(tierCandidate.Pool, currentRng, out currentRng);
+            if (selectedEnemyId is null)
+            {
+                break;
+            }
+
+            result.Add(selectedEnemyId);
+            remainingBudget -= tierCandidate.Value;
+        }
+
+        nextRng = currentRng;
+        return result.Count > 0 ? result : null;
+    }
+
+    private static int SelectDesiredGroupSize(int budget, int maxGroupSize, GameRng rng, out GameRng nextRng)
+    {
+        if (maxGroupSize <= 1)
+        {
+            nextRng = rng;
+            return 1;
+        }
+
+        WeightedEnemy[] sizeWeights = budget switch
+        {
+            2 => [new WeightedEnemy("1", 65), new WeightedEnemy("2", 35)],
+            _ => [new WeightedEnemy("1", 20), new WeightedEnemy("2", 35), new WeightedEnemy("3", 45)],
+        };
+
+        var filtered = sizeWeights
+            .Where(entry => int.Parse(entry.EnemyId) <= maxGroupSize)
+            .ToArray();
+
+        var chosen = SelectByWeight(filtered, rng, out nextRng);
+        return chosen is null ? 1 : int.Parse(chosen);
     }
 
     private static string? SelectEliteEnemy(ZoneSpawnTable table, GameRng rng, out GameRng nextRng)
@@ -90,19 +178,54 @@ public static class MapNodeEncounterSelector
         return SelectByWeight(pool, rng, out nextRng);
     }
 
-    private static string GetNormalBand(MapState mapState)
+    private static string GetNormalBandByDistance(int distanceFromStart)
     {
-        var resolvedNormalCount = mapState.ResolvedEncounterNodeIds
-            .Select(id => mapState.Graph.TryGetNode(id, out var node) ? node : null)
-            .Where(node => node?.Type == NodeType.Combat)
-            .Count();
-
-        return resolvedNormalCount switch
+        return distanceFromStart switch
         {
-            0 => "early",
-            1 => "mid",
+            <= 1 => "early",
+            2 => "mid",
             _ => "late",
         };
+    }
+
+    private static int GetDistanceFromStart(MapState mapState)
+    {
+        var startNode = mapState.Graph.Nodes.FirstOrDefault(node => node.Type == NodeType.Start);
+        if (startNode is null)
+        {
+            return 1;
+        }
+
+        if (startNode.Id == mapState.CurrentNodeId)
+        {
+            return 0;
+        }
+
+        var queue = new Queue<(NodeId NodeId, int Distance)>();
+        var visited = new HashSet<NodeId> { startNode.Id };
+        queue.Enqueue((startNode.Id, 0));
+
+        while (queue.Count > 0)
+        {
+            var (currentNodeId, currentDistance) = queue.Dequeue();
+            foreach (var neighbor in mapState.Graph.GetNeighbors(currentNodeId))
+            {
+                if (!visited.Add(neighbor))
+                {
+                    continue;
+                }
+
+                var nextDistance = currentDistance + 1;
+                if (neighbor == mapState.CurrentNodeId)
+                {
+                    return nextDistance;
+                }
+
+                queue.Enqueue((neighbor, nextDistance));
+            }
+        }
+
+        return 1;
     }
 
     private static string? SelectByWeight(IReadOnlyList<WeightedEnemy> pool, GameRng rng, out GameRng nextRng)
