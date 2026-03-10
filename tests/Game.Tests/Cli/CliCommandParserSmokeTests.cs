@@ -8,6 +8,7 @@ public sealed class CliCommandParserSmokeTests
     [Theory]
     [InlineData("start 123", typeof(StartRunAction))]
     [InlineData("start", typeof(StartRunAction))]
+    [InlineData("select deck-blades", typeof(SelectDeckAction))]
     [InlineData("discard 0", typeof(DiscardOverflowAction))]
     [InlineData("move n1", typeof(MoveToNodeAction))]
     [InlineData("play 0", typeof(PlayCardAction))]
@@ -26,9 +27,9 @@ public sealed class CliCommandParserSmokeTests
     [Fact]
     public void ParsesViewCommandForMap()
     {
-        var ok = CliCommandParser.TryParse("discardpile", out var parsed, out var error);
+        var ok = CliCommandParser.TryParse("decks", out var parsed, out var error);
 
         Assert.True(ok, error);
-        Assert.Equal(CliView.Discard, parsed.View);
+        Assert.Equal(CliView.Decks, parsed.View);
     }
 }

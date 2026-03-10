@@ -6,6 +6,8 @@ namespace Game.Core.Game;
 
 public abstract record GameAction;
 
+public sealed record SelectDeckAction(string DeckId) : GameAction;
+
 public sealed record StartRunAction(int Seed) : GameAction;
 
 public sealed record BeginCombatAction(CombatBlueprint Blueprint, IReadOnlyDictionary<CardId, CardDefinition> CardDefinitions, IReadOnlyList<CardId>? RewardCardPool = null) : GameAction;

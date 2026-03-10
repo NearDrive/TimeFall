@@ -12,6 +12,7 @@ internal enum CliView
     Hand,
     Reward,
     Deck,
+    Decks,
     Discard,
     Status,
     Shop,
@@ -49,6 +50,7 @@ internal static class CliCommandParser
             case "hand": command = new ParsedCommand(null, CliView.Hand); return true;
             case "reward": command = new ParsedCommand(null, CliView.Reward); return true;
             case "deck": command = new ParsedCommand(null, CliView.Deck); return true;
+            case "decks": command = new ParsedCommand(null, CliView.Decks); return true;
             case "discard":
                 if (parts.Length < 2)
                 {
@@ -86,6 +88,17 @@ internal static class CliCommandParser
                 }
 
                 command = new ParsedCommand(new StartRunAction(seed), null);
+                return true;
+            case "select":
+                if (parts.Length != 2)
+                {
+                    error = "Usage: select <deckId|index>";
+                    return false;
+                }
+
+                command = new ParsedCommand(int.TryParse(parts[1], out _)
+                    ? null
+                    : new SelectDeckAction(parts[1]), null, parts[1]);
                 return true;
             case "move":
                 if (parts.Length != 2)

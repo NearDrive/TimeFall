@@ -38,7 +38,7 @@ public class StateHasherReplayTests
     [Fact]
     public void Reducer_DoesNotMutatePreviousStateInstances()
     {
-        var (started, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(2024));
+        var started = GameStateTestFactory.CreateStartedRun(2024);
         var (combat, _) = GameReducer.Reduce(started, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
 
         var previous = combat;
@@ -121,8 +121,10 @@ public class StateHasherReplayTests
 
     private static string[] ReplayHashes(IReadOnlyList<GameAction> actions, int seed = 2024)
     {
-        var state = GameState.Initial;
+        var state = GameStateTestFactory.CreateInitialWithContent();
         var hashes = new List<string> { StateHasher.Hash(state) };
+
+        state = GameReducer.Reduce(state, new SelectDeckAction(state.AvailableDeckIds[0])).NewState;
 
         var (startedState, _) = GameReducer.Reduce(state, new StartRunAction(seed));
         state = startedState;
@@ -181,6 +183,9 @@ public class StateHasherReplayTests
             Time: TimeState.Create(SampleMapFactory.CreateDefaultState()),
             Reward: null,
             RewardCardPool: ImmutableList<CardsCardId>.Empty,
+            DeckDefinitions: Content.DeckDefinitions,
+            AvailableDeckIds: Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(),
+            SelectedDeckId: "deck-blades",
             RunDeck: ImmutableList<CardInstance>.Empty,
             DeckEdit: null,
             RunHp: 20,

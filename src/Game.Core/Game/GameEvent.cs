@@ -7,6 +7,8 @@ namespace Game.Core.Game;
 
 public abstract record GameEvent;
 
+public sealed record DeckSelected(string DeckId) : GameEvent;
+
 public sealed record RunStarted(int Seed) : GameEvent;
 
 public sealed record EnteredCombat(NodeId? NodeId, NodeType? NodeType) : GameEvent;

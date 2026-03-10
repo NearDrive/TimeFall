@@ -292,7 +292,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, Content.DeckDefinitions, Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(), "deck-blades", ImmutableList<CardInstance>.Empty, null, 10, 10, null);
 
         var (newState, events) = GameReducer.Reduce(state, new DiscardOverflowAction([0, 1, 2]));
 
@@ -332,7 +332,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: 3);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, Content.DeckDefinitions, Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(), "deck-blades", ImmutableList<CardInstance>.Empty, null, 10, 10, null);
 
         var result = GameReducer.Reduce(state, new DiscardOverflowAction(indexes));
 
@@ -343,7 +343,7 @@ public class CombatReducerTests
     [Fact]
     public void EndTurn_PlayerToPlayer_EnemyDrawsAndAttacks()
     {
-        var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(123));
+        var seededState = GameStateTestFactory.CreateStartedRun(123);
         var (combatState, _) = GameReducer.Reduce(seededState, new BeginCombatAction(CreateStableOpeningCombat(), Content.CardDefinitions));
 
         var playerHpBefore = combatState.Combat!.Player.HP;
@@ -421,7 +421,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, Content.RewardCardPool.ToImmutableList(), ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, Content.RewardCardPool.ToImmutableList(), Content.DeckDefinitions, Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(), "deck-blades", ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
 
         var (newState, events) = GameReducer.Reduce(state, new PlayCardAction(0));
 
@@ -452,7 +452,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: false,
             RequiredOverflowDiscardCount: 0);
 
-        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
+        var state = new GameState(GamePhase.Combat, GameRng.FromSeed(10), combatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, Content.DeckDefinitions, Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(), "deck-blades", ImmutableList<CardInstance>.Empty, null, combatState.Player.HP, combatState.Player.MaxHP, null);
 
         var (newState, events) = GameReducer.Reduce(state, new EndTurnAction());
 
@@ -467,7 +467,7 @@ public class CombatReducerTests
     {
         static (int PlayerHp, int EnemyHp, int HandCount, int DiscardCount) RunSequence(int seed)
         {
-            var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(seed));
+            var seededState = GameStateTestFactory.CreateStartedRun(seed);
             var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction(Content.OpeningCombat, Content.CardDefinitions));
 
             for (var turn = 0; turn < 24 && state.Phase == GamePhase.Combat; turn++)
@@ -581,6 +581,9 @@ public class CombatReducerTests
             TimeState.Create(SampleMapFactory.CreateDefaultState()),
             null,
             ImmutableList<CardsCardId>.Empty,
+            Content.DeckDefinitions,
+            Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(),
+            "deck-blades",
             ImmutableList<CardInstance>.Empty,
             null,
             20,
@@ -621,7 +624,7 @@ public class CombatReducerTests
             NeedsOverflowDiscard: true,
             RequiredOverflowDiscardCount: requiredDiscardCount);
 
-        return new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, ImmutableList<CardInstance>.Empty, null, 10, 10, null);
+        return new GameState(GamePhase.Combat, GameRng.FromSeed(1), overflowCombatState, null, Content.CardDefinitions, SampleMapFactory.CreateDefaultState(), TimeState.Create(SampleMapFactory.CreateDefaultState()), null, ImmutableList<CardsCardId>.Empty, Content.DeckDefinitions, Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(), "deck-blades", ImmutableList<CardInstance>.Empty, null, 10, 10, null);
     }
 
 
@@ -672,7 +675,7 @@ public class CombatReducerTests
 
     private static (int PlayerHp, int EnemyCardsDrawn, int EnemyAttacksPlayed) SimulatePlayerEnemyTurns(int seed, int turns)
     {
-        var (seededState, _) = GameReducer.Reduce(GameState.Initial, new StartRunAction(seed));
+        var seededState = GameStateTestFactory.CreateStartedRun(seed);
         var (state, _) = GameReducer.Reduce(seededState, new BeginCombatAction(CreateStableOpeningCombat(), Content.CardDefinitions));
 
         var totalEnemyDraws = 0;
