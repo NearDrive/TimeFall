@@ -1,4 +1,5 @@
 using Game.Core.Cards;
+using Game.Core.Combat;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.TimeSystem;
@@ -48,6 +49,52 @@ public class ContentSlicePlaytestTests
         var (afterEntry, _) = GameReducer.Reduce(toRest, new MoveToNodeAction(new NodeId("boss-1")));
 
         Assert.Equal("enemy-boss-iron-warden", afterEntry.Combat!.Enemy.EntityId);
+    }
+
+
+    [Fact]
+    public void StarterCombat_UsesExpectedEncounterShape()
+    {
+        var combat = global::Game.Core.Content.PlaytestContent.OpeningCombat;
+
+        Assert.Equal("enemy-standard-blade-raider", combat.Enemy.EntityId);
+        Assert.Equal(28, combat.Enemy.HP);
+        Assert.Equal(
+            ["enemy-attack", "enemy-attack", "enemy-attack", "enemy-heavy-attack", "enemy-fortify"],
+            combat.Enemy.DrawPile.Select(id => id.Value).ToArray());
+    }
+
+    [Fact]
+    public void StarterCombat_DoesNotImmediatelyDegenerateIntoNoPressureEnemyState()
+    {
+        var state = CreateMapExplorationState();
+        var enteredCombat = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1"))).NewState;
+
+        Assert.Equal(GamePhase.Combat, enteredCombat.Phase);
+
+        var current = enteredCombat;
+        var enemyAttackEvents = new List<EnemyAttackPlayed>();
+        for (var i = 0; i < 4; i++)
+        {
+            var endTurn = GameReducer.Reduce(current, new EndTurnAction());
+            current = endTurn.NewState;
+            enemyAttackEvents.AddRange(endTurn.Events.OfType<EnemyAttackPlayed>());
+
+            var overflow = current.Combat is { NeedsOverflowDiscard: true } combat
+                ? Enumerable.Range(0, combat.RequiredOverflowDiscardCount).ToArray()
+                : Array.Empty<int>();
+            if (overflow.Length > 0)
+            {
+                current = GameReducer.Reduce(current, new DiscardOverflowAction(overflow)).NewState;
+            }
+
+            var afterPlayerEnd = GameReducer.Reduce(current, new EndTurnAction());
+            current = afterPlayerEnd.NewState;
+            enemyAttackEvents.AddRange(afterPlayerEnd.Events.OfType<EnemyAttackPlayed>());
+        }
+
+        Assert.True(enemyAttackEvents.Count >= 3, "Enemy should keep producing attacks across opening turns.");
+        Assert.True(current.RunHp < GameState.DefaultRunMaxHp, "Enemy pressure should reduce run HP during opening sequence.");
     }
 
     [Fact]

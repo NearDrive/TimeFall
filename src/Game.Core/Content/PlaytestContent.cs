@@ -63,6 +63,8 @@ public static class PlaytestContent
         [
             EnemyAttackCardId,
             EnemyAttackCardId,
+            EnemyAttackCardId,
+            EnemyHeavyAttackCardId,
             EnemyFortifyCardId,
         ]);
 

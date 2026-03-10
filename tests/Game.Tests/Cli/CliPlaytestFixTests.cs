@@ -1,6 +1,8 @@
 using System.IO;
 using Game.Cli;
 using Game.Core.Game;
+using Game.Core.Map;
+using Game.Core.TimeSystem;
 using Game.Data.Content;
 
 namespace Game.Tests.Cli;
@@ -67,6 +69,42 @@ public sealed class CliPlaytestFixTests
         Assert.Contains("discardpile", output);
     }
 
+
+    [Fact]
+    public void CliMove_CanUseAdjacentIndex()
+    {
+        var state = CreateMapExplorationState();
+        var parsed = CliCommandParser.TryParse("move 1", out var command, out var error);
+
+        Assert.True(parsed, error);
+        var resolved = CliLoop.ResolveContextualAction(command, state);
+
+        var move = Assert.IsType<MoveToNodeAction>(resolved);
+        Assert.Equal(new NodeId("shop-1"), move.NodeId);
+    }
+
+    [Fact]
+    public void MapRender_ShowsDeterministicAdjacentIndexes()
+    {
+        var output = CaptureConsole(() => CliRenderer.RenderMap(CreateMapExplorationState()));
+
+        Assert.Contains("[0] combat-1", output);
+        Assert.Contains("[1] shop-1", output);
+    }
+
+    [Fact]
+    public void CliMove_NodeIdPathStillWorks()
+    {
+        var state = CreateMapExplorationState();
+        var parsed = CliCommandParser.TryParse("move combat-1", out var command, out var error);
+
+        Assert.True(parsed, error);
+        var resolved = CliLoop.ResolveContextualAction(command, state) ?? command.Action;
+
+        var move = Assert.IsType<MoveToNodeAction>(resolved);
+        Assert.Equal(new NodeId("combat-1"), move.NodeId);
+    }
+
     [Fact]
     public void StartCommand_UsesDeterministicDefaultSeed_WhenOmitted()
     {
@@ -75,6 +113,18 @@ public sealed class CliPlaytestFixTests
         Assert.True(ok, error);
         var start = Assert.IsType<StartRunAction>(command.Action);
         Assert.Equal(CliCommandParser.DefaultSeed, start.Seed);
+    }
+
+
+    private static GameState CreateMapExplorationState()
+    {
+        var map = SampleMapFactory.CreateDefaultState();
+        return GameState.Initial with
+        {
+            Phase = GamePhase.MapExploration,
+            Map = map,
+            Time = TimeState.Create(map),
+        };
     }
 
     private static GameState CreateOverflowPendingCombatState(int requiredDiscards)
