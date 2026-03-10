@@ -32,13 +32,13 @@ public static class EnemyEncounterFactory
     {
         return new CombatBlueprint(
             Player: CreatePlayerBlueprint(),
-            Enemy: new CombatantBlueprint(
+            Enemies: [new CombatantBlueprint(
                 EntityId: enemyDefinition.Id,
                 HP: enemyDefinition.Hp,
                 MaxHP: enemyDefinition.Hp,
                 Armor: enemyDefinition.StartingArmor,
                 Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                DrawPile: enemyDefinition.Deck));
+                DrawPile: enemyDefinition.Deck)]);
     }
 
     private static CombatantBlueprint CreatePlayerBlueprint()

@@ -1,6 +1,7 @@
 using Game.Core.Cards;
 using Game.Core.Common;
 using Game.Core.Game;
+using System.Collections.Immutable;
 using CardId = Game.Core.Cards.CardId;
 
 namespace Game.Core.Combat;
@@ -14,7 +15,50 @@ public static class EnemyController
         GameRng rng,
         int count = DefaultEnemyTurnDrawCount)
     {
-        return DrawEnemyCards(combatState, rng, count);
+        var mutable = combatState;
+        var currentRng = rng;
+        var drawn = new List<CardInstance>();
+        var events = new List<GameEvent>();
+
+        for (var enemyIndex = 0; enemyIndex < mutable.Enemies.Count; enemyIndex++)
+        {
+            if (mutable.Enemies[enemyIndex].HP <= 0)
+            {
+                continue;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                if (mutable.Enemies[enemyIndex].Deck.DrawPile.Count == 0)
+                {
+                    var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Enemies[enemyIndex].Deck, currentRng, out var cycleEvents);
+                    mutable = mutable with { Enemies = mutable.Enemies.SetItem(enemyIndex, mutable.Enemies[enemyIndex] with { Deck = cycleResult.Deck }) };
+                    currentRng = cycleResult.Rng;
+                    events.AddRange(cycleEvents);
+
+                    if (mutable.Enemies[enemyIndex].Deck.DrawPile.Count == 0)
+                    {
+                        break;
+                    }
+                }
+
+                var topCard = mutable.Enemies[enemyIndex].Deck.DrawPile[0];
+                mutable = mutable with
+                {
+                    Enemies = mutable.Enemies.SetItem(enemyIndex, mutable.Enemies[enemyIndex] with
+                    {
+                        Deck = mutable.Enemies[enemyIndex].Deck with
+                        {
+                            DrawPile = mutable.Enemies[enemyIndex].Deck.DrawPile.RemoveAt(0),
+                            Hand = mutable.Enemies[enemyIndex].Deck.Hand.Add(topCard),
+                        },
+                    }),
+                };
+                drawn.Add(topCard);
+            }
+        }
+
+        return new DrawResult(mutable, currentRng, drawn, events);
     }
 
     public static EnemyTurnResult ExecuteTurn(
@@ -27,81 +71,48 @@ public static class EnemyController
         var events = new List<GameEvent>();
         var actionCount = 0;
 
-        while (true)
+        for (var enemyIndex = 0; enemyIndex < mutable.Enemies.Count; enemyIndex++)
         {
-            var attackIndex = FindPlayableCardIndex(mutable.Enemy.Deck.Hand, cardDefinitions);
-            if (attackIndex < 0)
+            var enemy = mutable.Enemies[enemyIndex];
+            if (enemy.HP <= 0)
             {
-                break;
+                continue;
             }
 
-            var attackCard = mutable.Enemy.Deck.Hand[attackIndex];
-            mutable = mutable with
+            while (true)
             {
-                Enemy = mutable.Enemy with
-                {
-                    Deck = mutable.Enemy.Deck with
-                    {
-                        Hand = mutable.Enemy.Deck.Hand.RemoveAt(attackIndex),
-                        DiscardPile = mutable.Enemy.Deck.DiscardPile.Add(attackCard),
-                    },
-                },
-            };
-
-            var resolution = CardEffectResolver.Resolve(mutable, attackCard, TurnOwner.Enemy, cardDefinitions, currentRng);
-            mutable = resolution.CombatState;
-            currentRng = resolution.Rng;
-            events.AddRange(resolution.Events);
-            actionCount++;
-        }
-
-        return new EnemyTurnResult(mutable, currentRng, events, actionCount);
-    }
-
-    private static DrawResult DrawEnemyCards(CombatState combatState, GameRng rng, int count)
-    {
-        var mutable = combatState;
-        var currentRng = rng;
-        var drawn = new List<CardInstance>();
-        var events = new List<GameEvent>();
-
-        for (var i = 0; i < count; i++)
-        {
-            if (mutable.Enemy.Deck.DrawPile.Count == 0)
-            {
-                var cycleResult = DeckCycleSystem.EnsureDrawAvailable(mutable.Enemy.Deck, currentRng, out var cycleEvents);
-                mutable = mutable with
-                {
-                    Enemy = mutable.Enemy with
-                    {
-                        Deck = cycleResult.Deck,
-                    },
-                };
-                currentRng = cycleResult.Rng;
-                events.AddRange(cycleEvents);
-
-                if (mutable.Enemy.Deck.DrawPile.Count == 0)
+                var attackIndex = FindPlayableCardIndex(enemy.Deck.Hand, cardDefinitions);
+                if (attackIndex < 0)
                 {
                     break;
                 }
-            }
 
-            var topCard = mutable.Enemy.Deck.DrawPile[0];
-            mutable = mutable with
-            {
-                Enemy = mutable.Enemy with
+                var attackCard = enemy.Deck.Hand[attackIndex];
+                enemy = enemy with
                 {
-                    Deck = mutable.Enemy.Deck with
+                    Deck = enemy.Deck with
                     {
-                        DrawPile = mutable.Enemy.Deck.DrawPile.RemoveAt(0),
-                        Hand = mutable.Enemy.Deck.Hand.Add(topCard),
+                        Hand = enemy.Deck.Hand.RemoveAt(attackIndex),
+                        DiscardPile = enemy.Deck.DiscardPile.Add(attackCard),
                     },
-                },
-            };
-            drawn.Add(topCard);
+                };
+                mutable = mutable with { Enemies = mutable.Enemies.SetItem(enemyIndex, enemy) };
+
+                var resolution = CardEffectResolver.Resolve(mutable, attackCard, TurnOwner.Enemy, cardDefinitions, currentRng, enemy.EntityId);
+                mutable = resolution.CombatState;
+                currentRng = resolution.Rng;
+                events.AddRange(resolution.Events);
+                actionCount++;
+
+                enemy = mutable.Enemies[enemyIndex];
+                if (mutable.Player.HP <= 0)
+                {
+                    return new EnemyTurnResult(mutable, currentRng, events, actionCount);
+                }
+            }
         }
 
-        return new DrawResult(mutable, currentRng, drawn, events);
+        return new EnemyTurnResult(mutable, currentRng, events, actionCount);
     }
 
     private static int FindPlayableCardIndex(

@@ -112,11 +112,23 @@ internal static class CliCommandParser
             case "play":
                 if (parts.Length < 2 || parts.Length > 3 || !int.TryParse(parts[1], out var handIndex))
                 {
-                    error = "Usage: play <index> [target]";
+                    error = "Usage: play <index> [targetIndex]";
                     return false;
                 }
 
-                command = new ParsedCommand(new PlayCardAction(handIndex), null);
+                int? targetIndex = null;
+                if (parts.Length == 3)
+                {
+                    if (!int.TryParse(parts[2], out var parsedTargetIndex))
+                    {
+                        error = "Usage: play <index> [targetIndex]";
+                        return false;
+                    }
+
+                    targetIndex = parsedTargetIndex;
+                }
+
+                command = new ParsedCommand(new PlayCardAction(handIndex, targetIndex), null);
                 return true;
             case "end": command = new ParsedCommand(new EndTurnAction(), null); return true;
             case "choose":
