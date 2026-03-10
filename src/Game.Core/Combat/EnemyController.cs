@@ -7,6 +7,16 @@ namespace Game.Core.Combat;
 
 public static class EnemyController
 {
+    public const int DefaultEnemyTurnDrawCount = 1;
+
+    public static DrawResult DrawAtTurnStart(
+        CombatState combatState,
+        GameRng rng,
+        int count = DefaultEnemyTurnDrawCount)
+    {
+        return DrawEnemyCards(combatState, rng, count);
+    }
+
     public static EnemyTurnResult ExecuteTurn(
         CombatState combatState,
         GameRng rng,
@@ -19,20 +29,6 @@ public static class EnemyController
 
         while (true)
         {
-            if (mutable.Enemy.Deck.Hand.Count == 0)
-            {
-                var drawResult = DrawEnemyCards(mutable, currentRng, 1);
-                mutable = drawResult.CombatState;
-                currentRng = drawResult.Rng;
-                events.AddRange(drawResult.Events);
-                events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
-
-                if (drawResult.DrawnCards.Count == 0)
-                {
-                    break;
-                }
-            }
-
             var attackIndex = FindPlayableCardIndex(mutable.Enemy.Deck.Hand, cardDefinitions);
             if (attackIndex < 0)
             {
