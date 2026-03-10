@@ -57,7 +57,7 @@ internal static class CliRenderer
             for (var i = 0; i < reward.CardOptions.Count; i++)
             {
                 var cardId = reward.CardOptions[i];
-                Console.WriteLine($"  [{i}] {GetCardName(cardId, cardDefinitions)} ({cardId.Value})");
+                Console.WriteLine($"  [{i}] {FormatCardSummary(cardId, cardDefinitions)} ({cardId.Value})");
             }
         }
 
@@ -105,7 +105,7 @@ internal static class CliRenderer
         for (var i = 0; i < combat.Player.Deck.Hand.Count; i++)
         {
             var card = combat.Player.Deck.Hand[i];
-            Console.WriteLine($"[{i}] {GetCardName(card.DefinitionId, cardDefinitions)}");
+            Console.WriteLine($"[{i}] {FormatCardSummary(card.DefinitionId, cardDefinitions)}");
         }
     }
 
@@ -115,7 +115,7 @@ internal static class CliRenderer
         for (var i = 0; i < state.RunDeck.Count; i++)
         {
             var card = state.RunDeck[i];
-            Console.WriteLine($"[{i}] {GetCardName(card.DefinitionId, cardDefinitions)} ({card.DefinitionId.Value})");
+            Console.WriteLine($"[{i}] {FormatCardSummary(card.DefinitionId, cardDefinitions)} ({card.DefinitionId.Value})");
         }
     }
 
@@ -130,7 +130,7 @@ internal static class CliRenderer
         Console.WriteLine($"Discard pile ({combat.Player.Deck.DiscardPile.Count}):");
         foreach (var card in combat.Player.Deck.DiscardPile)
         {
-            Console.WriteLine($"- {GetCardName(card.DefinitionId, cardDefinitions)}");
+            Console.WriteLine($"- {FormatCardSummary(card.DefinitionId, cardDefinitions)}");
         }
     }
 
@@ -152,7 +152,7 @@ internal static class CliRenderer
         Console.WriteLine("Hand preview:");
         for (var i = 0; i < combat.Player.Deck.Hand.Count; i++)
         {
-            Console.WriteLine($"  [{i}] {GetCardName(combat.Player.Deck.Hand[i].DefinitionId, cardDefinitions)}");
+            Console.WriteLine($"  [{i}] {FormatCardSummary(combat.Player.Deck.Hand[i].DefinitionId, cardDefinitions)}");
         }
     }
 
@@ -161,14 +161,14 @@ internal static class CliRenderer
         return gameEvent switch
         {
             RunStarted e => $"Run started (seed {e.Seed})",
+            TurnEnded e => $"---------------- {e.NextTurnOwner} turn begins ----------------",
             EnteredCombat e => $"Entered combat at {e.NodeId?.Value ?? "unknown"} ({e.NodeType?.ToString() ?? "n/a"})",
-            CardDrawn e => $"Drew {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
-            CardDiscarded e => $"Discarded {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
-            PlayerStrikePlayed e => $"Strike for {e.Damage} (enemy HP {e.EnemyHpAfterHit})",
-            EnemyAttackPlayed e => $"Enemy attack for {e.Damage} (player HP {e.PlayerHpAfterHit})",
-            TurnEnded e => $"Turn -> {e.NextTurnOwner}",
+            CardDrawn e => $"Draws {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
+            CardDiscarded e => $"Plays/discards {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
+            PlayerStrikePlayed e => $"[Player] Uses {GetCardName(e.Card.DefinitionId, cardDefinitions)} -> Enemy HP {e.EnemyHpBeforeHit} -> {e.EnemyHpAfterHit}, Armor {e.EnemyArmorBeforeHit} -> {e.EnemyArmorAfterHit} ({e.Damage} incoming, {e.DamageBlockedByArmor} blocked)",
+            EnemyAttackPlayed e => $"[Enemy] Uses {GetCardName(e.Card.DefinitionId, cardDefinitions)} -> Player HP {e.PlayerHpBeforeHit} -> {e.PlayerHpAfterHit}, Armor {e.PlayerArmorBeforeHit} -> {e.PlayerArmorAfterHit} ({e.Damage} incoming, {e.DamageBlockedByArmor} blocked)",
             DeckReshuffled => "Deck reshuffled",
-            CardBurned e => $"Burned {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
+            CardBurned e => $"Burns {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
             MovedToNode e => $"Moved to {e.NodeId.Value}",
             EncounterTriggered e => $"Encounter triggered at {e.NodeId.Value} ({e.NodeType})",
             EncounterResolved e => $"Encounter resolved at {e.NodeId.Value} ({e.NodeType})",
@@ -191,8 +191,45 @@ internal static class CliRenderer
         };
     }
 
+    private static string FormatCardSummary(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
+    {
+        if (!cardDefinitions.TryGetValue(id, out var definition))
+        {
+            return id.Value;
+        }
+
+        return $"{definition.Name} — {FormatCardRulesText(definition)}";
+    }
+
+    private static string FormatCardRulesText(CardDefinition definition)
+    {
+        if (definition.Effects.Count == 0)
+        {
+            return "No effect";
+        }
+
+        return string.Join(", ", definition.Effects.Select(effect => effect switch
+        {
+            DamageCardEffect damage => $"Deal {damage.Amount} damage{FormatTargetSuffix(damage.Target)}",
+            GainArmorCardEffect armor => $"Gain {armor.Amount} armor{FormatTargetSuffix(armor.Target)}",
+            DrawCardsCardEffect draw => $"Draw {draw.Amount} card{(draw.Amount == 1 ? string.Empty : "s")}{FormatTargetSuffix(draw.Target)}",
+            _ => "Special effect",
+        }));
+    }
+
+    private static string FormatTargetSuffix(CardTarget target)
+    {
+        return target switch
+        {
+            CardTarget.Self => " (self)",
+            CardTarget.Opponent => string.Empty,
+            _ => string.Empty,
+        };
+    }
+
     private static string GetCardName(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         return cardDefinitions.TryGetValue(id, out var def) ? def.Name : id.Value;
     }
+
 }
