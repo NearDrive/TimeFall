@@ -78,6 +78,21 @@ public class Zone1MapGenerationTests
         Assert.InRange(count, 1, 3);
     }
 
+
+    [Fact]
+    public void Zone1Map_NoEliteAtDistance1FromStart()
+    {
+        for (var seed = 1; seed <= 100; seed++)
+        {
+            var map = SampleMapFactory.CreateZone1State(seed);
+            var invalidElite = map.Graph.Nodes
+                .Where(node => node.Type == NodeType.Elite)
+                .Any(node => map.TryGetDistanceFromStart(node.Id, out var distance) && distance == 1);
+
+            Assert.False(invalidElite, $"Seed {seed} produced an elite adjacent to Start.");
+        }
+    }
+
     [Fact]
     public void Zone1Map_RemainingNodes_AreNormalCombat()
     {

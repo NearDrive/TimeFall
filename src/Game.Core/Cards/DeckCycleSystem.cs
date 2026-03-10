@@ -7,6 +7,14 @@ namespace Game.Core.Cards;
 
 public static class DeckCycleSystem
 {
+    public static (IReadOnlyList<CardInstance> Shuffled, GameRng Rng) ShuffleInitialDrawPile(
+        IReadOnlyList<CardInstance> cards,
+        GameRng rng)
+    {
+        var (shuffled, nextRng) = Shuffle(cards.ToList(), rng);
+        return (shuffled, nextRng);
+    }
+
     public static (DeckState Deck, GameRng Rng) EnsureDrawAvailable(
         DeckState deck,
         GameRng rng,

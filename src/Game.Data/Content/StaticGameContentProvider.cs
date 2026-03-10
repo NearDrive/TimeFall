@@ -63,10 +63,23 @@ public static class StaticGameContentProvider
             Zone1EnemyContentLoader.ValidateReferences(enemyCards, enemyDefinitions, zone1SpawnTable);
         }
 
+        var allowedDeckAffinities = deckDefinitions.Values
+            .Select(deck => deck.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var rewardCardPool = cardDefinitions
+            .Where(card =>
+                !card.Key.Value.StartsWith("enemy-", StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(card.Value.DeckAffinity)
+                && (allowedDeckAffinities.Count == 0 || allowedDeckAffinities.Contains(card.Value.DeckAffinity)))
+            .Select(card => card.Key)
+            .OrderBy(cardId => cardId.Value, StringComparer.Ordinal)
+            .ToArray();
+
         return new GameContentBundle(
             CardDefinitions: cardDefinitions,
             DeckDefinitions: deckDefinitions,
-            RewardCardPool: cardDefinitions.Keys.OrderBy(k => k.Value, StringComparer.Ordinal).ToArray(),
+            RewardCardPool: rewardCardPool,
             OpeningCombat: PlaytestContent.OpeningCombat,
             EnemyDefinitions: enemyDefinitions,
             Zone1SpawnTable: zone1SpawnTable);

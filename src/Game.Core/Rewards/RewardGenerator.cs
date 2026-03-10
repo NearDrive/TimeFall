@@ -16,6 +16,7 @@ public static class RewardGenerator
     {
         var cardIds = rewardCardPool
             .Where(cardDefinitions.ContainsKey)
+            .Where(cardId => !cardId.Value.StartsWith("enemy-", StringComparison.Ordinal))
             .Distinct()
             .OrderBy(id => id.Value, StringComparer.Ordinal)
             .ToArray();
