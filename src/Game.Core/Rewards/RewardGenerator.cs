@@ -8,11 +8,6 @@ namespace Game.Core.Rewards;
 
 public static class RewardGenerator
 {
-    private static bool IsRewardEligible(CardDefinition definition)
-    {
-        return !string.IsNullOrWhiteSpace(definition.DeckAffinity);
-    }
-
     public static (RewardState RewardState, GameRng Rng) CreateCardChoiceReward(
         IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions,
         IReadOnlyList<CardId> rewardCardPool,
@@ -21,7 +16,7 @@ public static class RewardGenerator
     {
         var cardIds = rewardCardPool
             .Where(cardDefinitions.ContainsKey)
-            .Where(cardId => IsRewardEligible(cardDefinitions[cardId]))
+            .Where(cardId => !cardId.Value.StartsWith("enemy-", StringComparison.Ordinal))
             .Distinct()
             .OrderBy(id => id.Value, StringComparer.Ordinal)
             .ToArray();

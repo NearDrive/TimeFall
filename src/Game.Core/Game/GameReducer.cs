@@ -146,8 +146,7 @@ public static class GameReducer
 
     private static bool IsRewardEligibleCardDefinition(KeyValuePair<CardId, CardDefinition> card)
     {
-        return !string.IsNullOrWhiteSpace(card.Value.DeckAffinity)
-            && !card.Key.Value.StartsWith("enemy-", StringComparison.Ordinal);
+        return !card.Key.Value.StartsWith("enemy-", StringComparison.Ordinal);
     }
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
@@ -652,11 +651,13 @@ public static class GameReducer
             Resources = ResolveStartingResources(state, blueprint.Player.Resources),
         };
 
-        var (player, nextRng) = CreateCombatEntity(playerBlueprint, rng, shuffleOnCreate: true);
+        var shouldShuffleCombatDecks = state.SelectedDeckId is not null;
+
+        var (player, nextRng) = CreateCombatEntity(playerBlueprint, rng, shuffleOnCreate: shouldShuffleCombatDecks);
         var enemies = ImmutableList.CreateBuilder<CombatEntity>();
         foreach (var enemyBlueprint in blueprint.Enemies)
         {
-            var (enemy, enemyRng) = CreateCombatEntity(enemyBlueprint, nextRng, shuffleOnCreate: true);
+            var (enemy, enemyRng) = CreateCombatEntity(enemyBlueprint, nextRng, shuffleOnCreate: shouldShuffleCombatDecks);
             enemies.Add(enemy);
             nextRng = enemyRng;
         }
