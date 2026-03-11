@@ -45,33 +45,34 @@ public static class CardEffectResolver
         var mutable = combatState with { LastCardDamageDealt = 0 };
         var events = new List<GameEvent>();
         var currentRng = rng ?? GameRng.FromSeed(0);
+        var isAttackCard = definition.HasLabel("Attack");
 
         foreach (var effect in definition.Effects)
         {
             switch (effect)
             {
-                case DamageCardEffect e: mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, events, selectedEnemyId); break;
-                case DamageIgnoringArmorCardEffect e: mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, true, events, selectedEnemyId); break;
+                case DamageCardEffect e: mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, isAttackCard, events, selectedEnemyId); break;
+                case DamageIgnoringArmorCardEffect e: mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, true, isAttackCard, events, selectedEnemyId); break;
                 case DamageNTimesCardEffect e:
-                    for (var i = 0; i < e.Times; i++) mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, events, selectedEnemyId);
+                    for (var i = 0; i < e.Times; i++) mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, isAttackCard, events, selectedEnemyId);
                     break;
                 case DealDamagePerMomentumSpentCardEffect e:
-                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, events, selectedEnemyId);
+                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, isAttackCard, events, selectedEnemyId);
                     break;
                 case DealDamagePerAllMomentumSpentCardEffect e:
-                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, events, selectedEnemyId);
+                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, isAttackCard, events, selectedEnemyId);
                     break;
                 case DealDamagePerCurrentMomentumCardEffect e:
-                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * GetMomentum(mutable.Player), e.Target, false, events, selectedEnemyId);
+                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * GetMomentum(mutable.Player), e.Target, false, isAttackCard, events, selectedEnemyId);
                     break;
                 case DealDamageToAllEnemiesCardEffect e:
-                    mutable = ApplyDamageToAllEnemies(mutable, card, actor, e.Amount, false, events);
+                    mutable = ApplyDamageToAllEnemies(mutable, card, actor, e.Amount, false, isAttackCard, events);
                     break;
                 case DealDamageAndDrawPerCurrentMomentumCardEffect e:
                     var m = GetMomentum(mutable.Player);
                     if (m > 0)
                     {
-                        mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * m, e.Target, false, events, selectedEnemyId);
+                        mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * m, e.Target, false, isAttackCard, events, selectedEnemyId);
                         var dr = ApplyDrawEffect(mutable, new DrawCardsCardEffect(e.DrawPerMomentum * m, CardTarget.Self), actor, currentRng);
                         mutable = dr.CombatState; currentRng = dr.Rng; events.AddRange(dr.Events);
                     }
@@ -126,29 +127,38 @@ public static class CardEffectResolver
         }
 
         var before = cs.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
-        var after = Math.Max(0, before + amount);
-        events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, reason));
+        var gained = MomentumMath.Threshold(amount);
+        var after = Math.Max(0, before + gained);
+        events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, $"{reason} (GM +{gained} from M {amount})"));
         return cs with { Player = cs.Player with { Resources = cs.Player.Resources.SetItem(ResourceType.Momentum, after) } };
     }
 
-    private static CombatState ApplyDamageToAllEnemies(CombatState combatState, CardInstance card, TurnOwner actor, int amount, bool ignoreArmor, ICollection<GameEvent> events)
+    private static CombatState ApplyDamageToAllEnemies(CombatState combatState, CardInstance card, TurnOwner actor, int amount, bool ignoreArmor, bool isAttackCard, ICollection<GameEvent> events)
     {
         var enemyIds = combatState.Enemies.Select(e => e.EntityId).ToArray();
         var mutable = combatState;
         foreach (var enemyId in enemyIds)
         {
-            mutable = ApplyDamageEffect(mutable, card, actor, amount, CardTarget.Opponent, ignoreArmor, events, enemyId);
+            mutable = ApplyDamageEffect(mutable, card, actor, amount, CardTarget.Opponent, ignoreArmor, isAttackCard, events, enemyId);
         }
 
         return mutable;
     }
 
-    private static CombatState ApplyDamageEffect(CombatState combatState, CardInstance card, TurnOwner actor, int amount, CardTarget targetType, bool ignoreArmor, ICollection<GameEvent> events, string? selectedEnemyId)
+    private static CombatState ApplyDamageEffect(CombatState combatState, CardInstance card, TurnOwner actor, int amount, CardTarget targetType, bool ignoreArmor, bool isAttackCard, ICollection<GameEvent> events, string? selectedEnemyId)
     {
         var target = ResolveTarget(targetType, actor);
         var modified = amount;
+        var baseDamage = amount;
+        var momentumBonus = 0;
         if (actor == TurnOwner.Player && target == TurnOwner.Enemy)
         {
+            if (isAttackCard && TryGetMomentumAttackBonus(combatState, out var attackMomentumBonus))
+            {
+                momentumBonus = attackMomentumBonus;
+                modified += attackMomentumBonus;
+            }
+
             modified += combatState.NextAttackBonusDamageThisTurn + combatState.AllAttacksBonusDamageThisTurn;
             if (combatState.NextAttackDoubleThisTurn || combatState.AllAttacksDoubleThisTurn) modified *= 2;
             combatState = combatState with { NextAttackBonusDamageThisTurn = 0, NextAttackDoubleThisTurn = false };
@@ -166,7 +176,7 @@ public static class CardEffectResolver
             var state = combatState with { Player = hitResult.UpdatedEntity };
             if (state.Player.ReflectNextEnemyAttackDamage > 0)
             {
-                state = ApplyDamageEffect(state with { Player = state.Player with { ReflectNextEnemyAttackDamage = 0 } }, card, TurnOwner.Player, state.Player.ReflectNextEnemyAttackDamage, CardTarget.Opponent, true, events, selectedEnemyId);
+                state = ApplyDamageEffect(state with { Player = state.Player with { ReflectNextEnemyAttackDamage = 0 } }, card, TurnOwner.Player, state.Player.ReflectNextEnemyAttackDamage, CardTarget.Opponent, true, false, events, selectedEnemyId);
             }
 
             return state;
@@ -184,11 +194,17 @@ public static class CardEffectResolver
             ? DamageSystem.ApplyArmorIgnoringHit(enemy, modified)
             : DamageSystem.ApplyHit(enemy, modified);
         var enemyBlocked = enemyHitResult.Events.OfType<DamageDealt>().Select(e => Math.Max(0, e.Incoming - e.Taken)).FirstOrDefault();
-        events.Add(new PlayerStrikePlayed(card, modified, enemyBeforeHp, enemyHitResult.UpdatedEntity.HP, enemyBeforeArmor, enemyHitResult.UpdatedEntity.Armor, enemyBlocked));
+        events.Add(new PlayerStrikePlayed(card, modified, baseDamage, momentumBonus, enemyBeforeHp, enemyHitResult.UpdatedEntity.HP, enemyBeforeArmor, enemyHitResult.UpdatedEntity.Armor, enemyBlocked));
         return UpdateEnemyById(combatState, enemy.EntityId, _ => enemyHitResult.UpdatedEntity) with
         {
             LastCardDamageDealt = combatState.LastCardDamageDealt + Math.Max(0, enemyBeforeHp - enemyHitResult.UpdatedEntity.HP),
         };
+    }
+
+    private static bool TryGetMomentumAttackBonus(CombatState combatState, out int bonus)
+    {
+        bonus = GetMomentum(combatState.Player);
+        return bonus > 0;
     }
 
     private static CombatState ApplyArmorEffect(CombatState combatState, GainArmorCardEffect effect, TurnOwner actor, string? selectedEnemyId)

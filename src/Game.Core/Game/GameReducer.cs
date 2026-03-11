@@ -238,7 +238,8 @@ public static class GameReducer
         if (cardDefinition.HasLabel("Attack"))
         {
             var before = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
-            var after = before + 1;
+            var gainedGm = MomentumMath.Threshold(1);
+            var after = before + gainedGm;
             combatState = combatState with
             {
                 Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, after) },

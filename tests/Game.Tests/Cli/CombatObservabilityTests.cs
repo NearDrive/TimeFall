@@ -23,7 +23,7 @@ public sealed class CombatObservabilityTests
         Assert.Equal(strike.Damage - hpDelta, strike.DamageBlockedByArmor);
 
         var rendered = CliRenderer.FormatEvent(strike, Content.CardDefinitions);
-        Assert.Contains("5 incoming", rendered);
+        Assert.Contains("Base 5 + Momentum 0", rendered);
         Assert.Contains("Enemy HP 23 -> 20", rendered);
         Assert.Contains("Armor 2 -> 1", rendered);
         Assert.Contains("2 blocked", rendered);
