@@ -134,6 +134,114 @@ public class DeckCycleSystemTests
         Assert.Equal(first.CombatState.RequiredOverflowDiscardCount, second.CombatState.RequiredOverflowDiscardCount);
     }
 
+    [Fact]
+    public void PlayerDeck_ReshufflesMultipleTimes_BeforeEnemy()
+    {
+        var state = CreateCombatState(draw: [], hand: [], discard: CardsRange("p", 1, 12)) with
+        {
+            Enemy = CreateEntity("enemy", [], [], CardsRange("e", 1, 12), reshuffleCount: 0),
+        };
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, GameRng.FromSeed(501), out _);
+        var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, "p", 100, 111), playerFirst.Rng, out _);
+        var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, "p", 200, 211), playerSecond.Rng, out _);
+
+        Assert.Equal(0, state.Enemy.Deck.ReshuffleCount);
+        Assert.Equal(1, playerFirst.Deck.ReshuffleCount);
+        Assert.Equal(2, playerSecond.Deck.ReshuffleCount);
+        Assert.Equal(3, playerThird.Deck.ReshuffleCount);
+        Assert.Empty(playerThird.Deck.BurnPile);
+
+        var enemyFirst = DeckCycleSystem.EnsureDrawAvailable(state.Enemy.Deck, playerThird.Rng, out _);
+        Assert.Equal(1, enemyFirst.Deck.ReshuffleCount);
+    }
+
+    [Fact]
+    public void EnemyDeck_ReshufflesMultipleTimes_BeforePlayer()
+    {
+        var state = CreateCombatState(draw: [], hand: [], discard: CardsRange("p", 1, 12)) with
+        {
+            Enemy = CreateEntity("enemy", [], [], CardsRange("e", 1, 12), reshuffleCount: 0),
+        };
+
+        var enemyFirst = DeckCycleSystem.EnsureDrawAvailable(state.Enemy.Deck, GameRng.FromSeed(601), out _);
+        var enemySecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemyFirst.Deck, "e", 300, 311), enemyFirst.Rng, out _);
+        var enemyThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemySecond.Deck, "e", 400, 411), enemySecond.Rng, out _);
+
+        Assert.Equal(0, state.Player.Deck.ReshuffleCount);
+        Assert.Equal(1, enemyFirst.Deck.ReshuffleCount);
+        Assert.Equal(2, enemySecond.Deck.ReshuffleCount);
+        Assert.Equal(3, enemyThird.Deck.ReshuffleCount);
+        Assert.Empty(enemyThird.Deck.BurnPile);
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, enemyThird.Rng, out _);
+        Assert.Equal(1, playerFirst.Deck.ReshuffleCount);
+    }
+
+    [Fact]
+    public void PlayerReshuffles_EnemyNeverReshuffles()
+    {
+        var state = CreateCombatState(draw: [], hand: [], discard: CardsRange("p", 1, 12)) with
+        {
+            Enemy = CreateEntity("enemy", [], [], CardsRange("e", 1, 12), reshuffleCount: 0),
+        };
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, GameRng.FromSeed(701), out _);
+        var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, "p", 500, 511), playerFirst.Rng, out _);
+        var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, "p", 600, 611), playerSecond.Rng, out _);
+
+        Assert.Equal(0, state.Enemy.Deck.ReshuffleCount);
+        Assert.Equal(1, playerFirst.Deck.ReshuffleCount);
+        Assert.Equal(2, playerSecond.Deck.ReshuffleCount);
+        Assert.Equal(3, playerThird.Deck.ReshuffleCount);
+        Assert.Empty(playerThird.Deck.BurnPile);
+        Assert.Equal(12, state.Enemy.Deck.DiscardPile.Count);
+    }
+
+    [Fact]
+    public void Reshuffle_WithEmptyDiscard_IsNoOp()
+    {
+        var state = CreateCombatState(draw: [], hand: [], discard: []);
+
+        var cycle = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, GameRng.FromSeed(801), out var events);
+
+        Assert.Equal(0, cycle.Deck.ReshuffleCount);
+        Assert.Empty(cycle.Deck.DrawPile);
+        Assert.Empty(cycle.Deck.DiscardPile);
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public void BurnCount_Truncates_WhenDeckTooSmall()
+    {
+        var deck = new DeckState(
+            DrawPile: ImmutableList<CardInstance>.Empty,
+            Hand: ImmutableList<CardInstance>.Empty,
+            DiscardPile: Cards("c1", "c2").ToImmutableList(),
+            BurnPile: ImmutableList<CardInstance>.Empty,
+            ReshuffleCount: 5);
+
+        var cycle = DeckCycleSystem.EnsureDrawAvailable(deck, GameRng.FromSeed(901), out var events);
+
+        Assert.Equal(6, cycle.Deck.ReshuffleCount);
+        Assert.Empty(events.OfType<CardBurned>());
+        Assert.Empty(cycle.Deck.BurnPile);
+        Assert.Equal(2, cycle.Deck.DrawPile.Count);
+    }
+
+    [Fact]
+    public void IndependentDeckCycles_RemainIndependentAcrossMultipleTurns()
+    {
+        var firstRun = SimulateIndependentDeckCycles(seed: 1001);
+        var secondRun = SimulateIndependentDeckCycles(seed: 1001);
+
+        Assert.Equal(firstRun, secondRun);
+        Assert.Equal(3, firstRun.PlayerReshuffles);
+        Assert.Equal(2, firstRun.EnemyReshuffles);
+        Assert.Equal(0, firstRun.PlayerBurnPileCount);
+        Assert.Equal(0, firstRun.EnemyBurnPileCount);
+    }
+
     private static CombatState CreateCombatState(List<CardInstance> draw, List<CardInstance> hand, List<CardInstance> discard, int reshuffleCount = 0)
     {
         var player = CreateEntity("player", draw, hand, discard, reshuffleCount);
@@ -152,5 +260,38 @@ public class DeckCycleSystemTests
             new DeckState(draw.ToImmutableList(), hand.ToImmutableList(), discard.ToImmutableList(), ImmutableList<CardInstance>.Empty, reshuffleCount));
     }
 
+    private static DeckState PrepareNextReshuffle(DeckState deck, string prefix, int min, int max)
+    {
+        return deck with
+        {
+            DrawPile = ImmutableList<CardInstance>.Empty,
+            DiscardPile = CardsRange(prefix, min, max).ToImmutableList(),
+        };
+    }
+
+    private static (int PlayerReshuffles, int EnemyReshuffles, int PlayerBurnPileCount, int EnemyBurnPileCount) SimulateIndependentDeckCycles(int seed)
+    {
+        var state = CreateCombatState(draw: [], hand: [], discard: CardsRange("p", 1, 12)) with
+        {
+            Enemy = CreateEntity("enemy", [], [], CardsRange("e", 1, 12), 0),
+        };
+        var rng = GameRng.FromSeed(seed);
+
+        var playerFirst = DeckCycleSystem.EnsureDrawAvailable(state.Player.Deck, rng, out _);
+        var enemyFirst = DeckCycleSystem.EnsureDrawAvailable(state.Enemy.Deck, playerFirst.Rng, out _);
+        var playerSecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerFirst.Deck, "p", 700, 711), enemyFirst.Rng, out _);
+        var playerThird = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(playerSecond.Deck, "p", 800, 811), playerSecond.Rng, out _);
+        var enemySecond = DeckCycleSystem.EnsureDrawAvailable(PrepareNextReshuffle(enemyFirst.Deck, "e", 900, 911), playerThird.Rng, out _);
+
+        return (
+            PlayerReshuffles: playerThird.Deck.ReshuffleCount,
+            EnemyReshuffles: enemySecond.Deck.ReshuffleCount,
+            PlayerBurnPileCount: playerThird.Deck.BurnPile.Count,
+            EnemyBurnPileCount: enemySecond.Deck.BurnPile.Count);
+    }
+
     private static List<CardInstance> Cards(params string[] ids) => ids.Select(id => new CardInstance(new CardId(id))).ToList();
+
+    private static List<CardInstance> CardsRange(string prefix, int min, int max)
+        => Enumerable.Range(min, max - min + 1).Select(i => new CardInstance(new CardId($"{prefix}{i}"))).ToList();
 }
