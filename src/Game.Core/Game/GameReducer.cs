@@ -235,6 +235,9 @@ public static class GameReducer
         var resolution = CardEffectResolver.Resolve(combatState, card, TurnOwner.Player, state.CardDefinitions, state.Rng, selectedEnemyId);
         combatState = PruneDeadEnemies(resolution.CombatState);
 
+        events.Add(new CardDiscarded(card));
+        events.AddRange(resolution.Events);
+
         if (cardDefinition.HasLabel("Attack"))
         {
             var before = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
@@ -248,9 +251,6 @@ public static class GameReducer
             };
             events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, "Attack label bonus"));
         }
-
-        events.Add(new CardDiscarded(card));
-        events.AddRange(resolution.Events);
 
         return ResolveCombatPhase(state with { Combat = combatState, Rng = resolution.Rng }, events);
     }
@@ -830,8 +830,8 @@ public static class GameReducer
                     return false;
                 }
 
-                var costGm = MomentumMath.Threshold(s.Amount);
-                var afterSpend = Math.Max(0, gm - costGm);
+                var afterSpendMomentum = Math.Max(0, momentum - s.Amount);
+                var afterSpend = MomentumMath.Threshold(afterSpendMomentum);
                 events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, afterSpend, $"Spend {s.Amount} Momentum"));
                 newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterSpend) }, LastCardMomentumSpent = s.Amount };
                 return true;
@@ -841,8 +841,8 @@ public static class GameReducer
                 return true;
             case SpendUpToMomentumCost u:
                 spentMomentum = Math.Min(u.Max, momentum);
-                var spendUpToGm = MomentumMath.Threshold(spentMomentum);
-                var afterUpTo = Math.Max(0, gm - spendUpToGm);
+                var afterUpToMomentum = Math.Max(0, momentum - spentMomentum);
+                var afterUpTo = MomentumMath.Threshold(afterUpToMomentum);
                 events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, afterUpTo, $"Spend up to {u.Max} Momentum ({spentMomentum})"));
                 newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterUpTo) }, LastCardMomentumSpent = spentMomentum };
                 return true;

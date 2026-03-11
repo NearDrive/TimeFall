@@ -85,6 +85,17 @@ public sealed class CombatObservabilityTests
         Assert.Contains("Enemy statuses: Bleed 2, Reflect 1", output);
     }
 
+
+    [Fact]
+    public void Logs_DoNotConfuseGmAndMomentum()
+    {
+        var rendered = CliRenderer.FormatEvent(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, 5, 1, "Spend 2 Momentum"), Content.CardDefinitions);
+
+        Assert.Contains("GM: 5 -> 1", rendered);
+        Assert.Contains("Momentum: 3 -> 1", rendered);
+        Assert.DoesNotContain("Momentum: 5 -> 1", rendered);
+    }
+
     [Fact]
     public void CLIShowsReshuffleEvents()
     {
