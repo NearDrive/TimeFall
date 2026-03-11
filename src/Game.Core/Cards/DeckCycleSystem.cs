@@ -28,21 +28,11 @@ public static class DeckCycleSystem
 
         var generatedEvents = new List<GameEvent>();
 
-        // Deck cycle order must remain explicit and deterministic:
-        // 1) reshuffle discard into draw, 2) burn escalated count, 3) resume draw.
-        // This keeps replay traces stable for the same seed + action sequence.
         var (reshuffledDeck, reshuffleRng) = Reshuffle(deck, rng);
         generatedEvents.Add(new DeckReshuffled());
 
-        var burnCount = reshuffledDeck.ReshuffleCount + 1;
-        var (burnedDeck, nextRng, burnedCards) = Burn(
-            reshuffledDeck with { ReshuffleCount = reshuffledDeck.ReshuffleCount + 1 },
-            burnCount,
-            reshuffleRng);
-        generatedEvents.AddRange(burnedCards.Select(c => new CardBurned(c)));
-
         events = generatedEvents;
-        return (burnedDeck, nextRng);
+        return (reshuffledDeck with { ReshuffleCount = reshuffledDeck.ReshuffleCount + 1 }, reshuffleRng);
     }
 
     private static (DeckState Deck, GameRng Rng) Reshuffle(DeckState deck, GameRng rng)
@@ -70,27 +60,5 @@ public static class DeckCycleSystem
         }
 
         return (shuffled, currentRng);
-    }
-
-    private static (DeckState Deck, GameRng Rng, IReadOnlyList<CardInstance> BurnedCards) Burn(DeckState deck, int count, GameRng rng)
-    {
-        var burnedCards = new List<CardInstance>();
-        var currentRng = rng;
-        var burnsToApply = Math.Min(count, deck.DrawPile.Count);
-
-        for (var i = 0; i < burnsToApply; i++)
-        {
-            var (burnIndex, nextRng) = currentRng.NextInt(0, deck.DrawPile.Count);
-            var burnedCard = deck.DrawPile[burnIndex];
-            deck = deck with
-            {
-                DrawPile = deck.DrawPile.RemoveAt(burnIndex),
-                BurnPile = deck.BurnPile.Add(burnedCard),
-            };
-            burnedCards.Add(burnedCard);
-            currentRng = nextRng;
-        }
-
-        return (deck, currentRng, burnedCards);
     }
 }

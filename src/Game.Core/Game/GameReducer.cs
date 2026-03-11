@@ -19,7 +19,7 @@ public static class GameReducer
         {
             if (action is PlayCardAction)
             {
-                return RejectPlayCard(state, PlayCardRejectionReason.ActionBlockedByPendingDiscard, "Discard overflow cards before playing more cards.");
+                return RejectPlayCard(state, PlayCardRejectionReason.ActionBlockedByPendingDiscard, "Resolve pending discard before playing more cards.");
             }
 
             return (state, Array.Empty<GameEvent>());
@@ -468,7 +468,11 @@ public static class GameReducer
 
         var discardedCards = uniqueIndexes.OrderBy(i => i).Select(i => state.Combat.Player.Deck.Hand[i]).ToArray();
         var combatState = HandManager.ApplyDiscard(state.Combat, uniqueIndexes);
-        var events = discardedCards.Select(c => (GameEvent)new CardDiscarded(c)).ToArray();
+        var events = discardedCards.Select(c => (GameEvent)new CardDiscarded(c)).ToList();
+        if (state.Combat.PendingDiscardIsFatigue && requiredCount > 0)
+        {
+            events.Add(new FatigueDiscardResolved(TurnOwner.Player, requiredCount));
+        }
 
         return (state with { Combat = combatState }, events);
     }

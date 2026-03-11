@@ -169,6 +169,8 @@ internal static class CliRenderer
         Console.WriteLine($"Momentum: {MomentumMath.DerivedMomentumFromGm(gm)} (gm: {gm})");
         Console.WriteLine($"Player statuses: {FormatStatuses(combat.Player)}");
         Console.WriteLine($"Player piles: draw {combat.Player.Deck.DrawPile.Count} | hand {combat.Player.Deck.Hand.Count} | discard {combat.Player.Deck.DiscardPile.Count} | burn {combat.Player.Deck.BurnPile.Count}");
+        Console.WriteLine($"Shuffle Fatigue: {combat.Player.Deck.ReshuffleCount}");
+        Console.WriteLine($"Next reshuffle discard: {Math.Min(combat.Player.Deck.ReshuffleCount + 1, HandManager.InitialHandSize)}");
         Console.WriteLine("Enemies:");
         for (var i = 0; i < combat.Enemies.Count; i++)
         {
@@ -176,6 +178,7 @@ internal static class CliRenderer
             Console.WriteLine($"  [{i}] {enemy.EntityId} — HP {enemy.HP}, Armor {enemy.Armor}");
             Console.WriteLine($"      Statuses: {FormatStatuses(enemy)}");
             Console.WriteLine($"      Piles: draw {enemy.Deck.DrawPile.Count} | hand {enemy.Deck.Hand.Count} | discard {enemy.Deck.DiscardPile.Count} | burn {enemy.Deck.BurnPile.Count}");
+            Console.WriteLine($"      Shuffle Fatigue: {enemy.Deck.ReshuffleCount}");
         }
 
         if (combat.NeedsOverflowDiscard)
@@ -209,6 +212,8 @@ internal static class CliRenderer
             StatusExpired e => $"[{e.Target}] {e.StatusName} expires",
             DeckReshuffled => "Deck reshuffled",
             CardBurned e => $"Burns {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
+            ReshuffleFatigueApplied e => $"Reshuffle Fatigue {e.DiscardCount}: discard {e.DiscardCount} cards",
+            FatigueDiscardResolved e => $"{e.Owner} discards {e.DiscardCount} cards due to fatigue",
             MovedToNode e => $"Moved to {e.NodeId.Value}",
             EncounterTriggered e => $"Encounter triggered at {e.NodeId.Value} ({e.NodeType})",
             EncounterResolved e => $"Encounter resolved at {e.NodeId.Value} ({e.NodeType})",

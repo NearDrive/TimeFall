@@ -85,6 +85,16 @@ public sealed class CombatObservabilityTests
         Assert.Contains("Enemy statuses: Bleed 2, Reflect 1", output);
     }
 
+    [Fact]
+    public void CLIShowsReshuffleEvents()
+    {
+        var fatigue = CliRenderer.FormatEvent(new ReshuffleFatigueApplied(TurnOwner.Player, 2), Content.CardDefinitions);
+        var discard = CliRenderer.FormatEvent(new FatigueDiscardResolved(TurnOwner.Player, 2), Content.CardDefinitions);
+
+        Assert.Contains("Reshuffle Fatigue 2", fatigue);
+        Assert.Contains("due to fatigue", discard);
+    }
+
     private static GameState BeginCombatWithBleedingCut()
     {
         var blueprint = new CombatBlueprint(

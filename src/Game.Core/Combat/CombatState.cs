@@ -8,6 +8,7 @@ public sealed record CombatState(
     ImmutableList<CombatEntity> Enemies,
     bool NeedsOverflowDiscard,
     int RequiredOverflowDiscardCount,
+    bool PendingDiscardIsFatigue = false,
     int AttacksPlayedThisTurn = 0,
     bool PlayedAttackThisTurn = false,
     int NextAttackBonusDamageThisTurn = 0,
@@ -23,6 +24,7 @@ public sealed record CombatState(
         CombatEntity Enemy,
         bool NeedsOverflowDiscard,
         int RequiredOverflowDiscardCount,
+        bool PendingDiscardIsFatigue = false,
         int AttacksPlayedThisTurn = 0,
         bool PlayedAttackThisTurn = false,
         int NextAttackBonusDamageThisTurn = 0,
@@ -31,7 +33,7 @@ public sealed record CombatState(
         bool AllAttacksDoubleThisTurn = false,
         int LastCardMomentumSpent = 0,
         int LastCardDamageDealt = 0)
-        : this(TurnOwner, Player, ImmutableList.Create(Enemy), NeedsOverflowDiscard, RequiredOverflowDiscardCount, AttacksPlayedThisTurn, PlayedAttackThisTurn, NextAttackBonusDamageThisTurn, NextAttackDoubleThisTurn, AllAttacksBonusDamageThisTurn, AllAttacksDoubleThisTurn, LastCardMomentumSpent, LastCardDamageDealt)
+        : this(TurnOwner, Player, ImmutableList.Create(Enemy), NeedsOverflowDiscard, RequiredOverflowDiscardCount, PendingDiscardIsFatigue, AttacksPlayedThisTurn, PlayedAttackThisTurn, NextAttackBonusDamageThisTurn, NextAttackDoubleThisTurn, AllAttacksBonusDamageThisTurn, AllAttacksDoubleThisTurn, LastCardMomentumSpent, LastCardDamageDealt)
     {
     }
 

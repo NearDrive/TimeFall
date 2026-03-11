@@ -98,7 +98,7 @@ public class ContentSlicePlaytestTests
     }
 
     [Fact]
-    public void EnemyBurnRule_RemainsEnabled()
+    public void EnemyReshuffleFatigue_RemainsEnabled()
     {
         var state = CreateMapExplorationState();
         var enteredCombat = GameReducer.Reduce(state, new MoveToNodeAction(new NodeId("combat-1"))).NewState;
@@ -121,11 +121,11 @@ public class ContentSlicePlaytestTests
             },
         };
 
-        var cycled = EnemyController.ExecuteTurn(exhaustedEnemyDeck, enteredCombat.Rng, enteredCombat.CardDefinitions);
+        var cycled = EnemyController.DrawAtTurnStart(exhaustedEnemyDeck, enteredCombat.Rng, 1);
 
         Assert.True(cycled.Events.OfType<DeckReshuffled>().Any());
-        Assert.True(cycled.Events.OfType<CardBurned>().Any(), "Enemy deck cycle should still burn cards.");
-        Assert.True(cycled.CombatState.Enemy.Deck.BurnPile.Count > 0);
+        Assert.True(cycled.Events.OfType<ReshuffleFatigueApplied>().Any(), "Enemy deck cycle should apply fatigue.");
+        Assert.True(cycled.CombatState.Enemy.Deck.BurnPile.Count == 0);
     }
 
     [Fact]

@@ -6,6 +6,8 @@ namespace Game.Core.Combat;
 
 public static class HandManager
 {
+    public const int InitialHandSize = 5;
+
     public static DrawResult Draw(CombatState combatState, GameRng rng, int count)
     {
         var mutable = combatState;
@@ -28,6 +30,13 @@ public static class HandManager
                 currentRng = cycleResult.Rng;
                 events.AddRange(cycleEvents);
 
+                if (cycleEvents.Any(e => e is DeckReshuffled))
+                {
+                    var (fatigueState, fatigueEvents) = ApplyPlayerReshuffleFatigue(mutable);
+                    mutable = fatigueState;
+                    events.AddRange(fatigueEvents);
+                }
+
                 if (mutable.Player.Deck.DrawPile.Count == 0)
                 {
                     break;
@@ -49,11 +58,14 @@ public static class HandManager
             drawn.Add(topCard);
         }
 
-        var requiredDiscardCount = RequireOverflowDiscard(mutable);
+        var requiredDiscardCount = mutable.RequiredOverflowDiscardCount > 0
+            ? mutable.RequiredOverflowDiscardCount
+            : RequireOverflowDiscard(mutable);
         mutable = mutable with
         {
             NeedsOverflowDiscard = requiredDiscardCount > 0,
             RequiredOverflowDiscardCount = requiredDiscardCount,
+            PendingDiscardIsFatigue = mutable.PendingDiscardIsFatigue,
         };
 
         return new DrawResult(mutable, currentRng, drawn, events);
@@ -89,7 +101,42 @@ public static class HandManager
         {
             NeedsOverflowDiscard = requiredDiscardCount > 0,
             RequiredOverflowDiscardCount = requiredDiscardCount,
+            PendingDiscardIsFatigue = false,
         };
+    }
+
+    private static (CombatState CombatState, IReadOnlyList<GameEvent> Events) ApplyPlayerReshuffleFatigue(CombatState combatState)
+    {
+        var mutable = combatState;
+        var events = new List<GameEvent>();
+        var missingCards = Math.Max(0, InitialHandSize - mutable.Player.Deck.Hand.Count);
+
+        for (var i = 0; i < missingCards && mutable.Player.Deck.DrawPile.Count > 0; i++)
+        {
+            var topCard = mutable.Player.Deck.DrawPile[0];
+            mutable = mutable with
+            {
+                Player = mutable.Player with
+                {
+                    Deck = mutable.Player.Deck with
+                    {
+                        DrawPile = mutable.Player.Deck.DrawPile.RemoveAt(0),
+                        Hand = mutable.Player.Deck.Hand.Add(topCard),
+                    },
+                },
+            };
+            events.Add(new CardDrawn(topCard));
+        }
+
+        var fatigueDiscardCount = Math.Min(mutable.Player.Deck.ReshuffleCount, mutable.Player.Deck.Hand.Count);
+        events.Add(new ReshuffleFatigueApplied(TurnOwner.Player, fatigueDiscardCount));
+
+        return (mutable with
+        {
+            NeedsOverflowDiscard = fatigueDiscardCount > 0,
+            RequiredOverflowDiscardCount = fatigueDiscardCount,
+            PendingDiscardIsFatigue = fatigueDiscardCount > 0,
+        }, events);
     }
 
 }
