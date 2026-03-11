@@ -16,6 +16,7 @@ internal static class CliRenderer
         Console.WriteLine("  state | status      Show run summary");
         Console.WriteLine("  help                Show commands");
         Console.WriteLine("  map                 Show current node and neighbors");
+        Console.WriteLine("  zone                Show full zone map");
         Console.WriteLine("  move <nodeId|i>     Move to adjacent node (nodeId or 0-based adjacent index)");
         Console.WriteLine("  hand                Show combat hand");
         Console.WriteLine("  play <index> [t]    Play card from hand (0-based index, optional target index)");
@@ -96,6 +97,33 @@ internal static class CliRenderer
             var collapsed = state.Time.CollapsedNodeIds.Contains(neighborId) ? " [collapsed]" : string.Empty;
             var resolved = state.Map.ResolvedEncounterNodeIds.Contains(neighborId) ? " [resolved]" : string.Empty;
             Console.WriteLine($"- [{i}] {neighborId} ({node?.Type}){collapsed}{resolved}");
+        }
+    }
+
+
+    public static void RenderZone(GameState state)
+    {
+        Console.WriteLine("Zone Map");
+        Console.WriteLine();
+
+        var collapsedNodes = state.Time.CollapsedNodeIds;
+        var nodesByDepth = state.Map.Graph.Nodes
+            .Select(node => new
+            {
+                Node = node,
+                Depth = state.Map.DistanceFromStart.TryGetValue(node.Id, out var depth) ? depth : int.MaxValue,
+            })
+            .OrderBy(entry => entry.Depth)
+            .ThenBy(entry => entry.Node.Id.Value, StringComparer.Ordinal)
+            .GroupBy(entry => entry.Depth);
+
+        foreach (var depthGroup in nodesByDepth)
+        {
+            var renderedNodes = depthGroup
+                .Select(entry => FormatZoneNode(entry.Node, state.Map.CurrentNodeId, collapsedNodes))
+                .ToArray();
+            Console.WriteLine($"Depth {depthGroup.Key}:  {string.Join("   ", renderedNodes)}");
+            Console.WriteLine();
         }
     }
 
@@ -236,6 +264,32 @@ internal static class CliRenderer
             TimeCaughtPlayer e => $"Time caught player at {e.NodeId.Value} (step {e.Step})",
             _ => gameEvent.GetType().Name,
         };
+    }
+
+
+    private static string FormatZoneNode(Node node, NodeId currentNodeId, ISet<NodeId> collapsedNodeIds)
+    {
+        var marker = node.Type switch
+        {
+            NodeType.Start => "S",
+            NodeType.Boss => "B",
+            NodeType.Combat => "C",
+            NodeType.Elite => "E",
+            NodeType.Rest => "R",
+            NodeType.Shop => "$",
+            NodeType.Event => "?",
+            _ => "?",
+        };
+
+        var suffix = string.Empty;
+        if (node.Id == currentNodeId)
+        {
+            suffix += "@";
+        }
+
+        var collapsed = collapsedNodeIds.Contains(node.Id) ? " X" : string.Empty;
+
+        return $"[{marker}:{node.Id.Value}{suffix}{collapsed}]";
     }
 
     private static string FormatCardSummary(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)

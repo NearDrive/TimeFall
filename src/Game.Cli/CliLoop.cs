@@ -201,6 +201,9 @@ internal sealed class CliLoop
             case CliView.Map:
                 CliRenderer.RenderMap(state);
                 break;
+            case CliView.Zone:
+                CliRenderer.RenderZone(state);
+                break;
             case CliView.Hand:
                 CliRenderer.RenderHand(state, _content.CardDefinitions);
                 break;
