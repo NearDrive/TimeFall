@@ -200,7 +200,9 @@ internal static class CliRenderer
             RunStarted e => $"Run started (seed {e.Seed})",
             DeckSelected e => $"Deck selected: {e.DeckId}",
             TurnEnded e => $"---------------- {e.NextTurnOwner} turn begins ----------------",
-            ResourceChanged e => $"{e.Owner} {(e.ResourceType == ResourceType.Momentum ? "Momentum" : e.ResourceType.ToString())}: {e.Before} -> {e.After} ({e.Reason})",
+            ResourceChanged e when e.ResourceType == ResourceType.Momentum
+                => $"{e.Owner} GM: {e.Before} -> {e.After}; Momentum: {MomentumMath.DerivedMomentumFromGm(e.Before)} -> {MomentumMath.DerivedMomentumFromGm(e.After)} ({e.Reason})",
+            ResourceChanged e => $"{e.Owner} {e.ResourceType}: {e.Before} -> {e.After} ({e.Reason})",
             MomentumDecayApplied e => $"Momentum decay: gm {e.BeforeGm} -> {e.AfterGm}",
             EnteredCombat e => $"Entered combat at {e.NodeId?.Value ?? "unknown"} ({e.NodeType?.ToString() ?? "n/a"})",
             CardDrawn e => $"Draws {GetCardName(e.Card.DefinitionId, cardDefinitions)}",
