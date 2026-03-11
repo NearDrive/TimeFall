@@ -52,6 +52,10 @@ public sealed record DeckReshuffled : GameEvent;
 
 public sealed record CardBurned(CardInstance Card) : GameEvent;
 
+public sealed record ReshuffleFatigueApplied(TurnOwner Owner, int DiscardCount) : GameEvent;
+
+public sealed record FatigueDiscardResolved(TurnOwner Owner, int DiscardCount) : GameEvent;
+
 public sealed record EnemyAttackPlayed(
     CardInstance Card,
     int Damage,

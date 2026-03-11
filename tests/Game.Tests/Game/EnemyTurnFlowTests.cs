@@ -61,7 +61,7 @@ public sealed class EnemyTurnFlowTests
     }
 
     [Fact]
-    public void EnemyBurnRule_RemainsActive()
+    public void EnemyReshuffleFatigue_Applies()
     {
         var start = CreateCombatGameState(
             enemyDrawPile: [],
@@ -71,7 +71,7 @@ public sealed class EnemyTurnFlowTests
         var (_, events) = GameReducer.Reduce(start, new EndTurnAction());
 
         Assert.Contains(events, e => e is DeckReshuffled);
-        Assert.Contains(events, e => e is CardBurned);
+        Assert.Contains(events, e => e is ReshuffleFatigueApplied { Owner: TurnOwner.Enemy });
         Assert.Single(events.OfType<EnemyAttackPlayed>());
     }
 

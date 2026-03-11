@@ -602,8 +602,11 @@ public class CombatReducerTests
 
         Assert.Contains(events, e => e is DeckReshuffled);
         Assert.Contains(events, e => e is CardDrawn);
+        Assert.Contains(events, e => e is ReshuffleFatigueApplied { Owner: TurnOwner.Player, DiscardCount: 1 });
         Assert.NotNull(newState.Combat);
-        Assert.Single(newState.Combat!.Player.Deck.BurnPile);
+        Assert.Empty(newState.Combat!.Player.Deck.BurnPile);
+        Assert.True(newState.Combat.NeedsOverflowDiscard);
+        Assert.Equal(1, newState.Combat.RequiredOverflowDiscardCount);
     }
 
     private static GameState CreateOverflowState(int requiredDiscardCount, int handSize)
