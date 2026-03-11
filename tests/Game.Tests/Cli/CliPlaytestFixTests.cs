@@ -204,6 +204,27 @@ public sealed class CliPlaytestFixTests
         Assert.Contains("[1] shop-1", output);
     }
 
+
+    [Fact]
+    public void CliTargetIndex_MatchesRenderedEnemyOrder()
+    {
+        var state = CreateDuplicateEnemyCombatState();
+
+        var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
+        Assert.Contains("[0] zone1-raider#1", output);
+        Assert.Contains("[1] zone1-bastion-guard", output);
+        Assert.Contains("[2] zone1-raider#2", output);
+
+        var strikeIndex = state.Combat!.Player.Deck.Hand.FindIndex(card => card.DefinitionId.Value == "blades-strike");
+        var targetBefore = state.Combat.Enemies[2].HP;
+        var otherBefore = state.Combat.Enemies[0].HP;
+
+        var result = GameReducer.Reduce(state, new PlayCardAction(strikeIndex, 2));
+
+        Assert.Equal(targetBefore - 5, result.NewState.Combat!.Enemies[2].HP);
+        Assert.Equal(otherBefore, result.NewState.Combat.Enemies[0].HP);
+    }
+
     [Fact]
     public void CliMove_NodeIdPathStillWorks()
     {
@@ -280,6 +301,38 @@ public sealed class CliPlaytestFixTests
                 RequiredOverflowDiscardCount = requiredDiscards,
             },
         };
+    }
+
+
+    private static GameState CreateDuplicateEnemyCombatState()
+    {
+        var bladesDeck = Content.DeckDefinitions["deck-blades"];
+        var player = new CombatantBlueprint(
+            EntityId: "player",
+            HP: bladesDeck.BaseMaxHp,
+            MaxHP: bladesDeck.BaseMaxHp,
+            Armor: 0,
+            Resources: bladesDeck.StartingResources,
+            DrawPile: bladesDeck.StartingDeck);
+
+        var enemyIds = new[] { "zone1-raider", "zone1-bastion-guard", "zone1-raider" };
+        var enemies = enemyIds
+            .Select(enemyId => Content.EnemyDefinitions[enemyId])
+            .Select(enemy => new CombatantBlueprint(
+                EntityId: enemy.Id,
+                HP: enemy.Hp,
+                MaxHP: enemy.Hp,
+                Armor: enemy.StartingArmor,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
+                DrawPile: enemy.Deck))
+            .ToArray();
+
+        var state = GameState.CreateInitial(Content.CardDefinitions, Content.DeckDefinitions, Content.RewardCardPool, Content.EnemyDefinitions, Content.Zone1SpawnTable) with
+        {
+            SelectedDeckId = "deck-blades",
+        };
+
+        return GameReducer.Reduce(state, new BeginCombatAction(new CombatBlueprint(player, enemies), Content.CardDefinitions)).NewState;
     }
 
     private static string CaptureConsole(Action render)

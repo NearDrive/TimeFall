@@ -655,14 +655,37 @@ public static class GameReducer
 
         var (player, nextRng) = CreateCombatEntity(playerBlueprint, rng, shuffleOnCreate: shouldShuffleCombatDecks);
         var enemies = ImmutableList.CreateBuilder<CombatEntity>();
+        var duplicateEnemyCounts = blueprint.Enemies
+            .GroupBy(enemy => enemy.EntityId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var duplicateEnemyIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var enemyBlueprint in blueprint.Enemies)
         {
-            var (enemy, enemyRng) = CreateCombatEntity(enemyBlueprint, nextRng, shuffleOnCreate: shouldShuffleCombatDecks);
+            var enemyEntityId = ResolveCombatEnemyEntityId(enemyBlueprint.EntityId, duplicateEnemyCounts, duplicateEnemyIndexes);
+            var combatEnemyBlueprint = enemyBlueprint with { EntityId = enemyEntityId };
+            var (enemy, enemyRng) = CreateCombatEntity(combatEnemyBlueprint, nextRng, shuffleOnCreate: shouldShuffleCombatDecks);
             enemies.Add(enemy);
             nextRng = enemyRng;
         }
 
         return (new CombatState(TurnOwner.Player, player, enemies.ToImmutable(), false, 0), nextRng);
+    }
+
+    private static string ResolveCombatEnemyEntityId(
+        string blueprintEntityId,
+        IReadOnlyDictionary<string, int> duplicateEnemyCounts,
+        IDictionary<string, int> duplicateEnemyIndexes)
+    {
+        if (!duplicateEnemyCounts.TryGetValue(blueprintEntityId, out var count) || count <= 1)
+        {
+            return blueprintEntityId;
+        }
+
+        var duplicateIndex = duplicateEnemyIndexes.TryGetValue(blueprintEntityId, out var seenCount)
+            ? seenCount + 1
+            : 1;
+        duplicateEnemyIndexes[blueprintEntityId] = duplicateIndex;
+        return $"{blueprintEntityId}#{duplicateIndex}";
     }
 
     private static IReadOnlyDictionary<ResourceType, int> ResolveStartingResources(GameState state, IReadOnlyDictionary<ResourceType, int> fallback)
