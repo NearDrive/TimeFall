@@ -320,10 +320,10 @@ public sealed class CliPlaytestFixTests
             .Select(enemyId => Content.EnemyDefinitions[enemyId])
             .Select(enemy => new CombatantBlueprint(
                 EntityId: enemy.Id,
-                HP: enemy.MaxHp,
-                MaxHP: enemy.MaxHp,
-                Armor: enemy.BaseArmor,
-                Resources: enemy.StartingResources,
+                HP: enemy.Hp,
+                MaxHP: enemy.Hp,
+                Armor: enemy.StartingArmor,
+                Resources: ImmutableDictionary<ResourceType, int>.Empty,
                 DrawPile: enemy.Deck))
             .ToArray();
 
