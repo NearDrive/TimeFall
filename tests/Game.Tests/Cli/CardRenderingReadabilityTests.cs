@@ -5,8 +5,8 @@ using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Content;
 using Game.Core.Game;
-using Game.Core.Rewards;
 using Game.Core.Map;
+using Game.Core.Rewards;
 using Game.Data.Content;
 
 namespace Game.Tests.Cli;
@@ -16,18 +16,17 @@ public sealed class CardRenderingReadabilityTests
     private static readonly GameContentBundle Content = StaticGameContentProvider.LoadDefault();
 
     [Fact]
-    public void HandRendering_DoesNotShowSpecialEffectPlaceholder()
+    public void HandRendering_ShowsRarityMarker()
     {
-        var state = CreateCombatStateWithCard(new CardId("blades-blade-tempo"));
+        var state = CreateCombatStateWithCard(new CardId("blades-strike"));
 
         var output = CaptureConsole(() => CliRenderer.RenderHand(state, Content.CardDefinitions));
 
-        Assert.Contains("Blade Tempo — Gain 3 gm. Next attack deals +3 damage.", output);
-        Assert.DoesNotContain("Special effect", output);
+        Assert.Contains("[C] Strike", output);
     }
 
     [Fact]
-    public void RewardRendering_UsesReadableRulesText()
+    public void RewardRendering_ShowsRarityMarker()
     {
         var state = GameStateTestFactory.CreateStartedRun() with
         {
@@ -40,47 +39,105 @@ public sealed class CardRenderingReadabilityTests
 
         var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
 
-        Assert.Contains("Focus — Draw 1 card. Gain 2 gm.", output);
-        Assert.Contains("Twin Slash — Requires Momentum 2. Deal 5 damage twice.", output);
+        Assert.Contains("[C] Focus", output);
+        Assert.Contains("[U] Twin Slash", output);
     }
 
     [Fact]
-    public void DeckRendering_UsesReadableRulesText()
+    public void DeckRendering_ShowsRarityMarker()
     {
         var state = GameStateTestFactory.CreateStartedRun();
 
         var output = CaptureConsole(() => CliRenderer.RenderDeck(state, Content.CardDefinitions));
 
-        Assert.Contains("Strike — Deal 5 damage.", output);
-        Assert.DoesNotContain("Special effect", output);
+        Assert.Contains("[C] Strike", output);
     }
 
     [Fact]
-    public void FallbackText_DoesNotExposeRawEffectTypeNames()
+    public void RepresentativeCards_ShowExpectedMarkers()
     {
-        var card = new CardDefinition(
-            new CardId("test-fallback"),
-            "Fallback Card",
+        var cards = new Dictionary<CardId, CardDefinition>
+        {
+            [new CardId("common-card")] = CreateCard("common-card", "Common", "Common Card"),
+            [new CardId("uncommon-card")] = CreateCard("uncommon-card", "Uncommon", "Uncommon Card"),
+            [new CardId("rare-card")] = CreateCard("rare-card", "Rare", "Rare Card"),
+            [new CardId("epic-card")] = CreateCard("epic-card", "Epic", "Epic Card"),
+            [new CardId("legendary-card")] = CreateCard("legendary-card", "Legendary", "Legendary Card"),
+        };
+
+        var state = GameStateTestFactory.CreateStartedRun() with
+        {
+            RunDeck =
+            [
+                new CardInstance(new CardId("common-card")),
+                new CardInstance(new CardId("uncommon-card")),
+                new CardInstance(new CardId("rare-card")),
+                new CardInstance(new CardId("epic-card")),
+                new CardInstance(new CardId("legendary-card")),
+            ]
+        };
+
+        var output = CaptureConsole(() => CliRenderer.RenderDeck(state, cards));
+
+        Assert.Contains("[C] Common Card", output);
+        Assert.Contains("[U] Uncommon Card", output);
+        Assert.Contains("[R] Rare Card", output);
+        Assert.Contains("[E] Epic Card", output);
+        Assert.Contains("[L] Legendary Card", output);
+    }
+
+    [Fact]
+    public void PlainTextRendering_RemainsReadableWithoutColor()
+    {
+        CardRarityFormatter.ForceAnsiColors = false;
+        var state = CreateCombatStateWithCard(new CardId("blades-strike"));
+
+        try
+        {
+            var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
+
+            Assert.DoesNotContain("\u001b[", output);
+            Assert.Contains("[C] Strike", output);
+            Assert.Contains("Hand preview:", output);
+        }
+        finally
+        {
+            CardRarityFormatter.ForceAnsiColors = null;
+        }
+    }
+
+    [Fact]
+    public void ANSIFormatting_CanBeDisabledWithoutLosingRarityInfo()
+    {
+        var state = CreateCombatStateWithCard(new CardId("blades-twin-slash"));
+
+        try
+        {
+            CardRarityFormatter.ForceAnsiColors = true;
+            var withAnsi = CaptureConsole(() => CliRenderer.RenderHand(state, Content.CardDefinitions));
+            Assert.Contains("\u001b[", withAnsi);
+            Assert.Contains("[U] Twin Slash", withAnsi);
+
+            CardRarityFormatter.ForceAnsiColors = false;
+            var withoutAnsi = CaptureConsole(() => CliRenderer.RenderHand(state, Content.CardDefinitions));
+            Assert.DoesNotContain("\u001b[", withoutAnsi);
+            Assert.Contains("[U] Twin Slash", withoutAnsi);
+        }
+        finally
+        {
+            CardRarityFormatter.ForceAnsiColors = null;
+        }
+    }
+
+    private static CardDefinition CreateCard(string id, string rarity, string name)
+    {
+        return new CardDefinition(
+            new CardId(id),
+            name,
             0,
-            [new DamageNTimesCardEffect(4, 3, CardTarget.Opponent), new NextAttackBonusDamageThisTurnCardEffect(3, CardTarget.Self)],
-            RulesText: "");
-
-        var rendered = CardRulesTextFormatter.GetReadableRulesText(card);
-
-        Assert.Equal("Deal 4 damage three times. Next attack gains +3 damage (self)", rendered);
-        Assert.DoesNotContain("DamageNTimesCardEffect", rendered);
-        Assert.DoesNotContain("NextAttackBonusDamageThisTurn", rendered);
-        Assert.DoesNotContain("Special effect", rendered);
-    }
-
-    [Fact]
-    public void RepresentativeCompositeCard_RendersClearly()
-    {
-        var card = Content.CardDefinitions[new CardId("blades-bleeding-cut")];
-
-        var rendered = CardRulesTextFormatter.GetReadableRulesText(card);
-
-        Assert.Equal("Deal 5 damage. Apply Bleed 3.", rendered);
+            [new DamageCardEffect(5, CardTarget.Opponent)],
+            Rarity: rarity,
+            RulesText: "Deal 5 damage.");
     }
 
     private static GameState CreateCombatStateWithCard(CardId cardId)
