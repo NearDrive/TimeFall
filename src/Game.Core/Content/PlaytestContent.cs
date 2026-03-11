@@ -20,14 +20,14 @@ public static class PlaytestContent
     public static readonly ImmutableDictionary<CardId, CardDefinition> CardDefinitions =
         new Dictionary<CardId, CardDefinition>
         {
-            [StrikeCardId] = new(StrikeCardId, "Strike", 1, [new DamageCardEffect(4, CardTarget.Opponent)]),
-            [GuardCardId] = new(GuardCardId, "Guard", 1, [new GainArmorCardEffect(3, CardTarget.Self)]),
-            [QuickDrawCardId] = new(QuickDrawCardId, "Quick Draw", 1, [new DrawCardsCardEffect(1, CardTarget.Self)]),
-            [HeavyAttackCardId] = new(HeavyAttackCardId, "Heavy Attack", 2, [new DamageCardEffect(8, CardTarget.Opponent)]),
-            [FeintCardId] = new(FeintCardId, "Feint", 1, [new DamageCardEffect(2, CardTarget.Opponent), new GainArmorCardEffect(2, CardTarget.Self)]),
-            [EnemyAttackCardId] = new(EnemyAttackCardId, "Enemy Attack", 1, [new DamageCardEffect(5, CardTarget.Opponent)]),
-            [EnemyFortifyCardId] = new(EnemyFortifyCardId, "Enemy Fortify", 1, [new GainArmorCardEffect(4, CardTarget.Self)]),
-            [EnemyHeavyAttackCardId] = new(EnemyHeavyAttackCardId, "Enemy Heavy Attack", 2, [new DamageCardEffect(9, CardTarget.Opponent)]),
+            [StrikeCardId] = new(StrikeCardId, "Strike", 1, [new DamageCardEffect(4, CardTarget.Opponent)], RulesText: "Deal 4 damage."),
+            [GuardCardId] = new(GuardCardId, "Guard", 1, [new GainArmorCardEffect(3, CardTarget.Self)], RulesText: "Gain 3 armor."),
+            [QuickDrawCardId] = new(QuickDrawCardId, "Quick Draw", 1, [new DrawCardsCardEffect(1, CardTarget.Self)], RulesText: "Draw 1 card."),
+            [HeavyAttackCardId] = new(HeavyAttackCardId, "Heavy Attack", 2, [new DamageCardEffect(8, CardTarget.Opponent)], RulesText: "Deal 8 damage."),
+            [FeintCardId] = new(FeintCardId, "Feint", 1, [new DamageCardEffect(2, CardTarget.Opponent), new GainArmorCardEffect(2, CardTarget.Self)], RulesText: "Deal 2 damage. Gain 2 armor."),
+            [EnemyAttackCardId] = new(EnemyAttackCardId, "Enemy Attack", 1, [new DamageCardEffect(5, CardTarget.Opponent)], RulesText: "Deal 5 damage."),
+            [EnemyFortifyCardId] = new(EnemyFortifyCardId, "Enemy Fortify", 1, [new GainArmorCardEffect(4, CardTarget.Self)], RulesText: "Gain 4 armor."),
+            [EnemyHeavyAttackCardId] = new(EnemyHeavyAttackCardId, "Enemy Heavy Attack", 2, [new DamageCardEffect(9, CardTarget.Opponent)], RulesText: "Deal 9 damage."),
         }.ToImmutableDictionary();
 
     public static readonly ImmutableArray<CardId> StarterDeck =

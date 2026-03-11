@@ -109,7 +109,7 @@ public sealed class CliPlaytestFixTests
         var output = CaptureConsole(() => CliRenderer.RenderHand(state, Content.CardDefinitions));
 
         Assert.Contains("Strike — Deal 4 damage", output);
-        Assert.Contains("Guard — Gain 3 armor (self)", output);
+        Assert.Contains("Guard — Gain 3 armor.", output);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class CliPlaytestFixTests
         var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
 
         Assert.Contains("Strike — Deal 4 damage", output);
-        Assert.Contains("Quick Draw — Draw 1 card (self)", output);
+        Assert.Contains("Quick Draw — Draw 1 card.", output);
     }
 
     [Fact]
