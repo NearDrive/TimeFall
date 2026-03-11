@@ -32,4 +32,13 @@ public sealed class CliCommandParserSmokeTests
         Assert.True(ok, error);
         Assert.Equal(CliView.Decks, parsed.View);
     }
+
+    [Fact]
+    public void ParsesZoneViewCommand()
+    {
+        var ok = CliCommandParser.TryParse("zone", out var parsed, out var error);
+
+        Assert.True(ok, error);
+        Assert.Equal(CliView.Zone, parsed.View);
+    }
 }

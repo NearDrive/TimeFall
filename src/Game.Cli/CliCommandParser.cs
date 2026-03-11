@@ -9,6 +9,7 @@ internal enum CliView
     Help,
     State,
     Map,
+    Zone,
     Hand,
     Reward,
     Deck,
@@ -47,6 +48,7 @@ internal static class CliCommandParser
             case "state": command = new ParsedCommand(null, CliView.State); return true;
             case "status": command = new ParsedCommand(null, CliView.Status); return true;
             case "map": command = new ParsedCommand(null, CliView.Map); return true;
+            case "zone": command = new ParsedCommand(null, CliView.Zone); return true;
             case "hand": command = new ParsedCommand(null, CliView.Hand); return true;
             case "reward": command = new ParsedCommand(null, CliView.Reward); return true;
             case "deck": command = new ParsedCommand(null, CliView.Deck); return true;
