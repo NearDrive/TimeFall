@@ -212,7 +212,7 @@ public class TimeSystemTests
             state = Move(state, i % 2 == 0 ? "combat-1" : "elite-1");
         }
 
-        Assert.False(state.Time.CollapsedNodeIds.Contains(new NodeId("boss-1")));
+        Assert.DoesNotContain(new NodeId("boss-1"), state.Time.CollapsedNodeIds);
         Assert.True(HasPathWithoutCollapsedNodes(state.Map, state.Time.CollapsedNodeIds, state.Map.CurrentNodeId, new NodeId("boss-1")));
     }
 
