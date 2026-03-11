@@ -243,34 +243,9 @@ internal static class CliRenderer
             return id.Value;
         }
 
-        return $"{definition.Name} — {FormatCardRulesText(definition)}";
+        return $"{definition.Name} — {CardRulesTextFormatter.GetReadableRulesText(definition)}";
     }
 
-    private static string FormatCardRulesText(CardDefinition definition)
-    {
-        if (definition.Effects.Count == 0)
-        {
-            return "No effect";
-        }
-
-        return string.Join(", ", definition.Effects.Select(effect => effect switch
-        {
-            DamageCardEffect damage => $"Deal {damage.Amount} damage{FormatTargetSuffix(damage.Target)}",
-            GainArmorCardEffect armor => $"Gain {armor.Amount} armor{FormatTargetSuffix(armor.Target)}",
-            DrawCardsCardEffect draw => $"Draw {draw.Amount} card{(draw.Amount == 1 ? string.Empty : "s")}{FormatTargetSuffix(draw.Target)}",
-            _ => "Special effect",
-        }));
-    }
-
-    private static string FormatTargetSuffix(CardTarget target)
-    {
-        return target switch
-        {
-            CardTarget.Self => " (self)",
-            CardTarget.Opponent => string.Empty,
-            _ => string.Empty,
-        };
-    }
 
     private static string GetCardName(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
