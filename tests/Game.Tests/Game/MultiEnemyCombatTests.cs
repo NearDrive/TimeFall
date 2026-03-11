@@ -1,6 +1,5 @@
 using Game.Core.Cards;
 using Game.Core.Combat;
-using Game.Core.Common;
 using Game.Core.Content;
 using Game.Core.Game;
 using System.Collections.Immutable;
