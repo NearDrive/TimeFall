@@ -34,6 +34,8 @@ public sealed record PlayCardRejected(PlayCardRejectionReason Reason, string Mes
 public sealed record PlayerStrikePlayed(
     CardInstance Card,
     int Damage,
+    int BaseDamage,
+    int MomentumBonus,
     int EnemyHpBeforeHit,
     int EnemyHpAfterHit,
     int EnemyArmorBeforeHit,
