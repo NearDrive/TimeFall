@@ -240,10 +240,10 @@ internal static class CliRenderer
     {
         if (!cardDefinitions.TryGetValue(id, out var definition))
         {
-            return id.Value;
+            return $"[?] {id.Value}";
         }
 
-        return $"{definition.Name} — {CardRulesTextFormatter.GetReadableRulesText(definition)}";
+        return $"{CardRarityFormatter.FormatPrefix(definition)} {definition.Name} — {CardRulesTextFormatter.GetReadableRulesText(definition)}";
     }
 
 
