@@ -2,13 +2,16 @@ using System.Collections.Immutable;
 using Game.Cli;
 using Game.Core.Cards;
 using Game.Core.Combat;
-using Game.Core.Common;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.Rewards;
 using Game.Core.TimeSystem;
 using Game.Data.Content;
 using Game.Data.Save;
+using CardsCardId = Game.Core.Cards.CardId;
+using MapNodeId = Game.Core.Map.NodeId;
+using CommonGameRng = Game.Core.Common.GameRng;
+using CommonStateHasher = Game.Core.Common.StateHasher;
 
 namespace Game.Tests.Persistence;
 
@@ -28,7 +31,7 @@ public sealed class ActiveRunPersistenceTests
         var loaded = repository.TryLoad(Content, out var restored);
 
         Assert.True(loaded);
-        Assert.Equal(StateHasher.Hash(state), StateHasher.Hash(restored));
+        Assert.Equal(CommonStateHasher.Hash(state), CommonStateHasher.Hash(restored));
     }
 
     [Fact]
@@ -43,7 +46,7 @@ public sealed class ActiveRunPersistenceTests
         var fromOriginal = GameReducer.Reduce(state, new EndTurnAction()).NewState;
         var fromRestored = GameReducer.Reduce(restored, new EndTurnAction()).NewState;
 
-        Assert.Equal(StateHasher.Hash(fromOriginal), StateHasher.Hash(fromRestored));
+        Assert.Equal(CommonStateHasher.Hash(fromOriginal), CommonStateHasher.Hash(fromRestored));
     }
 
     [Fact]
@@ -51,7 +54,7 @@ public sealed class ActiveRunPersistenceTests
     {
         var previous = GameStateTestFactory.CreateStartedRun();
         var current = previous;
-        var events = new GameEvent[] { new EncounterResolved(new NodeId("rest-1"), NodeType.Rest) };
+        var events = new GameEvent[] { new EncounterResolved(new MapNodeId("rest-1"), NodeType.Rest) };
 
         var transition = CliLoop.DeterminePersistenceTransition(previous, current, events);
 
@@ -88,7 +91,7 @@ public sealed class ActiveRunPersistenceTests
         var rewardState = baseState with
         {
             Phase = GamePhase.RewardSelection,
-            Reward = new RewardState(RewardType.CardChoice, ImmutableList.Create(new CardId("blades-strike"), new CardId("blades-guard"), new CardId("blades-quick-draw")), false, baseState.Map.BossNodeId),
+            Reward = new RewardState(RewardType.CardChoice, ImmutableList.Create(new CardsCardId("blades-strike"), new CardsCardId("blades-guard"), new CardsCardId("blades-quick-draw")), false, baseState.Map.BossNodeId),
         };
 
         var result = GameReducer.Reduce(rewardState, new SkipRewardAction());
@@ -154,7 +157,7 @@ public sealed class ActiveRunPersistenceTests
     {
         return new GameState(
             GamePhase.Combat,
-            Game.Core.Common.GameRng.FromSeed(10),
+            CommonGameRng.FromSeed(10),
             new CombatState(
                 TurnOwner: TurnOwner.Player,
                 Player: new CombatEntity(
@@ -163,14 +166,14 @@ public sealed class ActiveRunPersistenceTests
                     MaxHP: 10,
                     Armor: 0,
                     Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                    Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardId("guard"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
+                    Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList.Create(new CardInstance(new CardsCardId("guard"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
                 Enemy: new CombatEntity(
                     EntityId: "enemy",
                     HP: 10,
                     MaxHP: 10,
                     Armor: 0,
                     Resources: ImmutableDictionary<ResourceType, int>.Empty,
-                    Deck: new DeckState(ImmutableList.Create(new CardInstance(new CardId("enemy-attack"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
+                    Deck: new DeckState(ImmutableList.Create(new CardInstance(new CardsCardId("enemy-attack"))), ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0)),
                 NeedsOverflowDiscard: false,
                 RequiredOverflowDiscardCount: 0),
             null,
