@@ -186,6 +186,7 @@ public class StateHasherReplayTests
             DeckDefinitions: Content.DeckDefinitions,
             AvailableDeckIds: Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(),
             SelectedDeckId: "deck-blades",
+            HasActiveRunSave: false,
             RunDeck: ImmutableList<CardInstance>.Empty,
             DeckEdit: null,
             RunHp: 20,

@@ -11,7 +11,8 @@ public sealed class DeckSelectReducerTests
     public void AvailableDecks_AreListedFromContent()
     {
         var content = StaticGameContentProvider.LoadDefault();
-        var state = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        var initial = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        var state = GameReducer.Reduce(GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState, new OpenDeckSelectAction()).NewState;
 
         Assert.Contains("deck-blades", state.AvailableDeckIds);
     }
@@ -20,7 +21,8 @@ public sealed class DeckSelectReducerTests
     public void SelectDeckAction_SelectsValidDeck()
     {
         var content = StaticGameContentProvider.LoadDefault();
-        var state = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        var initial = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        var state = GameReducer.Reduce(GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState, new OpenDeckSelectAction()).NewState;
 
         var (newState, events) = GameReducer.Reduce(state, new SelectDeckAction("deck-blades"));
 
@@ -32,7 +34,7 @@ public sealed class DeckSelectReducerTests
     public void SelectDeckAction_RejectsUnknownDeck()
     {
         var content = StaticGameContentProvider.LoadDefault();
-        var state = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        var state = GameReducer.Reduce(GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable), new EnterNewRunMenuAction()).NewState;
 
         var (newState, events) = GameReducer.Reduce(state, new SelectDeckAction("unknown"));
 
@@ -56,7 +58,7 @@ public sealed class DeckSelectReducerTests
     public void StartRun_RequiresSelectedDeck()
     {
         var content = StaticGameContentProvider.LoadDefault();
-        var state = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        var state = GameReducer.Reduce(GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable), new EnterNewRunMenuAction()).NewState;
 
         var (newState, events) = GameReducer.Reduce(state, new StartRunAction(123));
 
@@ -69,8 +71,11 @@ public sealed class DeckSelectReducerTests
     {
         var content = StaticGameContentProvider.LoadDefault();
         var initial = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
-        var (selected, _) = GameReducer.Reduce(initial, new SelectDeckAction("deck-blades"));
-        var (started, _) = GameReducer.Reduce(selected, new StartRunAction(123));
+        var newRun = GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState;
+        var deckSelect = GameReducer.Reduce(newRun, new OpenDeckSelectAction()).NewState;
+        var (selected, _) = GameReducer.Reduce(deckSelect, new SelectDeckAction("deck-blades"));
+        var returnToNewRun = GameReducer.Reduce(selected, new ReturnToNewRunMenuAction()).NewState;
+        var (started, _) = GameReducer.Reduce(returnToNewRun, new StartRunAction(123));
         var (combatState, _) = GameReducer.Reduce(started, new BeginCombatAction(content.OpeningCombat, content.CardDefinitions, content.RewardCardPool));
 
         Assert.Equal(120, started.RunMaxHp);

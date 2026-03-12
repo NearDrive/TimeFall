@@ -7,14 +7,44 @@ namespace Game.Cli;
 
 internal static class CliRenderer
 {
-    public static void RenderHelp()
+    public static void RenderHelp(GamePhase phase)
     {
-        Console.WriteLine("Commands:");
-        Console.WriteLine("  decks               List available run decks");
-        Console.WriteLine("  select <id|index>   Select run deck in DeckSelect phase");
-        Console.WriteLine("  start [seed]        Start run (default seed 1337)");
+        Console.WriteLine($"Commands ({phase}):");
+        if (phase == GamePhase.MainMenu)
+        {
+            Console.WriteLine("  continue            Continue active saved run");
+            Console.WriteLine("  new                 Enter New Run menu");
+            Console.WriteLine("  help                Show commands");
+            Console.WriteLine("  quit                Exit CLI");
+            return;
+        }
+
+        if (phase == GamePhase.NewRunMenu)
+        {
+            Console.WriteLine("  select-deck         Open deck selection");
+            Console.WriteLine("  edit-deck           Open deck editing for selected deck");
+            Console.WriteLine("  start [seed]        Start run with selected deck (default seed 1337)");
+            Console.WriteLine("  back                Return to main menu");
+            Console.WriteLine("  help                Show commands");
+            Console.WriteLine("  quit                Exit CLI");
+            return;
+        }
+
+        if (phase == GamePhase.DeckSelect)
+        {
+            Console.WriteLine("  decks               List available run decks");
+            Console.WriteLine("  select <id|index>   Select run deck");
+            Console.WriteLine("  back                Return to New Run menu");
+            return;
+        }
+
+        if (phase == GamePhase.DeckEdit)
+        {
+            Console.WriteLine("  back                Return to New Run menu");
+            return;
+        }
+
         Console.WriteLine("  state | status      Show run summary");
-        Console.WriteLine("  help                Show commands");
         Console.WriteLine("  map                 Show current node and neighbors");
         Console.WriteLine("  zone                Show full zone map (layered + connections)");
         Console.WriteLine("  move <displayId|i>  Move to adjacent node (displayId or 0-based adjacent index)");
@@ -30,15 +60,36 @@ internal static class CliRenderer
         Console.WriteLine("  deck                Show run deck");
         Console.WriteLine("  discard <index...>  Discard overflow cards from hand (0-based)");
         Console.WriteLine("  discardpile         Show combat discard pile");
+        Console.WriteLine("  help                Show commands");
         Console.WriteLine("  quit                Exit CLI");
     }
 
     public static void RenderState(GameState state, IReadOnlyList<GameEvent> recentEvents, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         Console.WriteLine($"Phase: {state.Phase}");
+        if (state.Phase == GamePhase.MainMenu)
+        {
+            RenderMainMenu(state);
+            return;
+        }
+        if (state.Phase == GamePhase.NewRunMenu)
+        {
+            RenderNewRunMenu(state);
+            return;
+        }
         if (state.Phase == GamePhase.DeckSelect)
         {
             RenderDeckSelection(state);
+            return;
+        }
+
+        if (state.Phase == GamePhase.DeckEdit)
+        {
+            Console.WriteLine(state.SelectedDeckId is null
+                ? "No deck selected. Use select-deck first."
+                : $"Deck edit: {state.SelectedDeckId} (editing placeholder)");
+            Console.WriteLine("Use 'back' to return to New Run Menu.");
+            return;
         }
         Console.WriteLine($"Run HP: {state.RunHp}/{state.RunMaxHp}");
         Console.WriteLine($"Node: {state.Map.CurrentNodeId}");
@@ -374,6 +425,25 @@ internal static class CliRenderer
         {
             Console.WriteLine("No deck selected. Use 'decks' and 'select <id|index>' before 'start'.");
         }
+    }
+
+    private static void RenderMainMenu(GameState state)
+    {
+        Console.WriteLine("Main Menu");
+        Console.WriteLine(state.HasActiveRunSave ? "- continue" : "- continue (unavailable: no active save)");
+        Console.WriteLine("- new");
+        Console.WriteLine("- quit");
+    }
+
+    private static void RenderNewRunMenu(GameState state)
+    {
+        Console.WriteLine("New Run Menu");
+        Console.WriteLine($"Selected deck: {state.SelectedDeckId ?? "(none)"}");
+        Console.WriteLine("Options:");
+        Console.WriteLine("- select-deck");
+        Console.WriteLine("- edit-deck");
+        Console.WriteLine("- start");
+        Console.WriteLine("- back");
     }
 
 }

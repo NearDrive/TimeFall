@@ -15,7 +15,10 @@ internal static class GameStateTestFactory
     public static GameState CreateStartedRun(int seed = 1337)
     {
         var initial = CreateInitialWithContent();
-        var selected = GameReducer.Reduce(initial, new SelectDeckAction(initial.AvailableDeckIds[0])).NewState;
-        return GameReducer.Reduce(selected, new StartRunAction(seed)).NewState;
+        var newRun = GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState;
+        var deckSelect = GameReducer.Reduce(newRun, new OpenDeckSelectAction()).NewState;
+        var selected = GameReducer.Reduce(deckSelect, new SelectDeckAction(deckSelect.AvailableDeckIds[0])).NewState;
+        var returned = GameReducer.Reduce(selected, new ReturnToNewRunMenuAction()).NewState;
+        return GameReducer.Reduce(returned, new StartRunAction(seed)).NewState;
     }
 }

@@ -91,6 +91,21 @@ internal static class CliCommandParser
 
                 command = new ParsedCommand(new StartRunAction(seed), null);
                 return true;
+            case "continue":
+                command = new ParsedCommand(new ContinueRunAction(GameState.Initial), null);
+                return true;
+            case "new":
+                command = new ParsedCommand(new EnterNewRunMenuAction(), null);
+                return true;
+            case "back":
+                command = new ParsedCommand(new ReturnToMainMenuAction(), null);
+                return true;
+            case "select-deck":
+                command = new ParsedCommand(new OpenDeckSelectAction(), null);
+                return true;
+            case "edit-deck":
+                command = new ParsedCommand(new OpenDeckEditAction(), null);
+                return true;
             case "select":
                 if (parts.Length != 2)
                 {

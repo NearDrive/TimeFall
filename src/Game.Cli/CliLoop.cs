@@ -23,13 +23,10 @@ internal sealed class CliLoop
     {
         var state = GameState.CreateInitial(_content.CardDefinitions, _content.DeckDefinitions, _content.RewardCardPool, _content.EnemyDefinitions, _content.Zone1SpawnTable);
         var eventLog = new List<GameEvent>();
+        var hasActiveSave = _saveRepository.TryLoad(_content, out var savedState);
+        (state, _) = GameReducer.Reduce(state, new SetContinueAvailabilityAction(hasActiveSave));
 
         Console.WriteLine("Timefall CLI playtest harness. Type 'help' for commands.");
-        if (_saveRepository.TryLoad(_content, out var loadedState))
-        {
-            state = loadedState;
-            Console.WriteLine("Loaded active run save.");
-        }
 
         CliRenderer.RenderState(state, eventLog, _content.CardDefinitions);
 
@@ -60,9 +57,25 @@ internal sealed class CliLoop
             }
 
             var action = ResolveContextualAction(command, state) ?? command.Action;
+            if (action is ContinueRunAction)
+            {
+                if (!hasActiveSave || savedState is null)
+                {
+                    Console.WriteLine("No active run save to continue.");
+                    continue;
+                }
+
+                action = new ContinueRunAction(savedState);
+            }
+
             if (action is StartRunAction && state.SelectedDeckId is null)
             {
                 Console.WriteLine("Select a deck first using 'select <deckId|index>'.");
+                continue;
+            }
+            if (action is OpenDeckEditAction && state.SelectedDeckId is null)
+            {
+                Console.WriteLine("No deck selected. Use select-deck first.");
                 continue;
             }
             if (action is DiscardOverflowAction discardOverflowAction && !TryValidateOverflowDiscard(discardOverflowAction, state, out var overflowError))
@@ -93,6 +106,11 @@ internal sealed class CliLoop
 
             eventLog.AddRange(newEvents);
             PersistStableRunState(previousState, state, newEvents);
+            hasActiveSave = _saveRepository.Exists();
+            savedState = hasActiveSave && _saveRepository.TryLoad(_content, out var loadedAfterPersistence)
+                ? loadedAfterPersistence
+                : null;
+            (state, _) = GameReducer.Reduce(state, new SetContinueAvailabilityAction(hasActiveSave));
             CliRenderer.RenderState(state, eventLog, _content.CardDefinitions);
         }
     }
@@ -112,7 +130,7 @@ internal sealed class CliLoop
 
     internal static PersistenceTransition DeterminePersistenceTransition(GameState previousState, GameState state, IReadOnlyList<GameEvent> newEvents)
     {
-        if (previousState.Phase == GamePhase.Combat && state.Phase == GamePhase.DeckSelect)
+        if (previousState.Phase == GamePhase.Combat && state.Phase == GamePhase.MainMenu)
         {
             return PersistenceTransition.Delete;
         }
@@ -125,7 +143,7 @@ internal sealed class CliLoop
                 ? (NodeType?)null
                 : sourceNode?.Type;
 
-            if (sourceType == NodeType.Boss && state.Phase == GamePhase.DeckSelect)
+            if (sourceType == NodeType.Boss && state.Phase == GamePhase.MainMenu)
             {
                 return PersistenceTransition.Delete;
             }
@@ -260,6 +278,16 @@ internal sealed class CliLoop
             return new SelectDeckAction(command.Argument);
         }
 
+        if (command.Action is ReturnToMainMenuAction)
+        {
+            return state.Phase switch
+            {
+                GamePhase.NewRunMenu => new ReturnToMainMenuAction(),
+                GamePhase.DeckSelect or GamePhase.DeckEdit => new ReturnToNewRunMenuAction(),
+                _ => command.Action,
+            };
+        }
+
         return command.Action;
     }
 
@@ -268,7 +296,7 @@ internal sealed class CliLoop
         switch (view)
         {
             case CliView.Help:
-                CliRenderer.RenderHelp();
+                CliRenderer.RenderHelp(state.Phase);
                 break;
             case CliView.State:
             case CliView.Status:
