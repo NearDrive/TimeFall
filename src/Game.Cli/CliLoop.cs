@@ -1,12 +1,23 @@
 using Game.Core.Cards;
 using Game.Core.Game;
 using Game.Data.Content;
+using Game.Data.Save;
+using Game.Core.Map;
 
 namespace Game.Cli;
+
+
+internal enum PersistenceTransition
+{
+    None,
+    Save,
+    Delete,
+}
 
 internal sealed class CliLoop
 {
     private readonly GameContentBundle _content = StaticGameContentProvider.LoadDefault();
+    private readonly SaveGameRepository _saveRepository = new(Path.Combine(AppContext.BaseDirectory, ".timefall", "active-run.json"));
 
     public void Run()
     {
@@ -14,6 +25,12 @@ internal sealed class CliLoop
         var eventLog = new List<GameEvent>();
 
         Console.WriteLine("Timefall CLI playtest harness. Type 'help' for commands.");
+        if (_saveRepository.TryLoad(_content, out var loadedState))
+        {
+            state = loadedState;
+            Console.WriteLine("Loaded active run save.");
+        }
+
         CliRenderer.RenderState(state, eventLog, _content.CardDefinitions);
 
         while (true)
@@ -75,8 +92,58 @@ internal sealed class CliLoop
             }
 
             eventLog.AddRange(newEvents);
+            PersistStableRunState(previousState, state, newEvents);
             CliRenderer.RenderState(state, eventLog, _content.CardDefinitions);
         }
+    }
+
+    private void PersistStableRunState(GameState previousState, GameState state, IReadOnlyList<GameEvent> newEvents)
+    {
+        var transition = DeterminePersistenceTransition(previousState, state, newEvents);
+        if (transition == PersistenceTransition.Save)
+        {
+            _saveRepository.Save(state);
+        }
+        else if (transition == PersistenceTransition.Delete)
+        {
+            _saveRepository.Delete();
+        }
+    }
+
+    internal static PersistenceTransition DeterminePersistenceTransition(GameState previousState, GameState state, IReadOnlyList<GameEvent> newEvents)
+    {
+        if (previousState.Phase == GamePhase.Combat && state.Phase == GamePhase.DeckSelect)
+        {
+            return PersistenceTransition.Delete;
+        }
+
+        var rewardResolved = newEvents.OfType<RewardChosen>().Any() || newEvents.OfType<RewardSkipped>().Any();
+        if (rewardResolved)
+        {
+            var sourceNodeId = previousState.Reward?.SourceNodeId;
+            var sourceType = sourceNodeId is null || !previousState.Map.Graph.TryGetNode(sourceNodeId.Value, out var sourceNode)
+                ? (NodeType?)null
+                : sourceNode?.Type;
+
+            if (sourceType == NodeType.Boss && state.Phase == GamePhase.DeckSelect)
+            {
+                return PersistenceTransition.Delete;
+            }
+
+            if (state.Phase == GamePhase.MapExploration)
+            {
+                return PersistenceTransition.Save;
+            }
+        }
+
+        var resolvedStableNodeTypes = new HashSet<NodeType> { NodeType.Rest, NodeType.Shop, NodeType.Event };
+        var resolvedStableEncounter = newEvents
+            .OfType<EncounterResolved>()
+            .Any(e => resolvedStableNodeTypes.Contains(e.NodeType));
+
+        return resolvedStableEncounter && state.Phase == GamePhase.MapExploration
+            ? PersistenceTransition.Save
+            : PersistenceTransition.None;
     }
 
 

@@ -502,14 +502,21 @@ public static class GameReducer
             new CardAddedToDeck(action.CardId),
         };
 
-        return (state with
+        var nextState = state with
         {
             Phase = GamePhase.MapExploration,
             Reward = null,
             Combat = null,
             RunDeck = state.RunDeck.Add(new CardInstance(action.CardId)),
             DeckEdit = null,
-        }, events);
+        };
+
+        if (IsBossReward(state))
+        {
+            nextState = nextState.ResetToDeckSelect();
+        }
+
+        return (nextState, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) SkipReward(GameState state, SkipRewardAction action)
@@ -526,13 +533,20 @@ public static class GameReducer
             new RewardSkipped(state.Reward.RewardType, state.Reward.SourceNodeId),
         };
 
-        return (state with
+        var nextState = state with
         {
             Phase = GamePhase.MapExploration,
             Reward = null,
             Combat = null,
             DeckEdit = null,
-        }, events);
+        };
+
+        if (IsBossReward(state))
+        {
+            nextState = nextState.ResetToDeckSelect();
+        }
+
+        return (nextState, events);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) BeginDeckRemoval(GameState state, BeginDeckRemovalAction action)
@@ -771,7 +785,8 @@ public static class GameReducer
 
         if (state.Combat.Player.HP <= 0)
         {
-            return (state with { Phase = GamePhase.RunEnded, Combat = null, ActiveCombatNodeId = null, Reward = null, RunHp = 0, NodeInteraction = null }, events);
+            var defeated = state with { Combat = null, ActiveCombatNodeId = null, Reward = null, RunHp = 0, NodeInteraction = null };
+            return (defeated.ResetToDeckSelect(), events);
         }
 
         if (state.Combat.Enemies.Count == 0)
@@ -857,6 +872,16 @@ public static class GameReducer
         return (state, new GameEvent[] { new PlayCardRejected(reason, message) });
     }
 
+
+    private static bool IsBossReward(GameState state)
+    {
+        if (state.Reward?.SourceNodeId is not { } sourceNodeId)
+        {
+            return false;
+        }
+
+        return state.Map.Graph.TryGetNode(sourceNodeId, out var sourceNode) && sourceNode?.Type == NodeType.Boss;
+    }
     private static bool IsBlockedByPendingCombatRequirement(GameState state, GameAction action)
     {
         return state.Combat is { NeedsOverflowDiscard: true } && action is not DiscardOverflowAction;

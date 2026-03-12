@@ -437,7 +437,7 @@ public class CombatReducerTests
     }
 
     [Fact]
-    public void EndTurn_EnemyKillTransitionsToRunEndedPhase()
+    public void EndTurn_EnemyKillReturnsToDeckSelect()
     {
         var combatState = new CombatState(
             TurnOwner: TurnOwner.Player,
@@ -462,7 +462,7 @@ public class CombatReducerTests
 
         var (newState, events) = GameReducer.Reduce(state, new EndTurnAction());
 
-        Assert.Equal(GamePhase.RunEnded, newState.Phase);
+        Assert.Equal(GamePhase.DeckSelect, newState.Phase);
         Assert.Null(newState.Combat);
         Assert.Contains(events, e => e is EnemyAttackPlayed { PlayerHpAfterHit: <= 0 });
     }
