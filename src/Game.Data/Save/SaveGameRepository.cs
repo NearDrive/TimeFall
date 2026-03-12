@@ -2,13 +2,15 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Game.Core.Cards;
 using Game.Core.Combat;
-using Game.Core.Common;
 using Game.Core.Decks;
 using Game.Core.Game;
 using Game.Core.Map;
 using Game.Core.Rewards;
 using Game.Core.TimeSystem;
 using Game.Data.Content;
+using CardsCardId = Game.Core.Cards.CardId;
+using MapNodeId = Game.Core.Map.NodeId;
+using CommonGameRng = Game.Core.Common.GameRng;
 
 namespace Game.Data.Save;
 
@@ -145,26 +147,26 @@ public sealed class SaveGameRepository
     {
         var initial = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
 
-        var nodes = dto.Map.Nodes.Select(n => new Node(new NodeId(n.NodeId), (NodeType)n.NodeType)).ToArray();
-        var connections = dto.Map.Connections.Select(c => (new NodeId(c.A), new NodeId(c.B))).ToArray();
+        var nodes = dto.Map.Nodes.Select(n => new Node(new MapNodeId(n.NodeId), (NodeType)n.NodeType)).ToArray();
+        var connections = dto.Map.Connections.Select(c => (new MapNodeId(c.A), new MapNodeId(c.B))).ToArray();
         var graph = new MapGraph(nodes, connections);
         var map = new MapState(
             graph,
-            new NodeId(dto.Map.StartNodeId),
-            new NodeId(dto.Map.CurrentNodeId),
-            dto.Map.DistanceFromStart.ToImmutableDictionary(k => new NodeId(k.Key), v => v.Value),
-            dto.Map.VisitedNodeIds.Select(id => new NodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
-            dto.Map.TriggeredEncounterNodeIds.Select(id => new NodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
-            dto.Map.ResolvedEncounterNodeIds.Select(id => new NodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
-            dto.Map.BossNodeId is null ? null : new NodeId(dto.Map.BossNodeId));
+            new MapNodeId(dto.Map.StartNodeId),
+            new MapNodeId(dto.Map.CurrentNodeId),
+            dto.Map.DistanceFromStart.ToImmutableDictionary(k => new MapNodeId(k.Key), v => v.Value),
+            dto.Map.VisitedNodeIds.Select(id => new MapNodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
+            dto.Map.TriggeredEncounterNodeIds.Select(id => new MapNodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
+            dto.Map.ResolvedEncounterNodeIds.Select(id => new MapNodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
+            dto.Map.BossNodeId is null ? null : new MapNodeId(dto.Map.BossNodeId));
 
         var time = new TimeState(
             dto.Time.CurrentStep,
             dto.Time.CurrentAct,
             dto.Time.MapTurnsSinceTimeAdvance,
             dto.Time.TimeAdvanceInterval,
-            dto.Time.CollapsedNodeIds.Select(id => new NodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
-            dto.Time.CollapseOrder.Select(id => new NodeId(id)).ToImmutableList(),
+            dto.Time.CollapsedNodeIds.Select(id => new MapNodeId(id)).ToImmutableSortedSet(MapState.NodeIdComparer),
+            dto.Time.CollapseOrder.Select(id => new MapNodeId(id)).ToImmutableList(),
             dto.Time.CollapseCursor,
             dto.Time.PlayerCaughtByTime,
             dto.Time.TimeBossTriggerPending);
@@ -172,20 +174,20 @@ public sealed class SaveGameRepository
         return initial with
         {
             Phase = dto.Phase,
-            Rng = new GameRng(dto.Rng.Seed, dto.Rng.State),
-            ActiveCombatNodeId = dto.ActiveCombatNodeId is null ? null : new NodeId(dto.ActiveCombatNodeId),
+            Rng = new CommonGameRng(dto.Rng.Seed, dto.Rng.State),
+            ActiveCombatNodeId = dto.ActiveCombatNodeId is null ? null : new MapNodeId(dto.ActiveCombatNodeId),
             Map = map,
             Time = time,
             Combat = dto.Combat is null ? null : FromDto(dto.Combat),
             Reward = dto.Reward is null
                 ? null
-                : new RewardState((RewardType)dto.Reward.RewardType, dto.Reward.CardOptions.Select(c => new CardId(c)).ToImmutableList(), dto.Reward.IsClaimed, dto.Reward.SourceNodeId is null ? null : new NodeId(dto.Reward.SourceNodeId)),
+                : new RewardState((RewardType)dto.Reward.RewardType, dto.Reward.CardOptions.Select(c => new CardsCardId(c)).ToImmutableList(), dto.Reward.IsClaimed, dto.Reward.SourceNodeId is null ? null : new MapNodeId(dto.Reward.SourceNodeId)),
             DeckEdit = dto.DeckEdit is null ? null : new DeckEditState(dto.DeckEdit.RemainingRemovals),
             NodeInteraction = dto.NodeInteraction is null
                 ? null
-                : new NodeInteractionState(new NodeId(dto.NodeInteraction.NodeId), (NodeType)dto.NodeInteraction.NodeType, dto.NodeInteraction.Options.Select(o => (NodeInteractionOption)o).ToImmutableArray()),
+                : new NodeInteractionState(new MapNodeId(dto.NodeInteraction.NodeId), (NodeType)dto.NodeInteraction.NodeType, dto.NodeInteraction.Options.Select(o => (NodeInteractionOption)o).ToImmutableArray()),
             SelectedDeckId = dto.SelectedDeckId,
-            RunDeck = dto.RunDeck.Select(card => new CardInstance(new CardId(card))).ToImmutableList(),
+            RunDeck = dto.RunDeck.Select(card => new CardInstance(new CardsCardId(card))).ToImmutableList(),
             RunHp = dto.RunHp,
             RunMaxHp = dto.RunMaxHp,
         };
@@ -219,10 +221,10 @@ public sealed class SaveGameRepository
             dto.Armor,
             dto.Resources.ToImmutableDictionary(k => (ResourceType)k.Key, v => v.Value),
             new DeckState(
-                dto.Deck.DrawPile.Select(c => new CardInstance(new CardId(c))).ToImmutableList(),
-                dto.Deck.Hand.Select(c => new CardInstance(new CardId(c))).ToImmutableList(),
-                dto.Deck.DiscardPile.Select(c => new CardInstance(new CardId(c))).ToImmutableList(),
-                dto.Deck.BurnPile.Select(c => new CardInstance(new CardId(c))).ToImmutableList(),
+                dto.Deck.DrawPile.Select(c => new CardInstance(new CardsCardId(c))).ToImmutableList(),
+                dto.Deck.Hand.Select(c => new CardInstance(new CardsCardId(c))).ToImmutableList(),
+                dto.Deck.DiscardPile.Select(c => new CardInstance(new CardsCardId(c))).ToImmutableList(),
+                dto.Deck.BurnPile.Select(c => new CardInstance(new CardsCardId(c))).ToImmutableList(),
                 dto.Deck.ReshuffleCount),
             dto.Bleed,
             dto.ReflectNextEnemyAttackDamage);
