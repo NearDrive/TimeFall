@@ -27,6 +27,13 @@ public static class GameReducer
 
         return action switch
         {
+            ContinueRunAction continueRunAction => ContinueRun(state, continueRunAction),
+            SetContinueAvailabilityAction setContinueAvailabilityAction => SetContinueAvailability(state, setContinueAvailabilityAction),
+            EnterNewRunMenuAction => EnterNewRunMenu(state),
+            ReturnToMainMenuAction => ReturnToMainMenu(state),
+            OpenDeckSelectAction => OpenDeckSelect(state),
+            OpenDeckEditAction => OpenDeckEdit(state),
+            ReturnToNewRunMenuAction => ReturnToNewRunMenu(state),
             SelectDeckAction selectDeckAction => SelectDeck(state, selectDeckAction),
             StartRunAction startRunAction => StartRun(state, startRunAction),
             BeginCombatAction beginCombatAction => BeginCombat(state, beginCombatAction),
@@ -42,6 +49,73 @@ public static class GameReducer
             UseShopRemovalAction useShopRemovalAction => UseShopRemoval(state, useShopRemovalAction),
             _ => (state, Array.Empty<GameEvent>()),
         };
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ContinueRun(GameState state, ContinueRunAction action)
+    {
+        if (state.Phase != GamePhase.MainMenu || !state.HasActiveRunSave)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (action.SavedState with { HasActiveRunSave = true }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) SetContinueAvailability(GameState state, SetContinueAvailabilityAction action)
+    {
+        return state.HasActiveRunSave == action.HasActiveSave
+            ? (state, Array.Empty<GameEvent>())
+            : (state with { HasActiveRunSave = action.HasActiveSave }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) EnterNewRunMenu(GameState state)
+    {
+        if (state.Phase != GamePhase.MainMenu)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.NewRunMenu }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ReturnToMainMenu(GameState state)
+    {
+        if (state.Phase != GamePhase.NewRunMenu)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.MainMenu, DeckEdit = null }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ReturnToNewRunMenu(GameState state)
+    {
+        if (state.Phase != GamePhase.DeckSelect && state.Phase != GamePhase.DeckEdit)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.NewRunMenu, DeckEdit = null }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenDeckSelect(GameState state)
+    {
+        if (state.Phase != GamePhase.NewRunMenu)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.DeckSelect }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenDeckEdit(GameState state)
+    {
+        if (state.Phase != GamePhase.NewRunMenu || state.SelectedDeckId is null)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.DeckEdit }, Array.Empty<GameEvent>());
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) SelectDeck(GameState state, SelectDeckAction action)
@@ -61,7 +135,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartRun(GameState state, StartRunAction action)
     {
-        if (state.Phase != GamePhase.DeckSelect)
+        if (state.Phase != GamePhase.NewRunMenu)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -86,6 +160,7 @@ public static class GameReducer
             state.DeckDefinitions,
             state.AvailableDeckIds,
             state.SelectedDeckId,
+            state.HasActiveRunSave,
             initializedRunDeck,
             null,
             selectedDeck.BaseMaxHp,
@@ -151,7 +226,7 @@ public static class GameReducer
 
     private static bool IsBeginCombatAllowedPhase(GamePhase phase)
     {
-        return phase is GamePhase.DeckSelect or GamePhase.MapExploration;
+        return phase is GamePhase.MainMenu or GamePhase.DeckSelect or GamePhase.MapExploration;
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)

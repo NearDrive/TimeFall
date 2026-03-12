@@ -67,7 +67,7 @@ public sealed class ZoneCommandTests
     [Fact]
     public void HelpCommand_ListsZoneCommand()
     {
-        var output = CaptureConsole(CliRenderer.RenderHelp);
+        var output = CaptureConsole(() => CliRenderer.RenderHelp(GamePhase.MapExploration));
 
         Assert.Contains("map                 Show current node and neighbors", output);
         Assert.Contains("zone                Show full zone map (layered + connections)", output);

@@ -6,6 +6,20 @@ namespace Game.Core.Game;
 
 public abstract record GameAction;
 
+public sealed record ContinueRunAction(GameState SavedState) : GameAction;
+
+public sealed record SetContinueAvailabilityAction(bool HasActiveSave) : GameAction;
+
+public sealed record EnterNewRunMenuAction : GameAction;
+
+public sealed record ReturnToMainMenuAction : GameAction;
+
+public sealed record OpenDeckSelectAction : GameAction;
+
+public sealed record OpenDeckEditAction : GameAction;
+
+public sealed record ReturnToNewRunMenuAction : GameAction;
+
 public sealed record SelectDeckAction(string DeckId) : GameAction;
 
 public sealed record StartRunAction(int Seed) : GameAction;

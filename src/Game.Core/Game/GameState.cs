@@ -23,6 +23,7 @@ public sealed record GameState(
     IReadOnlyDictionary<string, RunDeckDefinition> DeckDefinitions,
     ImmutableList<string> AvailableDeckIds,
     string? SelectedDeckId,
+    bool HasActiveRunSave,
     ImmutableList<CardInstance> RunDeck,
     DeckEditState? DeckEdit,
     int RunHp,
@@ -37,7 +38,7 @@ public sealed record GameState(
     private static readonly MapState InitialMap = SampleMapFactory.CreateDefaultState();
 
     public static GameState Initial => new(
-        GamePhase.DeckSelect,
+        GamePhase.MainMenu,
         GameRng.FromSeed(0),
         null,
         null,
@@ -49,6 +50,7 @@ public sealed record GameState(
         ImmutableDictionary<string, RunDeckDefinition>.Empty,
         ImmutableList<string>.Empty,
         null,
+        false,
         ImmutableList<CardInstance>.Empty,
         null,
         DefaultRunMaxHp,
@@ -85,7 +87,7 @@ public sealed record GameState(
 
         return this with
         {
-            Phase = GamePhase.DeckSelect,
+            Phase = GamePhase.MainMenu,
             Rng = GameRng.FromSeed(0),
             Combat = null,
             ActiveCombatNodeId = null,

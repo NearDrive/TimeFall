@@ -80,7 +80,7 @@ public sealed class ActiveRunPersistenceTests
         var result = GameReducer.Reduce(state, new EndTurnAction());
         var transition = CliLoop.DeterminePersistenceTransition(state, result.NewState, result.Events);
 
-        Assert.Equal(GamePhase.DeckSelect, result.NewState.Phase);
+        Assert.Equal(GamePhase.MainMenu, result.NewState.Phase);
         Assert.Equal(PersistenceTransition.Delete, transition);
     }
 
@@ -97,7 +97,7 @@ public sealed class ActiveRunPersistenceTests
         var result = GameReducer.Reduce(rewardState, new SkipRewardAction());
         var transition = CliLoop.DeterminePersistenceTransition(rewardState, result.NewState, result.Events);
 
-        Assert.Equal(GamePhase.DeckSelect, result.NewState.Phase);
+        Assert.Equal(GamePhase.MainMenu, result.NewState.Phase);
         Assert.Equal(PersistenceTransition.Delete, transition);
     }
 
@@ -185,6 +185,7 @@ public sealed class ActiveRunPersistenceTests
             Content.DeckDefinitions,
             Content.DeckDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).ToImmutableList(),
             "deck-blades",
+            false,
             ImmutableList<CardInstance>.Empty,
             null,
             4,
