@@ -75,4 +75,28 @@ public sealed record GameState(
             Zone1SpawnTable = zone1SpawnTable,
         };
     }
+
+    public GameState ResetToDeckSelect()
+    {
+        var mapState = SampleMapFactory.CreateDefaultState();
+        var maxHp = SelectedDeckId is { } deckId && DeckDefinitions.TryGetValue(deckId, out var deck)
+            ? deck.BaseMaxHp
+            : DefaultRunMaxHp;
+
+        return this with
+        {
+            Phase = GamePhase.DeckSelect,
+            Rng = GameRng.FromSeed(0),
+            Combat = null,
+            ActiveCombatNodeId = null,
+            Map = mapState,
+            Time = TimeState.Create(mapState),
+            Reward = null,
+            RunDeck = ImmutableList<CardInstance>.Empty,
+            DeckEdit = null,
+            RunHp = maxHp,
+            RunMaxHp = maxHp,
+            NodeInteraction = null,
+        };
+    }
 }
