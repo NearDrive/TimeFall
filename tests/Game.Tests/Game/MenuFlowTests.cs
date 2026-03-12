@@ -48,7 +48,7 @@ public sealed class MenuFlowTests
     }
 
     [Fact]
-    public void NewRunMenu_EditDeckRequiresSelectedDeck()
+    public void NewRunMenu_EditDeck_RequiresSelectedDeck()
     {
         var initial = GameStateTestFactory.CreateInitialWithContent();
         var newRun = GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState;
@@ -80,6 +80,65 @@ public sealed class MenuFlowTests
 
         Assert.Equal(GamePhase.MapExploration, resumed.Phase);
         Assert.Equal(savedRun.Map.CurrentNodeId, resumed.Map.CurrentNodeId);
+    }
+
+
+    [Fact]
+    public void NewRunMenu_SelectDeck_EntersDeckSelect()
+    {
+        var initial = GameStateTestFactory.CreateInitialWithContent();
+        var newRun = GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState;
+
+        var deckSelect = GameReducer.Reduce(newRun, new OpenDeckSelectAction()).NewState;
+
+        Assert.Equal(GamePhase.DeckSelect, deckSelect.Phase);
+    }
+
+    [Fact]
+    public void DeckSelect_Back_ReturnsToNewRunMenu()
+    {
+        var initial = GameStateTestFactory.CreateInitialWithContent();
+        var newRun = GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState;
+        var deckSelect = GameReducer.Reduce(newRun, new OpenDeckSelectAction()).NewState;
+
+        var parsed = CliCommandParser.TryParse("back", out var command, out var error);
+        Assert.True(parsed, error);
+        var action = CliLoop.ResolveContextualAction(command, deckSelect) ?? command.Action;
+        var returned = GameReducer.Reduce(deckSelect, action!).NewState;
+
+        Assert.Equal(GamePhase.NewRunMenu, returned.Phase);
+    }
+
+    [Fact]
+    public void SelectedDeck_PersistsWhenReturningFromDeckSelect()
+    {
+        var initial = GameStateTestFactory.CreateInitialWithContent();
+        var newRun = GameReducer.Reduce(initial, new EnterNewRunMenuAction()).NewState;
+        var deckSelect = GameReducer.Reduce(newRun, new OpenDeckSelectAction()).NewState;
+        var selected = GameReducer.Reduce(deckSelect, new SelectDeckAction(deckSelect.AvailableDeckIds[0])).NewState;
+
+        var returned = GameReducer.Reduce(selected, new ReturnToNewRunMenuAction()).NewState;
+
+        Assert.Equal(GamePhase.NewRunMenu, returned.Phase);
+        Assert.Equal(selected.SelectedDeckId, returned.SelectedDeckId);
+    }
+
+    [Fact]
+    public void DeckSelect_HelpMatchesAllowedCommands()
+    {
+        var deckSelectHelp = CaptureConsole(() => CliRenderer.RenderHelp(GamePhase.DeckSelect));
+
+        Assert.Contains("decks", deckSelectHelp, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("select <id|index>", deckSelectHelp, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("back", deckSelectHelp, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DeckSelect_DoesNotPretendEditDeckIsSupported()
+    {
+        var deckSelectHelp = CaptureConsole(() => CliRenderer.RenderHelp(GamePhase.DeckSelect));
+
+        Assert.DoesNotContain("edit-deck", deckSelectHelp, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
