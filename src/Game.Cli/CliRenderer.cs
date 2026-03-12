@@ -16,7 +16,7 @@ internal static class CliRenderer
         Console.WriteLine("  state | status      Show run summary");
         Console.WriteLine("  help                Show commands");
         Console.WriteLine("  map                 Show current node and neighbors");
-        Console.WriteLine("  zone                Show full zone map");
+        Console.WriteLine("  zone                Show full zone map (tree fallback)");
         Console.WriteLine("  move <nodeId|i>     Move to adjacent node (nodeId or 0-based adjacent index)");
         Console.WriteLine("  hand                Show combat hand");
         Console.WriteLine("  play <index> [t]    Play card from hand (0-based index, optional target index)");
@@ -106,25 +106,35 @@ internal static class CliRenderer
         Console.WriteLine("Zone Map");
         Console.WriteLine();
 
-        var collapsedNodes = state.Time.CollapsedNodeIds;
-        var nodesByDepth = state.Map.Graph.Nodes
-            .Select(node => new
-            {
-                Node = node,
-                Depth = state.Map.DistanceFromStart.TryGetValue(node.Id, out var depth) ? depth : int.MaxValue,
-            })
-            .OrderBy(entry => entry.Depth)
-            .ThenBy(entry => entry.Node.Id.Value, StringComparer.Ordinal)
-            .GroupBy(entry => entry.Depth);
-
-        foreach (var depthGroup in nodesByDepth)
+        if (!state.Map.Graph.TryGetNode(state.Map.StartNodeId, out var startNode) || startNode is null)
         {
-            var renderedNodes = depthGroup
-                .Select(entry => FormatZoneNode(entry.Node, state.Map.CurrentNodeId, collapsedNodes))
-                .ToArray();
-            Console.WriteLine($"Depth {depthGroup.Key}:  {string.Join("   ", renderedNodes)}");
-            Console.WriteLine();
+            Console.WriteLine("[?:missing-start]");
+            return;
         }
+
+        var parentByNode = BuildDeterministicParents(state.Map.Graph, state.Map.StartNodeId, state.Map.DistanceFromStart);
+        var visited = new HashSet<NodeId>();
+
+        RenderZoneNode(
+            state.Map.Graph,
+            startNode,
+            prefix: string.Empty,
+            isLast: true,
+            parentId: null,
+            visited,
+            parentByNode,
+            state.Map.DistanceFromStart,
+            state.Map.CurrentNodeId,
+            state.Time.CollapsedNodeIds,
+            isReference: false);
+
+        Console.WriteLine();
+        Console.WriteLine($"Current node: {state.Map.CurrentNodeId.Value}");
+        var bossDistance = state.Map.BossNodeId is { } bossNodeId && state.Map.Graph.TryGetShortestPathDistance(state.Map.CurrentNodeId, bossNodeId, out var distance)
+            ? distance.ToString()
+            : "unreachable";
+        Console.WriteLine($"Boss distance: {bossDistance}");
+        Console.WriteLine($"Collapsed nodes: {state.Time.CollapsedNodeIds.Count}");
     }
 
     public static void RenderHand(GameState state, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
@@ -269,6 +279,11 @@ internal static class CliRenderer
 
     private static string FormatZoneNode(Node node, NodeId currentNodeId, ISet<NodeId> collapsedNodeIds)
     {
+        return FormatZoneNode(node, currentNodeId, collapsedNodeIds, isReference: false);
+    }
+
+    private static string FormatZoneNode(Node node, NodeId currentNodeId, ISet<NodeId> collapsedNodeIds, bool isReference)
+    {
         var marker = node.Type switch
         {
             NodeType.Start => "S",
@@ -288,8 +303,107 @@ internal static class CliRenderer
         }
 
         var collapsed = collapsedNodeIds.Contains(node.Id) ? " X" : string.Empty;
+        var reference = isReference ? " ↺" : string.Empty;
 
-        return $"[{marker}:{node.Id.Value}{suffix}{collapsed}]";
+        return $"[{marker}:{node.Id.Value}{suffix}{collapsed}{reference}]";
+    }
+
+    private static Dictionary<NodeId, NodeId?> BuildDeterministicParents(MapGraph graph, NodeId startNodeId, IReadOnlyDictionary<NodeId, int> distanceFromStart)
+    {
+        var parentByNode = new Dictionary<NodeId, NodeId?>
+        {
+            [startNodeId] = null,
+        };
+        var queue = new Queue<NodeId>();
+        queue.Enqueue(startNodeId);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var neighbor in OrderZoneNeighbors(graph.GetNeighbors(current), distanceFromStart))
+            {
+                if (parentByNode.ContainsKey(neighbor))
+                {
+                    continue;
+                }
+
+                parentByNode[neighbor] = current;
+                queue.Enqueue(neighbor);
+            }
+        }
+
+        return parentByNode;
+    }
+
+    private static void RenderZoneNode(
+        MapGraph graph,
+        Node node,
+        string prefix,
+        bool isLast,
+        NodeId? parentId,
+        HashSet<NodeId> visited,
+        IReadOnlyDictionary<NodeId, NodeId?> parentByNode,
+        IReadOnlyDictionary<NodeId, int> distanceFromStart,
+        NodeId currentNodeId,
+        ISet<NodeId> collapsedNodeIds,
+        bool isReference)
+    {
+        var connector = parentId is null ? string.Empty : (isLast ? "└─ " : "├─ ");
+        Console.WriteLine($"{prefix}{connector}{FormatZoneNode(node, currentNodeId, collapsedNodeIds, isReference)}");
+
+        if (isReference)
+        {
+            return;
+        }
+
+        visited.Add(node.Id);
+
+        var childPrefix = parentId is null
+            ? string.Empty
+            : prefix + (isLast ? "   " : "│  ");
+
+        var neighbors = OrderZoneNeighbors(graph.GetNeighbors(node.Id), distanceFromStart);
+        var treeChildren = neighbors
+            .Where(neighbor => parentByNode.TryGetValue(neighbor, out var parent) && parent == node.Id)
+            .ToArray();
+        var referenceChildren = neighbors
+            .Where(neighbor => neighbor != parentId)
+            .Where(neighbor => (!parentByNode.TryGetValue(neighbor, out var parent) || parent != node.Id) && visited.Contains(neighbor))
+            .ToArray();
+        var renderedChildren = treeChildren
+            .Select(id => (Id: id, IsReference: false))
+            .Concat(referenceChildren.Select(id => (Id: id, IsReference: true)))
+            .ToArray();
+
+        for (var i = 0; i < renderedChildren.Length; i++)
+        {
+            var child = renderedChildren[i];
+            if (!graph.TryGetNode(child.Id, out var childNode) || childNode is null)
+            {
+                continue;
+            }
+
+            RenderZoneNode(
+                graph,
+                childNode,
+                childPrefix,
+                i == renderedChildren.Length - 1,
+                node.Id,
+                visited,
+                parentByNode,
+                distanceFromStart,
+                currentNodeId,
+                collapsedNodeIds,
+                child.IsReference);
+        }
+    }
+
+    private static NodeId[] OrderZoneNeighbors(IEnumerable<NodeId> neighbors, IReadOnlyDictionary<NodeId, int> distanceFromStart)
+    {
+        return neighbors
+            .OrderBy(id => distanceFromStart.TryGetValue(id, out var distance) ? distance : int.MaxValue)
+            .ThenBy(id => id.Value, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static string FormatCardSummary(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
