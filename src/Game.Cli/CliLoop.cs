@@ -198,6 +198,16 @@ internal sealed class CliLoop
 
     internal static GameAction? ResolveContextualAction(ParsedCommand command, GameState state)
     {
+        if (command.Action is ReturnToMainMenuAction)
+        {
+            return state.Phase switch
+            {
+                GamePhase.NewRunMenu => new ReturnToMainMenuAction(),
+                GamePhase.DeckSelect or GamePhase.DeckEdit => new ReturnToNewRunMenuAction(),
+                _ => command.Action,
+            };
+        }
+
         if (command.Argument is null)
         {
             return null;
@@ -276,16 +286,6 @@ internal sealed class CliLoop
         if (command.Action is SelectDeckAction)
         {
             return new SelectDeckAction(command.Argument);
-        }
-
-        if (command.Action is ReturnToMainMenuAction)
-        {
-            return state.Phase switch
-            {
-                GamePhase.NewRunMenu => new ReturnToMainMenuAction(),
-                GamePhase.DeckSelect or GamePhase.DeckEdit => new ReturnToNewRunMenuAction(),
-                _ => command.Action,
-            };
         }
 
         return command.Action;
