@@ -105,7 +105,7 @@ internal static class CliCommandParser
             case "move":
                 if (parts.Length != 2)
                 {
-                    error = "Usage: move <nodeId|adjacentIndex>";
+                    error = "Usage: move <displayId|adjacentIndex>";
                     return false;
                 }
 
