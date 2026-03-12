@@ -163,6 +163,15 @@ internal sealed class CliLoop
             return new RemoveCardFromDeckAction(cardId);
         }
 
+        if (command.Action is MoveToNodeAction && state.Phase == GamePhase.MapExploration)
+        {
+            var displayIds = MapDisplayIds.Create(state.Map);
+            if (displayIds.TryResolve(command.Argument, out var displayNodeId))
+            {
+                return new MoveToNodeAction(displayNodeId);
+            }
+        }
+
         var id = new CardId(command.Argument);
         if (command.Action is RemoveCardFromDeckAction)
         {
