@@ -82,7 +82,7 @@ public sealed class CliPlaytestFixTests
     [Fact]
     public void CliHelp_ClarifiesIndexing()
     {
-        var output = CaptureConsole(CliRenderer.RenderHelp);
+        var output = CaptureConsole(() => CliRenderer.RenderHelp(GamePhase.MapExploration));
 
         Assert.Contains("0-based", output);
         Assert.Contains("discardpile", output);
