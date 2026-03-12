@@ -10,38 +10,26 @@ namespace Game.Tests.Cli;
 public sealed class ZoneCommandTests
 {
     [Fact]
-    public void ZoneCommand_ShowsAllNodes()
+    public void ZoneCommand_RendersTreeStyleLayout()
     {
         var state = CreateZoneState();
 
         var output = CaptureConsole(() => CliRenderer.RenderZone(state));
 
-        foreach (var node in state.Map.Graph.Nodes)
-        {
-            Assert.Contains(node.Id.Value, output);
-        }
+        Assert.Contains("[S:start]", output);
+        Assert.Contains("├─", output);
+        Assert.Contains("└─", output);
     }
 
     [Fact]
-    public void ZoneCommand_GroupsNodesByDepth()
+    public void ZoneCommand_ShowsStartBossAndCurrentNode()
     {
         var state = CreateZoneState();
 
         var output = CaptureConsole(() => CliRenderer.RenderZone(state));
 
-        Assert.Contains("Depth 0:", output);
-        Assert.Contains("Depth 1:", output);
-        Assert.Contains("Depth 2:", output);
-        Assert.Contains("Depth 3:", output);
-    }
-
-    [Fact]
-    public void ZoneCommand_ShowsCurrentNode()
-    {
-        var state = CreateZoneState();
-
-        var output = CaptureConsole(() => CliRenderer.RenderZone(state));
-
+        Assert.Contains("[S:start]", output);
+        Assert.Contains("[B:boss-1]", output);
         Assert.Contains("[E:elite-1@]", output);
     }
 
@@ -60,21 +48,11 @@ public sealed class ZoneCommandTests
         var output = CaptureConsole(() => CliRenderer.RenderZone(state));
 
         Assert.Contains("[$:shop-1 X]", output);
+        Assert.Contains("Collapsed nodes: 1", output);
     }
 
     [Fact]
-    public void ZoneCommand_ShowsStartAndBoss()
-    {
-        var state = CreateZoneState();
-
-        var output = CaptureConsole(() => CliRenderer.RenderZone(state));
-
-        Assert.Contains("[S:start]", output);
-        Assert.Contains("[B:boss-1]", output);
-    }
-
-    [Fact]
-    public void ZoneCommand_RenderingIsDeterministic()
+    public void ZoneCommand_UsesDeterministicOrdering()
     {
         var state = CreateZoneState();
 
@@ -86,12 +64,38 @@ public sealed class ZoneCommandTests
     }
 
     [Fact]
+    public void ZoneCommand_HandlesReconnectionsDeterministically()
+    {
+        var state = CreateReconnectionState();
+
+        var output = CaptureConsole(() => CliRenderer.RenderZone(state));
+
+        Assert.Contains("[C:mid]", output);
+        Assert.Contains("[E:merge ↺]", output);
+        Assert.Equal(output, CaptureConsole(() => CliRenderer.RenderZone(state)));
+    }
+
+    [Fact]
     public void HelpCommand_ListsZoneCommand()
     {
         var output = CaptureConsole(CliRenderer.RenderHelp);
 
         Assert.Contains("map                 Show current node and neighbors", output);
-        Assert.Contains("zone                Show full zone map", output);
+        Assert.Contains("zone                Show full zone map (tree fallback)", output);
+    }
+
+    [Fact]
+    public void MapCommand_RemainsLocalAdjacencyOnly()
+    {
+        var state = CreateZoneState();
+
+        var output = CaptureConsole(() => CliRenderer.RenderMap(state));
+
+        Assert.Contains("Current node: elite-1", output);
+        Assert.Contains("- [0] boss-1", output);
+        Assert.Contains("- [1] combat-1", output);
+        Assert.DoesNotContain("shop-1", output);
+        Assert.DoesNotContain("Zone Map", output);
     }
 
     private static GameState CreateZoneState()
@@ -106,6 +110,39 @@ public sealed class ZoneCommandTests
         {
             Map = movedMap,
             Time = TimeState.Create(movedMap),
+        };
+    }
+
+    private static GameState CreateReconnectionState()
+    {
+        var start = new Node(new NodeId("start"), NodeType.Start);
+        var left = new Node(new NodeId("left"), NodeType.Combat);
+        var right = new Node(new NodeId("right"), NodeType.Rest);
+        var mid = new Node(new NodeId("mid"), NodeType.Combat);
+        var merge = new Node(new NodeId("merge"), NodeType.Elite);
+        var boss = new Node(new NodeId("boss"), NodeType.Boss);
+
+        var graph = new MapGraph(
+            new[] { start, left, right, mid, merge, boss },
+            new (NodeId A, NodeId B)[]
+            {
+                (start.Id, left.Id),
+                (start.Id, right.Id),
+                (left.Id, mid.Id),
+                (right.Id, merge.Id),
+                (mid.Id, merge.Id),
+                (merge.Id, boss.Id),
+            });
+
+        var map = MapState.Create(graph, start.Id, boss.Id) with
+        {
+            CurrentNodeId = mid.Id,
+        };
+
+        return GameStateTestFactory.CreateStartedRun() with
+        {
+            Map = map,
+            Time = TimeState.Create(map),
         };
     }
 
