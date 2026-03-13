@@ -13,6 +13,8 @@ internal enum CliView
     Hand,
     Reward,
     Deck,
+    Enabled,
+    Disabled,
     Decks,
     Discard,
     Status,
@@ -52,6 +54,8 @@ internal static class CliCommandParser
             case "hand": command = new ParsedCommand(null, CliView.Hand); return true;
             case "reward": command = new ParsedCommand(null, CliView.Reward); return true;
             case "deck": command = new ParsedCommand(null, CliView.Deck); return true;
+            case "enabled": command = new ParsedCommand(null, CliView.Enabled); return true;
+            case "disabled": command = new ParsedCommand(null, CliView.Disabled); return true;
             case "decks": command = new ParsedCommand(null, CliView.Decks); return true;
             case "discard":
                 if (parts.Length < 2)
@@ -105,6 +109,38 @@ internal static class CliCommandParser
                 return true;
             case "edit-deck":
                 command = new ParsedCommand(new OpenDeckEditAction(), null);
+                return true;
+            case "enable-all":
+                command = new ParsedCommand(new EnableAllRewardPoolCardsAction(), null);
+                return true;
+            case "disable-all":
+                command = new ParsedCommand(new DisableAllRewardPoolCardsAction(), null);
+                return true;
+            case "autofill-min":
+                command = new ParsedCommand(new AutofillMinRewardPoolAction(), null);
+                return true;
+            case "autofill-max":
+                command = new ParsedCommand(new AutofillMaxRewardPoolAction(), null);
+                return true;
+            case "done":
+                command = new ParsedCommand(new ConfirmRewardPoolAction(), null);
+                return true;
+            case "enable":
+            case "disable":
+            case "toggle":
+                if (parts.Length != 2)
+                {
+                    error = $"Usage: {name} <cardId|index>";
+                    return false;
+                }
+
+                var action = name switch
+                {
+                    "enable" => int.TryParse(parts[1], out _) ? null : new EnableRewardPoolCardAction(new CardId(parts[1])),
+                    "disable" => int.TryParse(parts[1], out _) ? null : new DisableRewardPoolCardAction(new CardId(parts[1])),
+                    _ => int.TryParse(parts[1], out _) ? null : new ToggleRewardPoolCardAction(new CardId(parts[1])),
+                };
+                command = new ParsedCommand(action, null, parts[1]);
                 return true;
             case "select":
                 if (parts.Length != 2)

@@ -313,7 +313,7 @@ public sealed class CliPlaytestFixTests
             MaxHP: bladesDeck.BaseMaxHp,
             Armor: 0,
             Resources: bladesDeck.StartingResources,
-            DrawPile: bladesDeck.StartingDeck);
+            DrawPile: bladesDeck.StartingCombatDeckCardIds);
 
         var enemyIds = new[] { "zone1-raider", "zone1-bastion-guard", "zone1-raider" };
         var enemies = enemyIds

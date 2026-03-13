@@ -38,6 +38,12 @@ internal static class BladesContentLoader
         var resourceType = Enum.Parse<ResourceType>(deck.GetProperty("resourceType").GetString()!, ignoreCase: true);
         var baseMaxHp = deck.GetProperty("baseMaxHp").GetInt32();
         var startingDeck = deck.GetProperty("startingDeck").EnumerateArray().Select(x => new CardId(x.GetString()!)).ToArray();
+        var rewardPool = deck.GetProperty("cardPool").EnumerateObject()
+            .SelectMany(bucket => bucket.Value.EnumerateArray())
+            .Select(x => new CardId(x.GetString()!))
+            .Distinct()
+            .OrderBy(id => id.Value, StringComparer.Ordinal)
+            .ToArray();
 
         var startingResources = new Dictionary<ResourceType, int>
         {
@@ -50,7 +56,8 @@ internal static class BladesContentLoader
             Description: null,
             ResourceType: resourceType,
             BaseMaxHp: baseMaxHp,
-            StartingDeck: startingDeck,
+            StartingCombatDeckCardIds: startingDeck,
+            RewardPoolCardIds: rewardPool,
             StartingResources: startingResources);
     }
 

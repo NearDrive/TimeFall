@@ -5,9 +5,9 @@ using Game.Core.Map;
 using Game.Core.TimeSystem;
 using Game.Core.Rewards;
 using Game.Core.Decks;
+using System.Collections.Immutable;
 using NodeId = Game.Core.Map.NodeId;
 using CardId = Game.Core.Cards.CardId;
-using System.Collections.Immutable;
 
 namespace Game.Core.Game;
 
@@ -33,6 +33,15 @@ public static class GameReducer
             ReturnToMainMenuAction => ReturnToMainMenu(state),
             OpenDeckSelectAction => OpenDeckSelect(state),
             OpenDeckEditAction => OpenDeckEdit(state),
+            EnableRewardPoolCardAction enableRewardPoolCardAction => EnableRewardPoolCard(state, enableRewardPoolCardAction),
+            DisableRewardPoolCardAction disableRewardPoolCardAction => DisableRewardPoolCard(state, disableRewardPoolCardAction),
+            ToggleRewardPoolCardAction toggleRewardPoolCardAction => ToggleRewardPoolCard(state, toggleRewardPoolCardAction),
+            EnableAllRewardPoolCardsAction => EnableAllRewardPoolCards(state),
+            DisableAllRewardPoolCardsAction => DisableAllRewardPoolCards(state),
+            AutofillMinRewardPoolAction => AutofillMinRewardPool(state),
+            AutofillMaxRewardPoolAction => AutofillMaxRewardPool(state),
+            ConfirmRewardPoolAction => ConfirmRewardPool(state),
+            CancelRewardPoolEditAction => CancelRewardPoolEdit(state),
             ReturnToNewRunMenuAction => ReturnToNewRunMenu(state),
             SelectDeckAction selectDeckAction => SelectDeck(state, selectDeckAction),
             StartRunAction startRunAction => StartRun(state, startRunAction),
@@ -85,7 +94,8 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        return (state with { Phase = GamePhase.MainMenu, DeckEdit = null }, Array.Empty<GameEvent>());
+        return (state with { Phase = GamePhase.MainMenu, DeckEdit = null,
+                RewardPoolEdit = null }, Array.Empty<GameEvent>());
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ReturnToNewRunMenu(GameState state)
@@ -95,7 +105,8 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        return (state with { Phase = GamePhase.NewRunMenu, DeckEdit = null }, Array.Empty<GameEvent>());
+        return (state with { Phase = GamePhase.NewRunMenu, DeckEdit = null,
+                RewardPoolEdit = null }, Array.Empty<GameEvent>());
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenDeckSelect(GameState state)
@@ -110,12 +121,16 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenDeckEdit(GameState state)
     {
-        if (state.Phase != GamePhase.NewRunMenu || state.SelectedDeckId is null)
+        if (state.Phase != GamePhase.NewRunMenu || state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var deck))
         {
             return (state, Array.Empty<GameEvent>());
         }
 
-        return (state with { Phase = GamePhase.DeckEdit }, Array.Empty<GameEvent>());
+        var enabled = state.EnabledRewardPoolCardIds.Count > 0
+            ? RewardPoolRules.NormalizeEnabled(state.EnabledRewardPoolCardIds, deck.RewardPoolCardIds)
+            : RewardPoolRules.NormalizeEnabled(deck.RewardPoolCardIds, deck.RewardPoolCardIds);
+        var edit = new RewardPoolEditState(enabled);
+        return (state with { Phase = GamePhase.DeckEdit, RewardPoolEdit = edit }, Array.Empty<GameEvent>());
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) SelectDeck(GameState state, SelectDeckAction action)
@@ -130,7 +145,124 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        return (state with { SelectedDeckId = action.DeckId }, new GameEvent[] { new DeckSelected(action.DeckId) });
+        var selectedDeck = state.DeckDefinitions[action.DeckId];
+        var enabled = RewardPoolRules.NormalizeEnabled(selectedDeck.RewardPoolCardIds, selectedDeck.RewardPoolCardIds);
+
+        return (state with { SelectedDeckId = action.DeckId, EnabledRewardPoolCardIds = enabled }, new GameEvent[] { new DeckSelected(action.DeckId) });
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) EnableRewardPoolCard(GameState state, EnableRewardPoolCardAction action)
+    {
+        return UpdateRewardPoolEdit(state, working => working.Add(action.CardId));
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) DisableRewardPoolCard(GameState state, DisableRewardPoolCardAction action)
+    {
+        return UpdateRewardPoolEdit(state, working => working.Remove(action.CardId));
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ToggleRewardPoolCard(GameState state, ToggleRewardPoolCardAction action)
+    {
+        return UpdateRewardPoolEdit(state, working => working.Contains(action.CardId) ? working.Remove(action.CardId) : working.Add(action.CardId));
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) EnableAllRewardPoolCards(GameState state)
+    {
+        if (!TryGetDeckEditContext(state, out var deck, out var edit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var normalized = RewardPoolRules.NormalizeEnabled(deck.RewardPoolCardIds, deck.RewardPoolCardIds);
+        return (state with { RewardPoolEdit = edit with { WorkingEnabledCardIds = normalized } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) DisableAllRewardPoolCards(GameState state)
+    {
+        if (!TryGetDeckEditContext(state, out _, out var edit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { RewardPoolEdit = edit with { WorkingEnabledCardIds = ImmutableList<CardId>.Empty } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) AutofillMinRewardPool(GameState state)
+    {
+        if (!TryGetDeckEditContext(state, out var deck, out var edit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var updated = RewardPoolRules.AutofillMin(edit.WorkingEnabledCardIds, deck.RewardPoolCardIds);
+        return (state with { RewardPoolEdit = edit with { WorkingEnabledCardIds = updated } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) AutofillMaxRewardPool(GameState state)
+    {
+        if (!TryGetDeckEditContext(state, out var deck, out var edit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var updated = RewardPoolRules.AutofillMax(deck.RewardPoolCardIds);
+        return (state with { RewardPoolEdit = edit with { WorkingEnabledCardIds = updated } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ConfirmRewardPool(GameState state)
+    {
+        if (!TryGetDeckEditContext(state, out var deck, out var edit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var normalized = RewardPoolRules.NormalizeEnabled(edit.WorkingEnabledCardIds, deck.RewardPoolCardIds);
+        if (!RewardPoolRules.TryValidate(normalized, deck.RewardPoolCardIds.Count, out var error))
+        {
+            return (state, new GameEvent[] { new RewardPoolEditRejected(error) });
+        }
+
+        return (state with
+        {
+            EnabledRewardPoolCardIds = normalized,
+            RewardPoolEdit = null,
+            Phase = GamePhase.NewRunMenu,
+        }, new GameEvent[] { new RewardPoolEditConfirmed(normalized.Count) });
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) CancelRewardPoolEdit(GameState state)
+    {
+        if (state.Phase != GamePhase.DeckEdit)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.NewRunMenu, RewardPoolEdit = null }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) UpdateRewardPoolEdit(GameState state, Func<ImmutableList<CardId>, ImmutableList<CardId>> update)
+    {
+        if (!TryGetDeckEditContext(state, out var deck, out var edit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var updated = RewardPoolRules.NormalizeEnabled(update(edit.WorkingEnabledCardIds), deck.RewardPoolCardIds);
+        return (state with { RewardPoolEdit = edit with { WorkingEnabledCardIds = updated } }, Array.Empty<GameEvent>());
+    }
+
+    private static bool TryGetDeckEditContext(GameState state, out RunDeckDefinition deck, out RewardPoolEditState edit)
+    {
+        deck = null!;
+        edit = null!;
+        if (state.Phase != GamePhase.DeckEdit || state.SelectedDeckId is null || state.RewardPoolEdit is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var selectedDeck))
+        {
+            return false;
+        }
+
+        deck = selectedDeck;
+        edit = state.RewardPoolEdit;
+        return true;
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartRun(GameState state, StartRunAction action)
@@ -146,7 +278,7 @@ public static class GameReducer
         }
 
         var mapState = SampleMapFactory.CreateZone1State(action.Seed);
-        var initializedRunDeck = selectedDeck.StartingDeck.Select(id => new CardInstance(id)).ToImmutableList();
+        var initializedRunDeck = selectedDeck.StartingCombatDeckCardIds.Select(id => new CardInstance(id)).ToImmutableList();
         var newState = new GameState(
             GamePhase.MapExploration,
             GameRng.FromSeed(action.Seed),
@@ -156,12 +288,13 @@ public static class GameReducer
             mapState,
             TimeState.Create(mapState),
             null,
-            state.RewardCardPool,
+            state.EnabledRewardPoolCardIds,
             state.DeckDefinitions,
             state.AvailableDeckIds,
             state.SelectedDeckId,
             state.HasActiveRunSave,
             initializedRunDeck,
+            null,
             null,
             selectedDeck.BaseMaxHp,
             selectedDeck.BaseMaxHp,
@@ -197,7 +330,8 @@ public static class GameReducer
         events.AddRange(drawResult.Events);
         events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
 
-        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, RewardCardPool = ResolveRewardCardPool(action).ToImmutableList(), Reward = null, DeckEdit = null, NodeInteraction = null }, events);
+        return (stateWithDeck with { Phase = GamePhase.Combat, Combat = drawResult.CombatState, Rng = drawResult.Rng, CardDefinitions = action.CardDefinitions, EnabledRewardPoolCardIds = ResolveRewardCardPool(action).ToImmutableList(), Reward = null, DeckEdit = null,
+                RewardPoolEdit = null, NodeInteraction = null }, events);
     }
 
     private static IReadOnlyList<CardId> ResolveRewardCardPool(BeginCombatAction action)
@@ -464,7 +598,7 @@ public static class GameReducer
                 movedState.EnemyDefinitions,
                 movedState.Zone1SpawnTable,
                 movedState.CardDefinitions,
-                movedState.RewardCardPool,
+                movedState.EnabledRewardPoolCardIds,
                 out var encounter,
                 out var encounterRng);
             if (!selected)
@@ -486,10 +620,11 @@ public static class GameReducer
                 Combat = drawResult.CombatState,
                 Rng = drawResult.Rng,
                 CardDefinitions = encounter.CardDefinitions,
-                RewardCardPool = encounter.RewardCardPool.ToImmutableList(),
+                EnabledRewardPoolCardIds = encounter.RewardCardPool.ToImmutableList(),
                 ActiveCombatNodeId = action.NodeId,
                 Reward = null,
                 DeckEdit = null,
+                RewardPoolEdit = null,
                 NodeInteraction = null,
             };
 
@@ -584,6 +719,7 @@ public static class GameReducer
             Combat = null,
             RunDeck = state.RunDeck.Add(new CardInstance(action.CardId)),
             DeckEdit = null,
+                RewardPoolEdit = null,
         };
 
         if (IsBossReward(state))
@@ -614,6 +750,7 @@ public static class GameReducer
             Reward = null,
             Combat = null,
             DeckEdit = null,
+                RewardPoolEdit = null,
         };
 
         if (IsBossReward(state))
@@ -818,7 +955,7 @@ public static class GameReducer
             return state;
         }
 
-        var initializedDeck = selectedDeck.StartingDeck
+        var initializedDeck = selectedDeck.StartingCombatDeckCardIds
             .Select(id => new CardInstance(id))
             .ToImmutableList();
 
@@ -879,7 +1016,7 @@ public static class GameReducer
                 resolvedEvents.Add(new EncounterResolved(nodeId, node.Type));
             }
 
-            var rewardResult = RewardGenerator.CreateCardChoiceReward(state.CardDefinitions, state.RewardCardPool, state.Rng, sourceNodeId);
+            var rewardResult = RewardGenerator.CreateCardChoiceReward(state.CardDefinitions, state.EnabledRewardPoolCardIds, state.Rng, sourceNodeId);
             var rewardState = rewardResult.RewardState;
 
             resolvedEvents.Insert(0, new CombatEnded(sourceNodeId, sourceNodeType, true));

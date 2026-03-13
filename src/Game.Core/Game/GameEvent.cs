@@ -23,6 +23,10 @@ public enum PlayCardRejectionReason
 
 public sealed record DeckSelected(string DeckId) : GameEvent;
 
+public sealed record RewardPoolEditRejected(string Message) : GameEvent;
+
+public sealed record RewardPoolEditConfirmed(int EnabledCount) : GameEvent;
+
 public sealed record RunStarted(int Seed) : GameEvent;
 
 public sealed record EnteredCombat(NodeId? NodeId, NodeType? NodeType) : GameEvent;
