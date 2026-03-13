@@ -40,7 +40,17 @@ internal static class CliRenderer
 
         if (phase == GamePhase.DeckEdit)
         {
-            Console.WriteLine("  back                Return to New Run menu");
+            Console.WriteLine("  enabled             List enabled reward-pool cards");
+            Console.WriteLine("  disabled            List disabled reward-pool cards");
+            Console.WriteLine("  enable <id|index>   Enable reward card");
+            Console.WriteLine("  disable <id|index>  Disable reward card");
+            Console.WriteLine("  toggle <id|index>   Toggle reward card");
+            Console.WriteLine("  enable-all          Enable all compatible cards");
+            Console.WriteLine("  disable-all         Disable all compatible cards");
+            Console.WriteLine("  autofill-min        Deterministically fill to minimum");
+            Console.WriteLine("  autofill-max        Deterministically fill to maximum");
+            Console.WriteLine("  done                Validate + apply reward pool");
+            Console.WriteLine("  back                Cancel and return to New Run menu");
             return;
         }
 
@@ -85,10 +95,16 @@ internal static class CliRenderer
 
         if (state.Phase == GamePhase.DeckEdit)
         {
-            Console.WriteLine(state.SelectedDeckId is null
-                ? "No deck selected. Use select-deck first."
-                : $"Deck edit: {state.SelectedDeckId} (editing placeholder)");
-            Console.WriteLine("Use 'back' to return to New Run Menu.");
+            if (state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var selectedDeck))
+            {
+                Console.WriteLine("No deck selected. Use select-deck first.");
+                return;
+            }
+
+            var working = state.RewardPoolEdit?.WorkingEnabledCardIds ?? state.EnabledRewardPoolCardIds;
+            Console.WriteLine($"Deck edit: {selectedDeck.Name} ({selectedDeck.Id})");
+            Console.WriteLine($"Enabled reward cards: {working.Count}/{selectedDeck.RewardPoolCardIds.Count} (min 20 when available, max 30)");
+            Console.WriteLine("Use 'enabled' / 'disabled' to inspect cards, then 'done' to apply or 'back' to cancel.");
             return;
         }
         Console.WriteLine($"Run HP: {state.RunHp}/{state.RunMaxHp}");
@@ -315,6 +331,8 @@ internal static class CliRenderer
         {
             RunStarted e => $"Run started (seed {e.Seed})",
             DeckSelected e => $"Deck selected: {e.DeckId}",
+            RewardPoolEditRejected e => $"Reward pool edit rejected: {e.Message}",
+            RewardPoolEditConfirmed e => $"Reward pool edit confirmed ({e.EnabledCount} enabled)",
             TurnEnded e => $"---------------- {e.NextTurnOwner} turn begins ----------------",
             ResourceChanged e when e.ResourceType == ResourceType.Momentum
                 => $"{e.Owner} GM: {e.Before} -> {e.After}; Momentum: {MomentumMath.DerivedMomentumFromGm(e.Before)} -> {MomentumMath.DerivedMomentumFromGm(e.After)} ({e.Reason})",
@@ -378,6 +396,33 @@ internal static class CliRenderer
         var collapsed = collapsedNodeIds.Contains(node.Id) ? " X" : string.Empty;
 
         return $"[{marker}:{displayIds.Get(node.Id)}{suffix}{collapsed}]";
+    }
+
+    public static void RenderRewardPool(GameState state, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions, bool enabled)
+    {
+        if (state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var deck))
+        {
+            Console.WriteLine("No selected deck.");
+            return;
+        }
+
+        var working = state.RewardPoolEdit?.WorkingEnabledCardIds ?? state.EnabledRewardPoolCardIds;
+        var enabledSet = working.ToHashSet();
+        var orderedPool = deck.RewardPoolCardIds.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+        var filtered = orderedPool
+            .Select((cardId, index) => (cardId, index))
+            .Where(entry => enabled ? enabledSet.Contains(entry.cardId) : !enabledSet.Contains(entry.cardId))
+            .ToArray();
+        Console.WriteLine(enabled ? "Enabled reward cards:" : "Disabled reward cards:");
+        foreach (var entry in filtered)
+        {
+            Console.WriteLine($"  [{entry.index}] {FormatCardSummary(entry.cardId, cardDefinitions)} ({entry.cardId.Value})");
+        }
+
+        if (filtered.Length == 0)
+        {
+            Console.WriteLine("  (none)");
+        }
     }
 
     private static string FormatCardSummary(CardId id, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)

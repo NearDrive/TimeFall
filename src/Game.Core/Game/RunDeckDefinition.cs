@@ -9,5 +9,6 @@ public sealed record RunDeckDefinition(
     string? Description,
     ResourceType ResourceType,
     int BaseMaxHp,
-    IReadOnlyList<CardId> StartingDeck,
+    IReadOnlyList<CardId> StartingCombatDeckCardIds,
+    IReadOnlyList<CardId> RewardPoolCardIds,
     IReadOnlyDictionary<ResourceType, int> StartingResources);

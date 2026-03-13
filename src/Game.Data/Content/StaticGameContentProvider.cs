@@ -63,16 +63,10 @@ public static class StaticGameContentProvider
             Zone1EnemyContentLoader.ValidateReferences(enemyCards, enemyDefinitions, zone1SpawnTable);
         }
 
-        var allowedDeckAffinities = deckDefinitions.Values
-            .Select(deck => deck.Name)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var rewardCardPool = cardDefinitions
-            .Where(card =>
-                !card.Key.Value.StartsWith("enemy-", StringComparison.Ordinal)
-                && !string.IsNullOrWhiteSpace(card.Value.DeckAffinity)
-                && (allowedDeckAffinities.Count == 0 || allowedDeckAffinities.Contains(card.Value.DeckAffinity)))
-            .Select(card => card.Key)
+        var rewardCardPool = deckDefinitions.Values
+            .SelectMany(deck => deck.RewardPoolCardIds)
+            .Distinct()
+            .Where(id => cardDefinitions.ContainsKey(id))
             .OrderBy(cardId => cardId.Value, StringComparer.Ordinal)
             .ToArray();
 

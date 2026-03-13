@@ -15,7 +15,25 @@ public sealed class CliCommandParserSmokeTests
     [InlineData("end", typeof(EndTurnAction))]
     [InlineData("skip", typeof(SkipRewardAction))]
     [InlineData("rest", typeof(UseRestAction))]
+    [InlineData("done", typeof(ConfirmRewardPoolAction))]
+    [InlineData("enable-all", typeof(EnableAllRewardPoolCardsAction))]
+    [InlineData("disable-all", typeof(DisableAllRewardPoolCardsAction))]
+    [InlineData("autofill-min", typeof(AutofillMinRewardPoolAction))]
+    [InlineData("autofill-max", typeof(AutofillMaxRewardPoolAction))]
     public void ParsesCoreActionCommands(string input, Type expectedActionType)
+    {
+        var ok = CliCommandParser.TryParse(input, out var parsed, out var error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(parsed.Action);
+        Assert.IsType(expectedActionType, parsed.Action);
+    }
+
+    [Theory]
+    [InlineData("enable blades-strike", typeof(EnableRewardPoolCardAction))]
+    [InlineData("disable blades-strike", typeof(DisableRewardPoolCardAction))]
+    [InlineData("toggle blades-strike", typeof(ToggleRewardPoolCardAction))]
+    public void ParsesDeckEditToggleCommands(string input, Type expectedActionType)
     {
         var ok = CliCommandParser.TryParse(input, out var parsed, out var error);
 

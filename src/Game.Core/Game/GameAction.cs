@@ -18,6 +18,24 @@ public sealed record OpenDeckSelectAction : GameAction;
 
 public sealed record OpenDeckEditAction : GameAction;
 
+public sealed record EnableRewardPoolCardAction(CardId CardId) : GameAction;
+
+public sealed record DisableRewardPoolCardAction(CardId CardId) : GameAction;
+
+public sealed record ToggleRewardPoolCardAction(CardId CardId) : GameAction;
+
+public sealed record EnableAllRewardPoolCardsAction : GameAction;
+
+public sealed record DisableAllRewardPoolCardsAction : GameAction;
+
+public sealed record AutofillMinRewardPoolAction : GameAction;
+
+public sealed record AutofillMaxRewardPoolAction : GameAction;
+
+public sealed record ConfirmRewardPoolAction : GameAction;
+
+public sealed record CancelRewardPoolEditAction : GameAction;
+
 public sealed record ReturnToNewRunMenuAction : GameAction;
 
 public sealed record SelectDeckAction(string DeckId) : GameAction;
