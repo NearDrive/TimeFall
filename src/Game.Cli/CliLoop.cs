@@ -75,7 +75,7 @@ internal sealed class CliLoop
             }
             if (action is OpenDeckEditAction && state.SelectedDeckId is null)
             {
-                Console.WriteLine("No deck selected. Use select-deck first.");
+                Console.WriteLine("No deck selected. Use 'select-deck' then 'select <deckId|index>' first.");
                 continue;
             }
             if (action is DiscardOverflowAction discardOverflowAction && !TryValidateOverflowDiscard(discardOverflowAction, state, out var overflowError))
@@ -244,6 +244,24 @@ internal sealed class CliLoop
                 return new ChooseRewardCardAction(reward.CardOptions[index]);
             }
 
+            if (state.Phase == GamePhase.DeckEdit && state.SelectedDeckId is { } selectedDeckId && state.DeckDefinitions.TryGetValue(selectedDeckId, out var deckDefinition))
+            {
+                var orderedPool = deckDefinition.RewardPoolCardIds.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+                if (index < 0 || index >= orderedPool.Length)
+                {
+                    return null;
+                }
+
+                var deckEditCardId = orderedPool[index];
+                return command.Action switch
+                {
+                    EnableRewardPoolCardAction => new EnableRewardPoolCardAction(deckEditCardId),
+                    DisableRewardPoolCardAction => new DisableRewardPoolCardAction(deckEditCardId),
+                    ToggleRewardPoolCardAction => new ToggleRewardPoolCardAction(deckEditCardId),
+                    _ => command.Action,
+                };
+            }
+
             if (index < 0 || index >= state.RunDeck.Count)
             {
                 return null;
@@ -288,6 +306,21 @@ internal sealed class CliLoop
             return new SelectDeckAction(command.Argument);
         }
 
+        if (command.Action is EnableRewardPoolCardAction)
+        {
+            return new EnableRewardPoolCardAction(id);
+        }
+
+        if (command.Action is DisableRewardPoolCardAction)
+        {
+            return new DisableRewardPoolCardAction(id);
+        }
+
+        if (command.Action is ToggleRewardPoolCardAction)
+        {
+            return new ToggleRewardPoolCardAction(id);
+        }
+
         return command.Action;
     }
 
@@ -323,6 +356,12 @@ internal sealed class CliLoop
                 break;
             case CliView.Deck:
                 CliRenderer.RenderDeck(state, _content.CardDefinitions);
+                break;
+            case CliView.Enabled:
+                CliRenderer.RenderRewardPool(state, _content.CardDefinitions, enabled: true);
+                break;
+            case CliView.Disabled:
+                CliRenderer.RenderRewardPool(state, _content.CardDefinitions, enabled: false);
                 break;
             case CliView.Decks:
                 CliRenderer.RenderDecks(state);

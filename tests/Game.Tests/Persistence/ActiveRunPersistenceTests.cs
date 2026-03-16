@@ -188,6 +188,7 @@ public sealed class ActiveRunPersistenceTests
             false,
             ImmutableList<CardInstance>.Empty,
             null,
+            null,
             4,
             10,
             null,
