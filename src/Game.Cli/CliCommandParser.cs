@@ -134,13 +134,19 @@ internal static class CliCommandParser
                     return false;
                 }
 
-                var action = name switch
+                GameAction? deckEditAction = null;
+                if (!int.TryParse(parts[1], out _))
                 {
-                    "enable" => int.TryParse(parts[1], out _) ? null : new EnableRewardPoolCardAction(new CardId(parts[1])),
-                    "disable" => int.TryParse(parts[1], out _) ? null : new DisableRewardPoolCardAction(new CardId(parts[1])),
-                    _ => int.TryParse(parts[1], out _) ? null : new ToggleRewardPoolCardAction(new CardId(parts[1])),
-                };
-                command = new ParsedCommand(action, null, parts[1]);
+                    var cardId = new CardId(parts[1]);
+                    deckEditAction = name switch
+                    {
+                        "enable" => new EnableRewardPoolCardAction(cardId),
+                        "disable" => new DisableRewardPoolCardAction(cardId),
+                        _ => new ToggleRewardPoolCardAction(cardId),
+                    };
+                }
+
+                command = new ParsedCommand(deckEditAction, null, parts[1]);
                 return true;
             case "select":
                 if (parts.Length != 2)

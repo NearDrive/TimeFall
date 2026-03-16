@@ -252,12 +252,12 @@ internal sealed class CliLoop
                     return null;
                 }
 
-                var cardId = orderedPool[index];
+                var deckEditCardId = orderedPool[index];
                 return command.Action switch
                 {
-                    EnableRewardPoolCardAction => new EnableRewardPoolCardAction(cardId),
-                    DisableRewardPoolCardAction => new DisableRewardPoolCardAction(cardId),
-                    ToggleRewardPoolCardAction => new ToggleRewardPoolCardAction(cardId),
+                    EnableRewardPoolCardAction => new EnableRewardPoolCardAction(deckEditCardId),
+                    DisableRewardPoolCardAction => new DisableRewardPoolCardAction(deckEditCardId),
+                    ToggleRewardPoolCardAction => new ToggleRewardPoolCardAction(deckEditCardId),
                     _ => command.Action,
                 };
             }
