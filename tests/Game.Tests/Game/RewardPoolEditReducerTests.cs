@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Game.Core.Cards;
+using Game.Core.Decks;
 using Game.Core.Game;
 
 namespace Game.Tests.Game;
@@ -133,7 +134,7 @@ public sealed class RewardPoolEditReducerTests
         var modifiedState = baseState with
         {
             DeckDefinitions = baseState.DeckDefinitions.ToDictionary(kvp => kvp.Key, kvp => kvp.Key == "deck-blades" ? modifiedDeck : kvp.Value),
-            RewardPoolEdit = new Game.Core.Decks.RewardPoolEditState(smallPool.Take(enabledCards).ToImmutableList()),
+            RewardPoolEdit = new RewardPoolEditState(smallPool.Take(enabledCards).ToImmutableList()),
             EnabledRewardPoolCardIds = smallPool.Take(enabledCards).ToImmutableList(),
         };
 
