@@ -75,6 +75,20 @@ public class DamageSystemTests
     }
 
     [Fact]
+    public void VulnerableConsumesPerHitUsingRealDamage()
+    {
+        var target = CreateTarget(hp: 50, armor: 1, vulnerable: 3);
+
+        var (afterFirstHit, _) = DamageSystem.ApplyHit(target, incomingDamage: 2);
+        var (afterSecondHit, secondEvents) = DamageSystem.ApplyHit(afterFirstHit, incomingDamage: 2);
+
+        Assert.Equal(46, afterFirstHit.HP);
+        Assert.Equal(0, afterFirstHit.Vulnerable);
+        Assert.Equal(44, afterSecondHit.HP);
+        Assert.Equal(new DamageDealt(2, 2), secondEvents[0]);
+    }
+
+    [Fact]
     public void VulnerableIsNotConsumedWhenArmorPreventsHpLoss()
     {
         var target = CreateTarget(hp: 50, armor: 10, vulnerable: 4);
