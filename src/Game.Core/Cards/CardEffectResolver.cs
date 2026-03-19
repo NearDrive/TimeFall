@@ -1,7 +1,7 @@
+using System.Collections.Immutable;
 using Game.Core.Combat;
 using Game.Core.Common;
 using Game.Core.Game;
-using System.Collections.Immutable;
 
 namespace Game.Core.Cards;
 
@@ -14,20 +14,7 @@ public static class CardEffectResolver
         => cardDefinitions.TryGetValue(card.DefinitionId, out var definition) && HasResolvableEffects(definition);
 
     public static bool RequiresEnemyTarget(CardDefinition definition)
-        => definition.Effects.Any(effect => effect switch
-        {
-            DealDamageToAllEnemiesCardEffect => false,
-            DamageCardEffect e => e.Target == CardTarget.Opponent,
-            DamageIgnoringArmorCardEffect e => e.Target == CardTarget.Opponent,
-            DamageNTimesCardEffect e => e.Target == CardTarget.Opponent,
-            DealDamagePerMomentumSpentCardEffect e => e.Target == CardTarget.Opponent,
-            DealDamagePerAllMomentumSpentCardEffect e => e.Target == CardTarget.Opponent,
-            DealDamagePerCurrentMomentumCardEffect e => e.Target == CardTarget.Opponent,
-            DealDamageAndDrawPerCurrentMomentumCardEffect e => e.Target == CardTarget.Opponent,
-            ApplyBleedCardEffect e => e.Target == CardTarget.Opponent,
-            RemoveEnemyArmorCardEffect => true,
-            _ => false,
-        });
+        => definition.Effects.Any(RequiresEnemyTarget);
 
     public static CardEffectResolution Resolve(
         CombatState combatState,
@@ -45,72 +32,183 @@ public static class CardEffectResolver
         var mutable = combatState with { LastCardDamageDealt = 0 };
         var events = new List<GameEvent>();
         var currentRng = rng ?? GameRng.FromSeed(0);
+        var context = new EffectExecutionContext(GetMomentum(mutable.Player));
         var isAttackCard = definition.HasLabel("Attack");
 
         foreach (var effect in definition.Effects)
         {
-            switch (effect)
-            {
-                case DamageCardEffect e: mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, isAttackCard, events, selectedEnemyId); break;
-                case DamageIgnoringArmorCardEffect e: mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, true, isAttackCard, events, selectedEnemyId); break;
-                case DamageNTimesCardEffect e:
-                    for (var i = 0; i < e.Times; i++) mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, isAttackCard, events, selectedEnemyId);
-                    break;
-                case DealDamagePerMomentumSpentCardEffect e:
-                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, isAttackCard, events, selectedEnemyId);
-                    break;
-                case DealDamagePerAllMomentumSpentCardEffect e:
-                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, isAttackCard, events, selectedEnemyId);
-                    break;
-                case DealDamagePerCurrentMomentumCardEffect e:
-                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * GetMomentum(mutable.Player), e.Target, false, isAttackCard, events, selectedEnemyId);
-                    break;
-                case DealDamageToAllEnemiesCardEffect e:
-                    mutable = ApplyDamageToAllEnemies(mutable, card, actor, e.Amount, false, isAttackCard, events);
-                    break;
-                case DealDamageAndDrawPerCurrentMomentumCardEffect e:
-                    var m = GetMomentum(mutable.Player);
-                    if (m > 0)
-                    {
-                        mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * m, e.Target, false, isAttackCard, events, selectedEnemyId);
-                        var dr = ApplyDrawEffect(mutable, new DrawCardsCardEffect(e.DrawPerMomentum * m, CardTarget.Self), actor, currentRng);
-                        mutable = dr.CombatState; currentRng = dr.Rng; events.AddRange(dr.Events);
-                    }
-                    break;
-                case GainArmorCardEffect e: mutable = ApplyArmorEffect(mutable, e, actor, selectedEnemyId); break;
-                case ConditionalGainArmorIfMomentumAtLeastCardEffect e:
-                    if (GetMomentum(mutable.Player) >= e.MinimumMomentum) mutable = ApplyArmorEffect(mutable, new GainArmorCardEffect(e.Amount, e.Target), actor, selectedEnemyId);
-                    break;
-                case DrawCardsCardEffect e:
-                    var d = ApplyDrawEffect(mutable, e, actor, currentRng); mutable = d.CombatState; currentRng = d.Rng; events.AddRange(d.Events); break;
-                case HealCardEffect e: mutable = ApplyHeal(mutable, e, actor, selectedEnemyId); break;
-                case ApplyBleedCardEffect e:
-                    mutable = ApplyBleed(mutable, e, actor, selectedEnemyId);
-                    events.Add(new StatusApplied(actor, ResolveTarget(e.Target, actor), "Bleed", e.Amount));
-                    break;
-                case GainGeneratedMomentumCardEffect e: mutable = ApplyGmGain(mutable, e.Amount, actor, e.Target, events, "Card effect"); break;
-                case ReflectNextEnemyAttackDamageCardEffect e:
-                    if (ResolveTarget(e.Target, actor) == TurnOwner.Player) mutable = mutable with { Player = mutable.Player with { ReflectNextEnemyAttackDamage = e.Amount } };
-                    break;
-                case AttackCountThisTurnToGmCardEffect:
-                    mutable = ApplyGmGain(mutable, mutable.AttacksPlayedThisTurn, actor, CardTarget.Self, events, "Attack count this turn");
-                    break;
-                case RemoveEnemyArmorCardEffect:
-                    mutable = UpdateEnemyById(mutable, selectedEnemyId, enemy => enemy with { Armor = 0 });
-                    break;
-                case NextAttackBonusDamageThisTurnCardEffect e: mutable = mutable with { NextAttackBonusDamageThisTurn = mutable.NextAttackBonusDamageThisTurn + e.Amount }; break;
-                case NextAttackDoubleThisTurnCardEffect: mutable = mutable with { NextAttackDamageMultiplierThisTurn = mutable.NextAttackDamageMultiplierThisTurn + 2m }; break;
-                case TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect e: mutable = mutable with { AllAttacksBonusDamageThisTurn = mutable.AllAttacksBonusDamageThisTurn + e.Amount }; break;
-                case TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect: mutable = mutable with { AllAttacksDamageMultiplierThisTurn = mutable.AllAttacksDamageMultiplierThisTurn + 2m }; break;
-                case LifestealPercentOfDamageDealtCardEffect e:
-                    var heal = (int)Math.Floor(mutable.LastCardDamageDealt * (e.Percent / 100.0));
-                    mutable = ApplyHeal(mutable, new HealCardEffect(heal, e.Target), actor, selectedEnemyId);
-                    break;
-            }
+            var result = ResolveEffect(mutable, card, actor, effect, isAttackCard, events, currentRng, selectedEnemyId, context, 0);
+            mutable = result.CombatState;
+            currentRng = result.Rng;
         }
 
         return new CardEffectResolution(mutable, currentRng, events, true);
     }
+
+    private static EffectResolutionResult ResolveEffect(
+        CombatState state,
+        CardInstance card,
+        TurnOwner actor,
+        CardEffect effect,
+        bool isAttackCard,
+        List<GameEvent> events,
+        GameRng rng,
+        string? selectedEnemyId,
+        EffectExecutionContext context,
+        int recursionDepth)
+    {
+        if (recursionDepth > 16)
+        {
+            return new EffectResolutionResult(state, rng);
+        }
+
+        var mutable = state;
+        var currentRng = rng;
+
+        switch (effect)
+        {
+            case DamageCardEffect e:
+                mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, isAttackCard, events, selectedEnemyId);
+                break;
+            case DamageIgnoringArmorCardEffect e:
+                mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, true, isAttackCard, events, selectedEnemyId);
+                break;
+            case DamageNTimesCardEffect e:
+                for (var i = 0; i < e.Times; i++)
+                {
+                    mutable = ApplyDamageEffect(mutable, card, actor, e.Amount, e.Target, false, isAttackCard, events, selectedEnemyId);
+                }
+                break;
+            case DealDamagePerMomentumSpentCardEffect e:
+                mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, isAttackCard, events, selectedEnemyId);
+                break;
+            case DealDamagePerAllMomentumSpentCardEffect e:
+                mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * mutable.LastCardMomentumSpent, e.Target, false, isAttackCard, events, selectedEnemyId);
+                break;
+            case DealDamagePerCurrentMomentumCardEffect e:
+                mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * context.InitialCurrentMomentum, e.Target, false, isAttackCard, events, selectedEnemyId);
+                break;
+            case DealDamageToAllEnemiesCardEffect e:
+                mutable = ApplyDamageToAllEnemies(mutable, card, actor, e.Amount, false, isAttackCard, events);
+                break;
+            case DealDamageAndDrawPerCurrentMomentumCardEffect e:
+                if (context.InitialCurrentMomentum > 0)
+                {
+                    mutable = ApplyDamageEffect(mutable, card, actor, e.DamagePerMomentum * context.InitialCurrentMomentum, e.Target, false, isAttackCard, events, selectedEnemyId);
+                    var dr = ApplyDrawEffect(mutable, new DrawCardsCardEffect(e.DrawPerMomentum * context.InitialCurrentMomentum, CardTarget.Self), actor, currentRng);
+                    mutable = dr.CombatState;
+                    currentRng = dr.Rng;
+                    events.AddRange(dr.Events);
+                }
+                break;
+            case DamageWithAttackCountScalingCardEffect e:
+                mutable = ApplyDamageEffect(mutable, card, actor, e.BaseAmount + (e.DamagePerAttackPlayedThisTurn * mutable.AttacksPlayedThisTurn), e.Target, false, isAttackCard, events, selectedEnemyId);
+                break;
+            case GainArmorCardEffect e:
+                mutable = ApplyArmorEffect(mutable, e, actor, selectedEnemyId);
+                break;
+            case ConditionalGainArmorIfMomentumAtLeastCardEffect e:
+                if (GetMomentum(mutable.Player) >= e.MinimumMomentum)
+                {
+                    mutable = ApplyArmorEffect(mutable, new GainArmorCardEffect(e.Amount, e.Target), actor, selectedEnemyId);
+                }
+                break;
+            case DrawCardsCardEffect e:
+                var d = ApplyDrawEffect(mutable, e, actor, currentRng);
+                mutable = d.CombatState;
+                currentRng = d.Rng;
+                events.AddRange(d.Events);
+                break;
+            case HealCardEffect e:
+                mutable = ApplyHeal(mutable, e, actor, selectedEnemyId);
+                break;
+            case ApplyStatusCardEffect e:
+                mutable = ApplyStatus(mutable, e.Status, e.Amount, e.Target, actor, selectedEnemyId);
+                events.Add(new StatusApplied(actor, ResolveTarget(e.Target, actor), e.Status.ToString(), e.Amount));
+                break;
+            case ApplyBleedCardEffect e:
+                mutable = ApplyStatus(mutable, StatusKind.Bleed, e.Amount, e.Target, actor, selectedEnemyId);
+                events.Add(new StatusApplied(actor, ResolveTarget(e.Target, actor), StatusKind.Bleed.ToString(), e.Amount));
+                break;
+            case ApplyStatusPerCurrentMomentumCardEffect e:
+                var statusAmount = e.BaseAmount + (e.AmountPerCurrentMomentum * context.InitialCurrentMomentum);
+                mutable = ApplyStatus(mutable, e.Status, statusAmount, e.Target, actor, selectedEnemyId);
+                events.Add(new StatusApplied(actor, ResolveTarget(e.Target, actor), e.Status.ToString(), statusAmount));
+                break;
+            case GainGeneratedMomentumCardEffect e:
+                mutable = ApplyGmGain(mutable, e.Amount, actor, e.Target, events, "Card effect");
+                break;
+            case ReflectNextEnemyAttackDamageCardEffect e:
+                if (ResolveTarget(e.Target, actor) == TurnOwner.Player)
+                {
+                    mutable = mutable with { Player = mutable.Player with { ReflectNextEnemyAttackDamage = e.Amount } };
+                }
+                break;
+            case AttackCountThisTurnToGmCardEffect:
+                mutable = ApplyGmGain(mutable, mutable.AttacksPlayedThisTurn, actor, CardTarget.Self, events, "Attack count this turn");
+                break;
+            case RemoveEnemyArmorCardEffect:
+                mutable = UpdateEnemyById(mutable, selectedEnemyId, enemy => enemy with { Armor = 0 });
+                break;
+            case RemoveAllArmorCardEffect:
+                mutable = mutable with { Enemies = mutable.Enemies.Select(enemy => enemy with { Armor = 0 }).ToImmutableList() };
+                break;
+            case NextAttackBonusDamageThisTurnCardEffect e:
+                mutable = mutable with { NextAttackBonusDamageThisTurn = mutable.NextAttackBonusDamageThisTurn + e.Amount };
+                break;
+            case NextAttackDoubleThisTurnCardEffect:
+            case NextAttackDoubleDamageThisTurnCardEffect:
+                mutable = mutable with { NextAttackDamageMultiplierThisTurn = mutable.NextAttackDamageMultiplierThisTurn + 2m };
+                break;
+            case TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect e:
+                mutable = mutable with { AllAttacksBonusDamageThisTurn = mutable.AllAttacksBonusDamageThisTurn + e.Amount };
+                break;
+            case AllAttacksBonusDamageThisTurnCardEffect e:
+                mutable = mutable with { AllAttacksBonusDamageThisTurn = mutable.AllAttacksBonusDamageThisTurn + e.Amount };
+                break;
+            case TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect:
+            case AllAttacksDoubleDamageThisTurnCardEffect:
+                mutable = mutable with { AllAttacksDamageMultiplierThisTurn = mutable.AllAttacksDamageMultiplierThisTurn + 2m };
+                break;
+            case LifestealPercentOfDamageDealtCardEffect e:
+                var heal = (int)Math.Floor(mutable.LastCardDamageDealt * (e.Percent / 100.0));
+                mutable = ApplyHeal(mutable, new HealCardEffect(heal, e.Target), actor, selectedEnemyId);
+                break;
+            case RepeatEffectsPerCurrentMomentumCardEffect e:
+                for (var i = 0; i < context.InitialCurrentMomentum; i++)
+                {
+                    foreach (var nested in e.Effects)
+                    {
+                        var nestedResult = ResolveEffect(mutable, card, actor, nested, isAttackCard, events, currentRng, selectedEnemyId, context, recursionDepth + 1);
+                        mutable = nestedResult.CombatState;
+                        currentRng = nestedResult.Rng;
+                    }
+                }
+                break;
+        }
+
+        return new EffectResolutionResult(mutable, currentRng);
+    }
+
+    private static bool RequiresEnemyTarget(CardEffect effect)
+        => effect switch
+        {
+            DealDamageToAllEnemiesCardEffect => false,
+            RepeatEffectsPerCurrentMomentumCardEffect e => e.Effects.Any(RequiresEnemyTarget),
+            DamageCardEffect e => e.Target == CardTarget.Opponent,
+            DamageIgnoringArmorCardEffect e => e.Target == CardTarget.Opponent,
+            DamageNTimesCardEffect e => e.Target == CardTarget.Opponent,
+            DealDamagePerMomentumSpentCardEffect e => e.Target == CardTarget.Opponent,
+            DealDamagePerAllMomentumSpentCardEffect e => e.Target == CardTarget.Opponent,
+            DealDamagePerCurrentMomentumCardEffect e => e.Target == CardTarget.Opponent,
+            DealDamageAndDrawPerCurrentMomentumCardEffect e => e.Target == CardTarget.Opponent,
+            DamageWithAttackCountScalingCardEffect e => e.Target == CardTarget.Opponent,
+            ApplyStatusCardEffect e => e.Target == CardTarget.Opponent,
+            ApplyBleedCardEffect e => e.Target == CardTarget.Opponent,
+            ApplyStatusPerCurrentMomentumCardEffect e => e.Target == CardTarget.Opponent,
+            RemoveEnemyArmorCardEffect => true,
+            _ => false,
+        };
 
     private static int GetMomentum(CombatEntity entity)
     {
@@ -216,7 +314,6 @@ public static class CardEffectResolver
         return updatedState;
     }
 
-
     private static bool TryGetMomentumAttackBonus(CombatState combatState, out int bonus)
     {
         bonus = GetMomentum(combatState.Player);
@@ -257,16 +354,30 @@ public static class CardEffectResolver
         return UpdateEnemyById(state, selectedEnemyId, enemy => enemy with { HP = Math.Min(enemy.MaxHP, enemy.HP + effect.Amount) });
     }
 
-    private static CombatState ApplyBleed(CombatState state, ApplyBleedCardEffect effect, TurnOwner actor, string? selectedEnemyId)
+    private static CombatState ApplyStatus(CombatState state, StatusKind status, int amount, CardTarget target, TurnOwner actor, string? selectedEnemyId)
     {
-        var target = ResolveTarget(effect.Target, actor);
-        if (target == TurnOwner.Player)
+        if (amount <= 0)
         {
-            return state with { Player = state.Player with { Bleed = state.Player.Bleed + effect.Amount } };
+            return state;
         }
 
-        return UpdateEnemyById(state, selectedEnemyId, enemy => enemy with { Bleed = enemy.Bleed + effect.Amount });
+        var resolvedTarget = ResolveTarget(target, actor);
+        if (resolvedTarget == TurnOwner.Player)
+        {
+            return state with { Player = ApplyStatus(state.Player, status, amount) };
+        }
+
+        return UpdateEnemyById(state, selectedEnemyId, enemy => ApplyStatus(enemy, status, amount));
     }
+
+    private static CombatEntity ApplyStatus(CombatEntity entity, StatusKind status, int amount)
+        => status switch
+        {
+            StatusKind.Bleed => entity with { Bleed = entity.Bleed + amount },
+            StatusKind.Weak => entity with { Weak = entity.Weak + amount },
+            StatusKind.Vulnerable => entity with { Vulnerable = entity.Vulnerable + amount },
+            _ => entity,
+        };
 
     private static DrawEffectResult ApplyDrawEffect(CombatState combatState, DrawCardsCardEffect effect, TurnOwner actor, GameRng rng)
     {
@@ -314,3 +425,5 @@ public static class CardEffectResolver
 
 public sealed record CardEffectResolution(CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events, bool WasResolved);
 public sealed record DrawEffectResult(CombatState CombatState, GameRng Rng, IReadOnlyList<GameEvent> Events);
+internal sealed record EffectExecutionContext(int InitialCurrentMomentum);
+internal sealed record EffectResolutionResult(CombatState CombatState, GameRng Rng);

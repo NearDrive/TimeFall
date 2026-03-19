@@ -207,6 +207,20 @@ public class BladesMomentumTests
     }
 
 
+
+    [Fact]
+    public void WeakReducesSingleHitDamage()
+    {
+        var card = new CardDefinition(new CardId("weak-single"), "Strike", 0, [new DamageCardEffect(5, CardTarget.Opponent)], new NoCost(), new HashSet<string> { "Attack" });
+        var state = BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30);
+        state = state with { Combat = state.Combat! with { Player = state.Combat!.Player with { Weak = 2 } } };
+
+        var result = GameReducer.Reduce(state, new PlayCardAction(0));
+        var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
+
+        Assert.Equal(3, hit.Damage);
+    }
+
     [Fact]
     public void WeakReducesDirectDamagePerHit()
     {
@@ -269,10 +283,143 @@ public class BladesMomentumTests
     private static IReadOnlyDictionary<CardId, CardDefinition> Defs(CardDefinition card)
         => new Dictionary<CardId, CardDefinition> { [card.Id] = card };
 
-    private static GameState BuildState(CardId cardId, IReadOnlyDictionary<CardId, CardDefinition> defs, int gm, int enemyHp = 50, int enemyArmor = 0)
+    private static GameState BuildState(CardId cardId, IReadOnlyDictionary<CardId, CardDefinition> defs, int gm, int enemyHp = 50, int enemyArmor = 0, int playerHp = 50, int playerMaxHp = 50, IReadOnlyList<CombatEntity>? extraEnemies = null)
+        => BuildState([cardId], defs, gm, enemyHp, enemyArmor, playerHp, playerMaxHp, extraEnemies);
+
+    private static GameState BuildState(IReadOnlyList<CardId> handCardIds, IReadOnlyDictionary<CardId, CardDefinition> defs, int gm, int enemyHp = 50, int enemyArmor = 0, int playerHp = 50, int playerMaxHp = 50, IReadOnlyList<CombatEntity>? extraEnemies = null)
     {
-        var player = new CombatEntity("p", 50, 50, 0, new Dictionary<ResourceType, int> { [ResourceType.Momentum] = gm }.ToImmutableDictionary(), new DeckState([new CardInstance(cardId)], [new CardInstance(cardId)], [], [], 0));
-        var enemy = new CombatEntity("e", enemyHp, enemyHp, enemyArmor, new Dictionary<ResourceType, int>().ToImmutableDictionary(), new DeckState([], [], [], [], 0));
-        return GameState.Initial with { Phase = GamePhase.Combat, Combat = new CombatState(TurnOwner.Player, player, enemy, false, 0), CardDefinitions = defs };
+        var hand = handCardIds.Select(id => new CardInstance(id)).ToImmutableList();
+        var player = new CombatEntity("p", playerHp, playerMaxHp, 0, new Dictionary<ResourceType, int> { [ResourceType.Momentum] = gm }.ToImmutableDictionary(), new DeckState(hand, hand, [], [], 0));
+        var enemies = ImmutableList.Create(CreateEnemy("e", enemyHp, enemyArmor)).AddRange(extraEnemies ?? []);
+        return GameState.Initial with { Phase = GamePhase.Combat, Combat = new CombatState(TurnOwner.Player, player, enemies, false, 0), CardDefinitions = defs };
     }
+
+    private static CombatEntity CreateEnemy(string id, int hp, int armor)
+        => new(id, hp, hp, armor, new Dictionary<ResourceType, int>().ToImmutableDictionary(), new DeckState([], [], [], [], 0));
+
+    [Fact]
+    public void CurrentMomentumEffectsUseSnapshotAtCardStart()
+    {
+        var card = new CardDefinition(new CardId("momentum-snapshot"), "Snapshot", 0,
+            [new GainGeneratedMomentumCardEffect(2, CardTarget.Self), new DealDamagePerCurrentMomentumCardEffect(3, CardTarget.Opponent)],
+            new NoCost(), new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 2, enemyHp: 40), new PlayCardAction(0));
+        var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
+
+        Assert.Equal(6, hit.BaseDamage);
+        Assert.Equal(1, hit.MomentumBonus);
+        Assert.Equal(7, hit.Damage);
+    }
+
+    [Fact]
+    public void AllAttacksBuffsApplyToAllHitsOfMultiHitAttack()
+    {
+        var card = new CardDefinition(new CardId("all-attacks-multi"), "Whirl", 0,
+            [new AllAttacksBonusDamageThisTurnCardEffect(2, CardTarget.Self), new AllAttacksDoubleDamageThisTurnCardEffect(CardTarget.Self), new DamageNTimesCardEffect(3, 2, CardTarget.Opponent)],
+            new NoCost(), new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 0, enemyHp: 50), new PlayCardAction(0));
+        var hits = result.Events.OfType<PlayerStrikePlayed>().ToArray();
+
+        Assert.Equal([10, 10], hits.Select(h => h.Damage).ToArray());
+    }
+
+    [Fact]
+    public void NextAttackDoubleAppliesOnlyToFirstHitOfNextAttackCard()
+    {
+        var buffId = new CardId("prep-next");
+        var attackId = new CardId("twin-next");
+        var defs = new Dictionary<CardId, CardDefinition>
+        {
+            [buffId] = new(buffId, "Prep", 0, [new NextAttackDoubleDamageThisTurnCardEffect(CardTarget.Self)], new NoCost(), new HashSet<string>()),
+            [attackId] = new(attackId, "Twin", 0, [new DamageNTimesCardEffect(4, 2, CardTarget.Opponent)], new NoCost(), new HashSet<string> { "Attack" })
+        };
+
+        var state = BuildState([buffId, attackId], defs, gm: 0, enemyHp: 30);
+        var afterBuff = GameReducer.Reduce(state, new PlayCardAction(0)).NewState;
+        var afterAttack = GameReducer.Reduce(afterBuff, new PlayCardAction(0));
+        var hits = afterAttack.Events.OfType<PlayerStrikePlayed>().ToArray();
+
+        Assert.Equal([8, 4], hits.Select(h => h.Damage).ToArray());
+    }
+
+    [Fact]
+    public void LifestealUsesRealDamageDealtAfterArmor()
+    {
+        var card = new CardDefinition(new CardId("lifesteal-real"), "Drain", 0,
+            [new DamageCardEffect(10, CardTarget.Opponent), new LifestealPercentOfDamageDealtCardEffect(50, CardTarget.Self)],
+            new NoCost(), new HashSet<string> { "Attack" });
+        var state = BuildState(card.Id, Defs(card), gm: 0, enemyHp: 40, enemyArmor: 8, playerHp: 20, playerMaxHp: 40);
+
+        var result = GameReducer.Reduce(state, new PlayCardAction(0));
+
+        Assert.Equal(21, result.NewState.Combat!.Player.HP);
+        Assert.Equal(38, result.NewState.Combat.Enemy.HP);
+    }
+
+    [Fact]
+    public void DamageToAllEnemiesHitsEachEnemyDeterministically()
+    {
+        var card = new CardDefinition(new CardId("aoe"), "AoE", 0, [new DealDamageToAllEnemiesCardEffect(5)], new NoCost(), new HashSet<string> { "Attack" });
+        var state = BuildState(card.Id, Defs(card), gm: 0, enemyHp: 20, extraEnemies: [CreateEnemy("e2", 18, 2), CreateEnemy("e3", 15, 0)]);
+
+        var result = GameReducer.Reduce(state, new PlayCardAction(0));
+        var hits = result.Events.OfType<PlayerStrikePlayed>().ToArray();
+
+        Assert.Equal(3, hits.Length);
+        Assert.Equal([15, 15, 10], result.NewState.Combat!.Enemies.Select(e => e.HP).ToArray());
+    }
+
+    [Fact]
+    public void FlashCutStyleAttackScalesWithAttacksPlayedThisTurn()
+    {
+        var buffId = new CardId("open-attack");
+        var flashCutId = new CardId("flash-cut");
+        var defs = new Dictionary<CardId, CardDefinition>
+        {
+            [buffId] = new(buffId, "Open", 0, [new DamageCardEffect(2, CardTarget.Opponent)], new NoCost(), new HashSet<string> { "Attack" }),
+            [flashCutId] = new(flashCutId, "Flash Cut", 0, [new DamageWithAttackCountScalingCardEffect(4, 2, CardTarget.Opponent)], new NoCost(), new HashSet<string> { "Attack" })
+        };
+
+        var state = BuildState([buffId, flashCutId], defs, gm: 0, enemyHp: 40);
+        var afterFirst = GameReducer.Reduce(state, new PlayCardAction(0)).NewState;
+        var afterSecond = GameReducer.Reduce(afterFirst, new PlayCardAction(0));
+        var hit = Assert.Single(afterSecond.Events.OfType<PlayerStrikePlayed>());
+
+        Assert.Equal(6, hit.BaseDamage);
+        Assert.Equal(6, hit.Damage);
+    }
+
+    [Fact]
+    public void BleedingCutStyleEffectUsesCurrentMomentumSnapshot()
+    {
+        var card = new CardDefinition(new CardId("bleeding-cut"), "Bleeding Cut", 0,
+            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 1, 1, CardTarget.Opponent)],
+            new NoCost(), new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30), new PlayCardAction(0));
+
+        Assert.Equal(3, result.NewState.Combat!.Enemy.Bleed);
+        var applied = Assert.Single(result.Events.OfType<StatusApplied>());
+        Assert.Equal(3, applied.Amount);
+    }
+
+    [Fact]
+    public void InfiniteDanceStyleEffectRepeatsSequencePerInitialMomentum()
+    {
+        var card = new CardDefinition(new CardId("infinite-dance"), "Infinite Dance", 0,
+            [new RepeatEffectsPerCurrentMomentumCardEffect([
+                new DamageCardEffect(2, CardTarget.Opponent),
+                new ApplyStatusCardEffect(StatusKind.Bleed, 1, CardTarget.Opponent)
+            ], CardTarget.Self)],
+            new NoCost(), new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5, enemyHp: 40), new PlayCardAction(0));
+
+        Assert.Equal(31, result.NewState.Combat!.Enemy.HP);
+        Assert.Equal(3, result.NewState.Combat.Enemy.Bleed);
+        Assert.Equal(3, result.Events.OfType<StatusApplied>().Count());
+    }
+
 }
