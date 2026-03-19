@@ -84,7 +84,7 @@ public class DamageSystemTests
 
         Assert.Equal(46, afterFirstHit.HP);
         Assert.Equal(0, afterFirstHit.Vulnerable);
-        Assert.Equal(43, afterSecondHit.HP);
+        Assert.Equal(44, afterSecondHit.HP);
         Assert.Equal(new DamageDealt(2, 2), secondEvents[0]);
     }
 
