@@ -118,9 +118,9 @@ public sealed class SaveGameRepository
             state.AttacksPlayedThisTurn,
             state.PlayedAttackThisTurn,
             state.NextAttackBonusDamageThisTurn,
-            state.NextAttackDoubleThisTurn,
+            state.NextAttackDamageMultiplierThisTurn,
             state.AllAttacksBonusDamageThisTurn,
-            state.AllAttacksDoubleThisTurn,
+            state.AllAttacksDamageMultiplierThisTurn,
             state.LastCardMomentumSpent,
             state.LastCardDamageDealt);
     }
@@ -140,7 +140,9 @@ public sealed class SaveGameRepository
                 entity.Deck.BurnPile.Select(c => c.DefinitionId.Value).ToArray(),
                 entity.Deck.ReshuffleCount),
             entity.Bleed,
-            entity.ReflectNextEnemyAttackDamage);
+            entity.ReflectNextEnemyAttackDamage,
+            entity.Weak,
+            entity.Vulnerable);
     }
 
     private static GameState FromDto(SaveGameDto dto, GameContentBundle content)
@@ -205,9 +207,9 @@ public sealed class SaveGameRepository
             dto.AttacksPlayedThisTurn,
             dto.PlayedAttackThisTurn,
             dto.NextAttackBonusDamageThisTurn,
-            dto.NextAttackDoubleThisTurn,
+            dto.NextAttackDamageMultiplierThisTurn,
             dto.AllAttacksBonusDamageThisTurn,
-            dto.AllAttacksDoubleThisTurn,
+            dto.AllAttacksDamageMultiplierThisTurn,
             dto.LastCardMomentumSpent,
             dto.LastCardDamageDealt);
     }
@@ -227,6 +229,8 @@ public sealed class SaveGameRepository
                 dto.Deck.BurnPile.Select(c => new CardInstance(new CardsCardId(c))).ToImmutableList(),
                 dto.Deck.ReshuffleCount),
             dto.Bleed,
-            dto.ReflectNextEnemyAttackDamage);
+            dto.ReflectNextEnemyAttackDamage,
+            dto.Weak,
+            dto.Vulnerable);
     }
 }

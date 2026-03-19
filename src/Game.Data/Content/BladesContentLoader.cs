@@ -20,9 +20,9 @@ internal static class BladesContentLoader
             var deckAffinity = card.GetProperty("deckAffinity").GetString()!;
             var rulesText = card.GetProperty("rulesText").GetString()!;
             var labels = card.GetProperty("labels").EnumerateArray().Select(x => x.GetString()!).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var cost = ParseCost(card.GetProperty("cost"));
+            var costs = ParseCosts(card.GetProperty("cost"));
             var effects = card.GetProperty("effects").EnumerateArray().Select(ParseEffect).ToArray();
-            result.Add(id, new CardDefinition(id, name, 0, effects, cost, labels, deckAffinity, rarity, rulesText));
+            result.Add(id, new CardDefinition(id, name, 0, effects, costs, labels, deckAffinity, rarity, rulesText));
         }
 
         return result;
@@ -59,6 +59,16 @@ internal static class BladesContentLoader
             StartingCombatDeckCardIds: startingDeck,
             RewardPoolCardIds: rewardPool,
             StartingResources: startingResources);
+    }
+
+    private static IReadOnlyList<CardCost> ParseCosts(JsonElement e)
+    {
+        if (e.ValueKind == JsonValueKind.Array)
+        {
+            return e.EnumerateArray().Select(ParseCost).ToArray();
+        }
+
+        return [ParseCost(e)];
     }
 
     private static CardCost ParseCost(JsonElement e)

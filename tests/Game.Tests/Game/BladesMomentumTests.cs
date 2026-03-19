@@ -57,6 +57,9 @@ public class BladesMomentumTests
             Assert.Equal(5, hit.BaseDamage);
             Assert.Equal(3, hit.MomentumBonus);
         });
+
+        Assert.Equal(6, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Equal(2, result.Events.OfType<ResourceChanged>().Count(e => e.Reason.StartsWith("Attack hit bonus", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -79,7 +82,7 @@ public class BladesMomentumTests
         var card = AttackCard("spend-1", new SpendMomentumCost(1));
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 1), new PlayCardAction(0));
 
-        Assert.Equal(0, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Equal(1, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
     }
 
     [Fact]
@@ -88,7 +91,7 @@ public class BladesMomentumTests
         var card = AttackCard("spend-2-m3", new SpendMomentumCost(2));
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5), new PlayCardAction(0));
 
-        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]); // gm 1 after spend, +1 attack bonus
+        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
         var spend = Assert.IsType<ResourceChanged>(result.Events.First(e => e is ResourceChanged { Reason: "Spend 2 Momentum" }));
         Assert.Equal(5, spend.Before);
         Assert.Equal(1, spend.After);
@@ -133,14 +136,13 @@ public class BladesMomentumTests
     }
 
     [Fact]
-    public void AttackLabelBonus_IsAppliedAfterCardResolution()
+    public void AttackLabelBonus_IsAppliedPerHitAfterResolution()
     {
-        var card = AttackCard("attack-bonus-order", new SpendMomentumCost(2));
+        var card = new CardDefinition(new CardId("attack-bonus-order"), "Twin Slash", 0, [new DamageNTimesCardEffect(5, 2, CardTarget.Opponent)], new SpendMomentumCost(2), new HashSet<string> { "Attack" });
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30), new PlayCardAction(0));
 
-        var strike = Assert.IsType<PlayerStrikePlayed>(result.Events.First(e => e is PlayerStrikePlayed));
-        Assert.Equal(1, strike.MomentumBonus);
-        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Equal(3, result.Events.OfType<ResourceChanged>().Count(e => e.Reason == "Spend 2 Momentum" || e.Reason.StartsWith("Attack hit bonus", StringComparison.Ordinal)));
+        Assert.Equal(3, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
     }
 
     [Fact]
@@ -153,7 +155,7 @@ public class BladesMomentumTests
         Assert.Equal(5, spend.Before);
         Assert.Equal(1, spend.After);
 
-        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Equal(4, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
         Assert.Equal(35, result.NewState.Combat.Enemy.HP);
     }
 
@@ -173,11 +175,75 @@ public class BladesMomentumTests
     }
 
     [Fact]
-    public void MomentumDecayStillWorks()
+    public void MomentumDecayHalvesVisibleMomentumAndResetsToBaseThreshold()
     {
         var state = BuildState(new CardId("a"), new Dictionary<CardId, CardDefinition>(), gm: 10);
         var result = GameReducer.Reduce(state, new EndTurnAction());
-        Assert.Equal(5, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+    }
+
+    [Fact]
+    public void MultipleCostsValidateBeforeApplying()
+    {
+        var card = new CardDefinition(new CardId("multi-cost-fail"), "Costly", 0, [new DamageCardEffect(5, CardTarget.Opponent)], [new SpendMomentumCost(1), new RequireMomentumCost(3)], new HashSet<string> { "Attack" });
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 2), new PlayCardAction(0));
+
+        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Contains(result.Events, e => e is PlayCardRejected { Reason: PlayCardRejectionReason.CostNotPayable });
+    }
+
+    [Fact]
+    public void MultipleCostsApplyInDeterministicOrder()
+    {
+        var card = new CardDefinition(new CardId("multi-cost-pass"), "Costly", 0, [new DamageCardEffect(5, CardTarget.Opponent)], [new RequireMomentumCost(3), new SpendMomentumCost(1), new SpendUpToMomentumCost(2)], new HashSet<string> { "Attack" });
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 9), new PlayCardAction(0));
+
+        var changes = result.Events.OfType<ResourceChanged>().ToArray();
+        Assert.Collection(changes,
+            first => Assert.Equal("Spend 1 Momentum", first.Reason),
+            second => Assert.Equal("Spend up to 2 Momentum (2)", second.Reason),
+            third => Assert.StartsWith("Attack hit bonus", third.Reason));
+        Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+    }
+
+
+    [Fact]
+    public void WeakReducesDirectDamagePerHit()
+    {
+        var card = new CardDefinition(new CardId("weak-hit"), "Twin Slash", 0, [new DamageNTimesCardEffect(5, 2, CardTarget.Opponent)], new NoCost(), new HashSet<string> { "Attack" });
+        var state = BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30);
+        state = state with { Combat = state.Combat! with { Player = state.Combat!.Player with { Weak = 2 } } };
+
+        var result = GameReducer.Reduce(state, new PlayCardAction(0));
+        var hits = result.Events.OfType<PlayerStrikePlayed>().ToArray();
+
+        Assert.All(hits, hit => Assert.Equal(3, hit.Damage));
+    }
+
+    [Fact]
+    public void NextAttackMultiplierOnlyAffectsFirstHitOfNextAttackCard()
+    {
+        var card = new CardDefinition(new CardId("buffed-twin"), "Buffed Twin", 0,
+            [new NextAttackDoubleThisTurnCardEffect(CardTarget.Self), new DamageNTimesCardEffect(4, 2, CardTarget.Opponent)],
+            PlayCosts: [new NoCost()], Labels: new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30), new PlayCardAction(0));
+        var hits = result.Events.OfType<PlayerStrikePlayed>().ToArray();
+
+        Assert.Equal([8, 4], hits.Select(h => h.Damage).ToArray());
+    }
+
+    [Fact]
+    public void AttackMultipliersStackAdditively()
+    {
+        var card = new CardDefinition(new CardId("stacking-mults"), "Stacking", 0,
+            [new TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect(CardTarget.Self), new NextAttackDoubleThisTurnCardEffect(CardTarget.Self), new DamageCardEffect(4, CardTarget.Opponent)],
+            PlayCosts: [new NoCost()], Labels: new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30), new PlayCardAction(0));
+        var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
+
+        Assert.Equal(16, hit.Damage);
     }
 
     [Fact]

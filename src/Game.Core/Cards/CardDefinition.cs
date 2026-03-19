@@ -47,13 +47,27 @@ public sealed record CardDefinition(
     string Name,
     int Cost,
     IReadOnlyList<CardEffect> Effects,
-    CardCost? PlayCost = null,
+    IReadOnlyList<CardCost>? PlayCosts = null,
     IReadOnlySet<string>? Labels = null,
     string DeckAffinity = "",
     string Rarity = "",
     string RulesText = "")
 {
-    public CardCost PlayCostOrDefault => PlayCost ?? new NoCost();
+    public CardDefinition(
+        CardId Id,
+        string Name,
+        int Cost,
+        IReadOnlyList<CardEffect> Effects,
+        CardCost? PlayCost,
+        IReadOnlySet<string>? Labels = null,
+        string DeckAffinity = "",
+        string Rarity = "",
+        string RulesText = "")
+        : this(Id, Name, Cost, Effects, PlayCost is null ? null : [PlayCost], Labels, DeckAffinity, Rarity, RulesText)
+    {
+    }
+
+    public IReadOnlyList<CardCost> PlayCostsOrDefault => PlayCosts is null || PlayCosts.Count == 0 ? [new NoCost()] : PlayCosts;
     public IImmutableSet<string> LabelsOrEmpty => Labels is null ? ImmutableHashSet<string>.Empty : Labels.ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
     public bool HasLabel(string label) => LabelsOrEmpty.Contains(label);
 }
