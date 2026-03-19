@@ -12,9 +12,9 @@ public sealed record CombatState(
     int AttacksPlayedThisTurn = 0,
     bool PlayedAttackThisTurn = false,
     int NextAttackBonusDamageThisTurn = 0,
-    bool NextAttackDoubleThisTurn = false,
+    decimal NextAttackDamageMultiplierThisTurn = 0m,
     int AllAttacksBonusDamageThisTurn = 0,
-    bool AllAttacksDoubleThisTurn = false,
+    decimal AllAttacksDamageMultiplierThisTurn = 0m,
     int LastCardMomentumSpent = 0,
     int LastCardDamageDealt = 0)
 {
@@ -28,12 +28,12 @@ public sealed record CombatState(
         int AttacksPlayedThisTurn = 0,
         bool PlayedAttackThisTurn = false,
         int NextAttackBonusDamageThisTurn = 0,
-        bool NextAttackDoubleThisTurn = false,
+        decimal NextAttackDamageMultiplierThisTurn = 0m,
         int AllAttacksBonusDamageThisTurn = 0,
-        bool AllAttacksDoubleThisTurn = false,
+        decimal AllAttacksDamageMultiplierThisTurn = 0m,
         int LastCardMomentumSpent = 0,
         int LastCardDamageDealt = 0)
-        : this(TurnOwner, Player, ImmutableList.Create(Enemy), NeedsOverflowDiscard, RequiredOverflowDiscardCount, PendingDiscardIsFatigue, AttacksPlayedThisTurn, PlayedAttackThisTurn, NextAttackBonusDamageThisTurn, NextAttackDoubleThisTurn, AllAttacksBonusDamageThisTurn, AllAttacksDoubleThisTurn, LastCardMomentumSpent, LastCardDamageDealt)
+        : this(TurnOwner, Player, ImmutableList.Create(Enemy), NeedsOverflowDiscard, RequiredOverflowDiscardCount, PendingDiscardIsFatigue, AttacksPlayedThisTurn, PlayedAttackThisTurn, NextAttackBonusDamageThisTurn, NextAttackDamageMultiplierThisTurn, AllAttacksBonusDamageThisTurn, AllAttacksDamageMultiplierThisTurn, LastCardMomentumSpent, LastCardDamageDealt)
     {
     }
 

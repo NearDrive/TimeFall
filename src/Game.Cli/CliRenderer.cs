@@ -454,6 +454,16 @@ internal static class CliRenderer
             statuses.Add(("Reflect", entity.ReflectNextEnemyAttackDamage));
         }
 
+        if (entity.Vulnerable > 0)
+        {
+            statuses.Add(("Vulnerable", entity.Vulnerable));
+        }
+
+        if (entity.Weak > 0)
+        {
+            statuses.Add(("Weak", entity.Weak));
+        }
+
         if (statuses.Count == 0)
         {
             return "(none)";

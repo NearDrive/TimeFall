@@ -10,4 +10,6 @@ public sealed record CombatEntity(
     ImmutableDictionary<ResourceType, int> Resources,
     DeckState Deck,
     int Bleed = 0,
-    int ReflectNextEnemyAttackDamage = 0);
+    int ReflectNextEnemyAttackDamage = 0,
+    int Weak = 0,
+    int Vulnerable = 0);

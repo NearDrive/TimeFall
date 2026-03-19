@@ -449,16 +449,11 @@ public static class GameReducer
 
         if (cardDefinition.HasLabel("Attack"))
         {
-            var before = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
-            var gainedGm = MomentumMath.Threshold(1);
-            var after = before + gainedGm;
             combatState = combatState with
             {
-                Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, after) },
                 AttacksPlayedThisTurn = combatState.AttacksPlayedThisTurn + 1,
                 PlayedAttackThisTurn = true,
             };
-            events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, "Attack label bonus"));
         }
 
         return ResolveCombatPhase(state with { Combat = combatState, Rng = resolution.Rng }, events);
@@ -482,7 +477,7 @@ public static class GameReducer
         if (!combatState.PlayedAttackThisTurn)
         {
             var before = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
-            var after = before / 2;
+            var after = MomentumMath.DecayVisibleMomentum(before);
             if (before != after)
             {
                 combatState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, after) } };
@@ -491,7 +486,7 @@ public static class GameReducer
             }
         }
 
-        combatState = combatState with { TurnOwner = TurnOwner.Enemy, PlayedAttackThisTurn = false, AttacksPlayedThisTurn = 0, AllAttacksBonusDamageThisTurn = 0, AllAttacksDoubleThisTurn = false, NextAttackBonusDamageThisTurn = 0, NextAttackDoubleThisTurn = false };
+        combatState = combatState with { TurnOwner = TurnOwner.Enemy, PlayedAttackThisTurn = false, AttacksPlayedThisTurn = 0, AllAttacksBonusDamageThisTurn = 0, AllAttacksDamageMultiplierThisTurn = 0m, NextAttackBonusDamageThisTurn = 0, NextAttackDamageMultiplierThisTurn = 0m };
         events.Add(new TurnEnded(TurnOwner.Enemy));
         combatState = ApplyStartOfTurnStatuses(combatState, TurnOwner.Enemy, events);
         if (combatState.Enemies.Count == 0)
@@ -1041,41 +1036,61 @@ public static class GameReducer
 
     private static bool TryPayCost(CombatState combatState, CardDefinition definition, List<GameEvent> events, out CombatState newState)
     {
-        var gm = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
-        var momentum = MomentumMath.DerivedMomentumFromGm(gm);
-        var spentMomentum = 0;
+        var costs = definition.PlayCostsOrDefault;
+        var previewState = combatState with { LastCardMomentumSpent = 0 };
 
-        switch (definition.PlayCostOrDefault)
+        foreach (var cost in costs)
         {
-            case RequireMomentumCost r when momentum < r.Minimum:
+            if (!CanPayCost(previewState, cost))
+            {
                 newState = combatState;
                 return false;
-            case SpendMomentumCost s:
-                if (momentum < s.Amount)
-                {
-                    newState = combatState;
-                    return false;
-                }
+            }
+        }
 
-                var afterSpendMomentum = Math.Max(0, momentum - s.Amount);
-                var afterSpend = MomentumMath.Threshold(afterSpendMomentum);
+        foreach (var cost in costs)
+        {
+            previewState = ApplyCost(previewState, cost, events);
+        }
+
+        newState = previewState;
+        return true;
+    }
+
+    private static bool CanPayCost(CombatState combatState, CardCost cost)
+    {
+        var gm = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
+        var momentum = MomentumMath.DerivedMomentumFromGm(gm);
+
+        return cost switch
+        {
+            RequireMomentumCost r => momentum >= r.Minimum,
+            SpendMomentumCost s => momentum >= s.Amount,
+            _ => true,
+        };
+    }
+
+    private static CombatState ApplyCost(CombatState combatState, CardCost cost, List<GameEvent> events)
+    {
+        var gm = combatState.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
+        var momentum = MomentumMath.DerivedMomentumFromGm(gm);
+
+        switch (cost)
+        {
+            case SpendMomentumCost s:
+                var afterSpend = MomentumMath.SpendVisibleMomentum(gm, s.Amount);
                 events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, afterSpend, $"Spend {s.Amount} Momentum"));
-                newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterSpend) }, LastCardMomentumSpent = s.Amount };
-                return true;
+                return combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterSpend) }, LastCardMomentumSpent = combatState.LastCardMomentumSpent + s.Amount };
             case SpendAllMomentumCost:
                 events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, 0, "Spend all Momentum"));
-                newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, 0) }, LastCardMomentumSpent = momentum };
-                return true;
+                return combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, 0) }, LastCardMomentumSpent = combatState.LastCardMomentumSpent + momentum };
             case SpendUpToMomentumCost u:
-                spentMomentum = Math.Min(u.Max, momentum);
-                var afterUpToMomentum = Math.Max(0, momentum - spentMomentum);
-                var afterUpTo = MomentumMath.Threshold(afterUpToMomentum);
+                var spentMomentum = Math.Min(u.Max, momentum);
+                var afterUpTo = MomentumMath.SpendVisibleMomentum(gm, spentMomentum);
                 events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, gm, afterUpTo, $"Spend up to {u.Max} Momentum ({spentMomentum})"));
-                newState = combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterUpTo) }, LastCardMomentumSpent = spentMomentum };
-                return true;
+                return combatState with { Player = combatState.Player with { Resources = combatState.Player.Resources.SetItem(ResourceType.Momentum, afterUpTo) }, LastCardMomentumSpent = combatState.LastCardMomentumSpent + spentMomentum };
             default:
-                newState = combatState with { LastCardMomentumSpent = 0 };
-                return true;
+                return combatState;
         }
     }
 

@@ -98,10 +98,10 @@ public static class CardEffectResolver
                 case RemoveEnemyArmorCardEffect:
                     mutable = UpdateEnemyById(mutable, selectedEnemyId, enemy => enemy with { Armor = 0 });
                     break;
-                case NextAttackBonusDamageThisTurnCardEffect e: mutable = mutable with { NextAttackBonusDamageThisTurn = e.Amount }; break;
-                case NextAttackDoubleThisTurnCardEffect: mutable = mutable with { NextAttackDoubleThisTurn = true }; break;
-                case TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect e: mutable = mutable with { AllAttacksBonusDamageThisTurn = e.Amount }; break;
-                case TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect: mutable = mutable with { AllAttacksDoubleThisTurn = true }; break;
+                case NextAttackBonusDamageThisTurnCardEffect e: mutable = mutable with { NextAttackBonusDamageThisTurn = mutable.NextAttackBonusDamageThisTurn + e.Amount }; break;
+                case NextAttackDoubleThisTurnCardEffect: mutable = mutable with { NextAttackDamageMultiplierThisTurn = mutable.NextAttackDamageMultiplierThisTurn + 2m }; break;
+                case TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect e: mutable = mutable with { AllAttacksBonusDamageThisTurn = mutable.AllAttacksBonusDamageThisTurn + e.Amount }; break;
+                case TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect: mutable = mutable with { AllAttacksDamageMultiplierThisTurn = mutable.AllAttacksDamageMultiplierThisTurn + 2m }; break;
                 case LifestealPercentOfDamageDealtCardEffect e:
                     var heal = (int)Math.Floor(mutable.LastCardDamageDealt * (e.Percent / 100.0));
                     mutable = ApplyHeal(mutable, new HealCardEffect(heal, e.Target), actor, selectedEnemyId);
@@ -133,7 +133,7 @@ public static class CardEffectResolver
         return cs with { Player = cs.Player with { Resources = cs.Player.Resources.SetItem(ResourceType.Momentum, after) } };
     }
 
-    private static CombatState ApplyDamageToAllEnemies(CombatState combatState, CardInstance card, TurnOwner actor, int amount, bool ignoreArmor, bool isAttackCard, ICollection<GameEvent> events)
+    private static CombatState ApplyDamageToAllEnemies(CombatState combatState, CardInstance card, TurnOwner actor, int amount, bool ignoreArmor, bool isAttackCard, List<GameEvent> events)
     {
         var enemyIds = combatState.Enemies.Select(e => e.EntityId).ToArray();
         var mutable = combatState;
@@ -145,23 +145,30 @@ public static class CardEffectResolver
         return mutable;
     }
 
-    private static CombatState ApplyDamageEffect(CombatState combatState, CardInstance card, TurnOwner actor, int amount, CardTarget targetType, bool ignoreArmor, bool isAttackCard, ICollection<GameEvent> events, string? selectedEnemyId)
+    private static CombatState ApplyDamageEffect(CombatState combatState, CardInstance card, TurnOwner actor, int amount, CardTarget targetType, bool ignoreArmor, bool isAttackCard, List<GameEvent> events, string? selectedEnemyId)
     {
         var target = ResolveTarget(targetType, actor);
-        var modified = amount;
         var baseDamage = amount;
+        var source = ResolveActorEntity(combatState, actor, selectedEnemyId);
+        var weakPenalty = source?.Weak ?? 0;
+        var modified = amount;
         var momentumBonus = 0;
-        if (actor == TurnOwner.Player && target == TurnOwner.Enemy)
+        if (actor == TurnOwner.Player && target == TurnOwner.Enemy && isAttackCard)
         {
-            if (isAttackCard && TryGetMomentumAttackBonus(combatState, out var attackMomentumBonus))
+            if (TryGetMomentumAttackBonus(combatState, out var attackMomentumBonus))
             {
                 momentumBonus = attackMomentumBonus;
-                modified += attackMomentumBonus;
             }
 
+            modified += momentumBonus;
             modified += combatState.NextAttackBonusDamageThisTurn + combatState.AllAttacksBonusDamageThisTurn;
-            if (combatState.NextAttackDoubleThisTurn || combatState.AllAttacksDoubleThisTurn) modified *= 2;
-            combatState = combatState with { NextAttackBonusDamageThisTurn = 0, NextAttackDoubleThisTurn = false };
+            modified = Math.Max(0, modified - weakPenalty);
+            modified = ApplyAttackDamageMultiplier(modified, combatState);
+            combatState = combatState with { NextAttackBonusDamageThisTurn = 0, NextAttackDamageMultiplierThisTurn = 0m };
+        }
+        else
+        {
+            modified = Math.Max(0, modified - weakPenalty);
         }
 
         if (target == TurnOwner.Player)
@@ -195,17 +202,40 @@ public static class CardEffectResolver
             : DamageSystem.ApplyHit(enemy, modified);
         var enemyBlocked = enemyHitResult.Events.OfType<DamageDealt>().Select(e => Math.Max(0, e.Incoming - e.Taken)).FirstOrDefault();
         events.Add(new PlayerStrikePlayed(card, modified, baseDamage, momentumBonus, enemyBeforeHp, enemyHitResult.UpdatedEntity.HP, enemyBeforeArmor, enemyHitResult.UpdatedEntity.Armor, enemyBlocked));
-        return UpdateEnemyById(combatState, enemy.EntityId, _ => enemyHitResult.UpdatedEntity) with
+
+        var updatedState = UpdateEnemyById(combatState, enemy.EntityId, _ => enemyHitResult.UpdatedEntity) with
         {
             LastCardDamageDealt = combatState.LastCardDamageDealt + Math.Max(0, enemyBeforeHp - enemyHitResult.UpdatedEntity.HP),
         };
+
+        if (actor == TurnOwner.Player && target == TurnOwner.Enemy && isAttackCard && modified > 0)
+        {
+            updatedState = ApplyGmGain(updatedState, 1, actor, CardTarget.Self, events, "Attack hit bonus");
+        }
+
+        return updatedState;
     }
+
 
     private static bool TryGetMomentumAttackBonus(CombatState combatState, out int bonus)
     {
         bonus = GetMomentum(combatState.Player);
         return bonus > 0;
     }
+
+    private static int ApplyAttackDamageMultiplier(int damage, CombatState combatState)
+    {
+        var multiplier = combatState.NextAttackDamageMultiplierThisTurn + combatState.AllAttacksDamageMultiplierThisTurn;
+        if (multiplier <= 0m)
+        {
+            return damage;
+        }
+
+        return (int)Math.Floor(damage * multiplier);
+    }
+
+    private static CombatEntity? ResolveActorEntity(CombatState state, TurnOwner actor, string? selectedEnemyId)
+        => actor == TurnOwner.Player ? state.Player : ResolveEnemy(state, selectedEnemyId);
 
     private static CombatState ApplyArmorEffect(CombatState combatState, GainArmorCardEffect effect, TurnOwner actor, string? selectedEnemyId)
     {

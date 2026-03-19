@@ -62,9 +62,9 @@ public sealed record CombatDto(
     int AttacksPlayedThisTurn,
     bool PlayedAttackThisTurn,
     int NextAttackBonusDamageThisTurn,
-    bool NextAttackDoubleThisTurn,
+    decimal NextAttackDamageMultiplierThisTurn,
     int AllAttacksBonusDamageThisTurn,
-    bool AllAttacksDoubleThisTurn,
+    decimal AllAttacksDamageMultiplierThisTurn,
     int LastCardMomentumSpent,
     int LastCardDamageDealt);
 
@@ -76,7 +76,9 @@ public sealed record CombatEntityDto(
     IReadOnlyDictionary<int, int> Resources,
     DeckStateDto Deck,
     int Bleed,
-    int ReflectNextEnemyAttackDamage);
+    int ReflectNextEnemyAttackDamage,
+    int Weak,
+    int Vulnerable);
 
 public sealed record DeckStateDto(
     IReadOnlyList<string> DrawPile,

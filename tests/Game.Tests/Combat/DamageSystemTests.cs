@@ -62,6 +62,30 @@ public class DamageSystemTests
     }
 
     [Fact]
+    public void VulnerableAppliesAfterArmorAndIsConsumedOnHpLoss()
+    {
+        var target = CreateTarget(hp: 50, armor: 3, vulnerable: 4);
+
+        var (updated, events) = DamageSystem.ApplyHit(target, incomingDamage: 5);
+
+        Assert.Equal(44, updated.HP);
+        Assert.Equal(1, updated.Armor);
+        Assert.Equal(0, updated.Vulnerable);
+        Assert.Equal(new DamageDealt(5, 6), events[0]);
+    }
+
+    [Fact]
+    public void VulnerableIsNotConsumedWhenArmorPreventsHpLoss()
+    {
+        var target = CreateTarget(hp: 50, armor: 10, vulnerable: 4);
+
+        var (updated, _) = DamageSystem.ApplyHit(target, incomingDamage: 5);
+
+        Assert.Equal(50, updated.HP);
+        Assert.Equal(4, updated.Vulnerable);
+    }
+
+    [Fact]
     public void Damage_ClampsHp_ToZero()
     {
         var target = CreateTarget(hp: 5, armor: 0);
@@ -97,7 +121,7 @@ public class DamageSystemTests
         Assert.Equal(new ArmorChanged(10, 5), events[1]);
     }
 
-    private static CombatEntity CreateTarget(int hp, int armor)
+    private static CombatEntity CreateTarget(int hp, int armor, int weak = 0, int vulnerable = 0)
     {
         return new CombatEntity(
             EntityId: "player-1",
@@ -105,6 +129,8 @@ public class DamageSystemTests
             MaxHP: 100,
             Armor: armor,
             Resources: ImmutableDictionary<ResourceType, int>.Empty,
-            Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0));
+            Deck: new DeckState(ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, ImmutableList<CardInstance>.Empty, 0),
+            Weak: weak,
+            Vulnerable: vulnerable);
     }
 }
