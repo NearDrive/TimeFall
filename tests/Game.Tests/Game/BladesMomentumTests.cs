@@ -225,7 +225,7 @@ public class BladesMomentumTests
     {
         var card = new CardDefinition(new CardId("buffed-twin"), "Buffed Twin", 0,
             [new NextAttackDoubleThisTurnCardEffect(CardTarget.Self), new DamageNTimesCardEffect(4, 2, CardTarget.Opponent)],
-            new NoCost(), new HashSet<string> { "Attack" });
+            PlayCosts: [new NoCost()], Labels: new HashSet<string> { "Attack" });
 
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30), new PlayCardAction(0));
         var hits = result.Events.OfType<PlayerStrikePlayed>().ToArray();
@@ -237,8 +237,8 @@ public class BladesMomentumTests
     public void AttackMultipliersStackAdditively()
     {
         var card = new CardDefinition(new CardId("stacking-mults"), "Stacking", 0,
-            [new TemporaryBuffAllAttacksDoubleDamageThisTurn(CardTarget.Self), new NextAttackDoubleThisTurnCardEffect(CardTarget.Self), new DamageCardEffect(4, CardTarget.Opponent)],
-            new NoCost(), new HashSet<string> { "Attack" });
+            [new TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect(CardTarget.Self), new NextAttackDoubleThisTurnCardEffect(CardTarget.Self), new DamageCardEffect(4, CardTarget.Opponent)],
+            PlayCosts: [new NoCost()], Labels: new HashSet<string> { "Attack" });
 
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30), new PlayCardAction(0));
         var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
