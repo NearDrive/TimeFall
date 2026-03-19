@@ -14,13 +14,13 @@ internal static class BladesContentLoader
         var result = new Dictionary<CardId, CardDefinition>();
         foreach (var card in cards)
         {
-            var id = new CardId(card.GetProperty("id").GetString()!);
-            var name = card.GetProperty("name").GetString()!;
-            var rarity = card.GetProperty("rarity").GetString()!;
-            var deckAffinity = card.GetProperty("deckAffinity").GetString()!;
-            var rulesText = card.GetProperty("rulesText").GetString()!;
-            var labels = card.GetProperty("labels").EnumerateArray().Select(x => x.GetString()!).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var costs = ParseCosts(card.GetProperty("cost"));
+            var id = new CardId(GetRequiredString(card, "id"));
+            var name = GetRequiredString(card, "name");
+            var rarity = GetRequiredString(card, "rarity");
+            var deckAffinity = GetRequiredString(card, "deckAffinity");
+            var rulesText = GetRequiredString(card, "rulesText");
+            var labels = card.GetProperty("labels").EnumerateArray().Select(x => x.GetString() ?? throw new JsonException("Card labels must be strings.")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var costs = ParseCosts(card);
             var effects = card.GetProperty("effects").EnumerateArray().Select(ParseEffect).ToArray();
             result.Add(id, new CardDefinition(id, name, 0, effects, costs, labels, deckAffinity, rarity, rulesText));
         }
@@ -61,65 +61,133 @@ internal static class BladesContentLoader
             StartingResources: startingResources);
     }
 
-    private static IReadOnlyList<CardCost> ParseCosts(JsonElement e)
+    private static IReadOnlyList<CardCost> ParseCosts(JsonElement card)
     {
-        if (e.ValueKind == JsonValueKind.Array)
+        if (card.TryGetProperty("costs", out var costsElement))
         {
-            return e.EnumerateArray().Select(ParseCost).ToArray();
+            if (costsElement.ValueKind != JsonValueKind.Array)
+            {
+                throw new JsonException("Card property 'costs' must be an array.");
+            }
+
+            return costsElement.EnumerateArray().Select(ParseCost).ToArray();
         }
 
-        return [ParseCost(e)];
+        if (card.TryGetProperty("cost", out var costElement))
+        {
+            return costElement.ValueKind switch
+            {
+                JsonValueKind.Array => costElement.EnumerateArray().Select(ParseCost).ToArray(),
+                JsonValueKind.Object => [ParseCost(costElement)],
+                _ => throw new JsonException("Card property 'cost' must be an object or array."),
+            };
+        }
+
+        return [new NoCost()];
     }
 
     private static CardCost ParseCost(JsonElement e)
     {
-        var t = e.GetProperty("type").GetString();
+        var t = GetRequiredString(e, "type");
         return t switch
         {
             "None" => new NoCost(),
-            "RequireMomentum" => new RequireMomentumCost(e.GetProperty("minimum").GetInt32()),
-            "SpendMomentum" => new SpendMomentumCost(e.GetProperty("amount").GetInt32()),
+            "RequireMomentum" => new RequireMomentumCost(GetRequiredInt32(e, "minimum")),
+            "SpendMomentum" => new SpendMomentumCost(GetRequiredInt32(e, "amount")),
             "SpendAllMomentum" => new SpendAllMomentumCost(),
-            "SpendUpToMomentum" => new SpendUpToMomentumCost(e.GetProperty("max").GetInt32()),
-            _ => new NoCost(),
+            "SpendUpToMomentum" => new SpendUpToMomentumCost(GetRequiredInt32(e, "max")),
+            _ => throw new JsonException($"Unsupported card cost type '{t}'."),
         };
     }
 
     private static CardEffect ParseEffect(JsonElement e)
     {
-        var t = e.GetProperty("type").GetString();
-        var target = e.TryGetProperty("target", out var te) && te.GetString() == "Self" ? CardTarget.Self : CardTarget.Opponent;
+        var t = GetRequiredString(e, "type");
+        var target = ParseTarget(e);
         return t switch
         {
-            "DealDamage" => new DamageCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "DealDamageIgnoringArmor" => new DamageIgnoringArmorCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "DealDamageNTimes" => new DamageNTimesCardEffect(e.GetProperty("amount").GetInt32(), e.GetProperty("times").GetInt32(), target),
-            "DealDamagePerMomentumSpent" => new DealDamagePerMomentumSpentCardEffect(e.GetProperty("damagePerMomentum").GetInt32(), target),
-            "DealDamagePerAllMomentumSpent" => new DealDamagePerAllMomentumSpentCardEffect(e.GetProperty("damagePerMomentum").GetInt32(), target),
-            "DealDamagePerCurrentMomentum" => new DealDamagePerCurrentMomentumCardEffect(e.GetProperty("damagePerMomentum").GetInt32(), target),
-            "DealDamageToAllEnemies" => new DealDamageToAllEnemiesCardEffect(e.GetProperty("amount").GetInt32()),
-            "DealDamageAndDrawPerCurrentMomentum" => new DealDamageAndDrawPerCurrentMomentumCardEffect(e.GetProperty("damagePerMomentum").GetInt32(), e.GetProperty("drawPerMomentum").GetInt32(), target),
-            "DamageWithAttackCountScaling" => new DamageWithAttackCountScalingCardEffect(e.GetProperty("baseAmount").GetInt32(), e.GetProperty("damagePerAttackPlayedThisTurn").GetInt32(), target),
-            "GainArmor" => new GainArmorCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "DrawCards" => new DrawCardsCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "Heal" => new HealCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "ApplyStatus" => new ApplyStatusCardEffect(Enum.Parse<StatusKind>(e.GetProperty("status").GetString()!, true), e.GetProperty("amount").GetInt32(), target),
-            "ApplyBleed" => new ApplyBleedCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "ApplyStatusPerCurrentMomentum" => new ApplyStatusPerCurrentMomentumCardEffect(Enum.Parse<StatusKind>(e.GetProperty("status").GetString()!, true), e.GetProperty("baseAmount").GetInt32(), e.GetProperty("amountPerCurrentMomentum").GetInt32(), target),
-            "GainGeneratedMomentum" => new GainGeneratedMomentumCardEffect(e.GetProperty("amount").GetInt32(), target),
+            "DealDamage" => new DamageCardEffect(GetRequiredInt32(e, "amount"), target),
+            "DealDamageIgnoringArmor" => new DamageIgnoringArmorCardEffect(GetRequiredInt32(e, "amount"), target),
+            "DealDamageNTimes" => new DamageNTimesCardEffect(GetRequiredInt32(e, "amount"), GetRequiredInt32(e, "times"), target),
+            "DealDamagePerMomentumSpent" => new DealDamagePerMomentumSpentCardEffect(GetRequiredInt32(e, "damagePerMomentum"), target),
+            "DealDamagePerAllMomentumSpent" => new DealDamagePerAllMomentumSpentCardEffect(GetRequiredInt32(e, "damagePerMomentum"), target),
+            "DealDamagePerCurrentMomentum" => new DealDamagePerCurrentMomentumCardEffect(GetRequiredInt32(e, "damagePerMomentum"), target),
+            "DealDamageToAllEnemies" => new DealDamageToAllEnemiesCardEffect(GetRequiredInt32(e, "amount")),
+            "DealDamageAndDrawPerCurrentMomentum" => new DealDamageAndDrawPerCurrentMomentumCardEffect(GetRequiredInt32(e, "damagePerMomentum"), GetRequiredInt32(e, "drawPerMomentum"), target),
+            "DamageWithAttackCountScaling" => new DamageWithAttackCountScalingCardEffect(GetRequiredInt32(e, "baseAmount"), GetRequiredInt32(e, "damagePerAttackPlayedThisTurn"), target),
+            "GainArmor" => new GainArmorCardEffect(GetRequiredInt32(e, "amount"), target),
+            "DrawCards" => new DrawCardsCardEffect(GetRequiredInt32(e, "amount"), target),
+            "Heal" => new HealCardEffect(GetRequiredInt32(e, "amount"), target),
+            "ApplyStatus" => new ApplyStatusCardEffect(ParseStatus(e), GetRequiredInt32(e, "amount"), target),
+            "ApplyBleed" => new ApplyBleedCardEffect(GetRequiredInt32(e, "amount"), target),
+            "ApplyStatusPerCurrentMomentum" => new ApplyStatusPerCurrentMomentumCardEffect(ParseStatus(e), GetRequiredInt32(e, "baseAmount"), GetRequiredInt32(e, "amountPerCurrentMomentum"), target),
+            "GainGeneratedMomentum" => new GainGeneratedMomentumCardEffect(GetRequiredInt32(e, "amount"), target),
+            "ReflectNextEnemyAttackDamage" => new ReflectNextEnemyAttackDamageCardEffect(GetRequiredInt32(e, "amount"), target),
             "AttackCountThisTurnToGm" => new AttackCountThisTurnToGmCardEffect(target),
-            "ReflectNextEnemyAttackDamage" => new ReflectNextEnemyAttackDamageCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "NextAttackBonusDamageThisTurn" => new NextAttackBonusDamageThisTurnCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "NextAttackDoubleThisTurn" => new NextAttackDoubleThisTurnCardEffect(target),
-            "NextAttackDoubleDamageThisTurn" => new NextAttackDoubleDamageThisTurnCardEffect(target),
-            "AllAttacksBonusDamageThisTurn" => new AllAttacksBonusDamageThisTurnCardEffect(e.GetProperty("amount").GetInt32(), target),
-            "AllAttacksDoubleDamageThisTurn" => new AllAttacksDoubleDamageThisTurnCardEffect(target),
-            "ConditionalGainArmorIfMomentumAtLeast" => new ConditionalGainArmorIfMomentumAtLeastCardEffect(e.GetProperty("minimumMomentum").GetInt32(), e.GetProperty("amount").GetInt32(), target),
             "RemoveEnemyArmor" => new RemoveEnemyArmorCardEffect(target),
             "RemoveAllArmor" => new RemoveAllArmorCardEffect(target),
-            "LifestealPercentOfDamageDealt" => new LifestealPercentOfDamageDealtCardEffect(e.GetProperty("percent").GetInt32(), target),
-            "RepeatEffectsPerCurrentMomentum" => new RepeatEffectsPerCurrentMomentumCardEffect(e.GetProperty("effects").EnumerateArray().Select(ParseEffect).ToArray(), target),
-            _ => new DamageCardEffect(0, CardTarget.Opponent),
+            "NextAttackBonusDamageThisTurn" => new NextAttackBonusDamageThisTurnCardEffect(GetRequiredInt32(e, "amount"), target),
+            "NextAttackDoubleThisTurn" => new NextAttackDoubleThisTurnCardEffect(target),
+            "NextAttackDoubleDamageThisTurn" => new NextAttackDoubleDamageThisTurnCardEffect(target),
+            "AllAttacksBonusDamageThisTurn" => new AllAttacksBonusDamageThisTurnCardEffect(GetRequiredInt32(e, "amount"), target),
+            "TemporaryBuffAllAttacksPlusDamageThisTurn" => new TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect(GetRequiredInt32(e, "amount"), target),
+            "AllAttacksDoubleDamageThisTurn" => new AllAttacksDoubleDamageThisTurnCardEffect(target),
+            "TemporaryBuffAllAttacksDoubleDamageThisTurn" => new TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect(target),
+            "ConditionalGainArmorIfMomentumAtLeast" => new ConditionalGainArmorIfMomentumAtLeastCardEffect(GetRequiredInt32(e, "minimumMomentum"), GetRequiredInt32(e, "amount"), target),
+            "LifestealPercentOfDamageDealt" => new LifestealPercentOfDamageDealtCardEffect(GetRequiredInt32(e, "percent"), target),
+            "RepeatEffectsPerCurrentMomentum" => new RepeatEffectsPerCurrentMomentumCardEffect(ParseNestedEffects(e), target),
+            _ => throw new JsonException($"Unsupported card effect type '{t}'."),
         };
+    }
+
+    private static IReadOnlyList<CardEffect> ParseNestedEffects(JsonElement effect)
+    {
+        if (!effect.TryGetProperty("effects", out var nestedEffects) || nestedEffects.ValueKind != JsonValueKind.Array)
+        {
+            throw new JsonException("Composite card effects must contain an 'effects' array.");
+        }
+
+        return nestedEffects.EnumerateArray().Select(ParseEffect).ToArray();
+    }
+
+    private static CardTarget ParseTarget(JsonElement e)
+    {
+        if (!e.TryGetProperty("target", out var targetElement))
+        {
+            return CardTarget.Opponent;
+        }
+
+        return GetRequiredString(targetElement) switch
+        {
+            "Self" => CardTarget.Self,
+            "Opponent" => CardTarget.Opponent,
+            var target => throw new JsonException($"Unsupported card target '{target}'."),
+        };
+    }
+
+    private static StatusKind ParseStatus(JsonElement e)
+        => Enum.Parse<StatusKind>(GetRequiredString(e, "status"), ignoreCase: true);
+
+    private static string GetRequiredString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        return GetRequiredString(property);
+    }
+
+    private static string GetRequiredString(JsonElement element)
+        => element.GetString() ?? throw new JsonException("Expected a non-null string value.");
+
+    private static int GetRequiredInt32(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        return property.GetInt32();
     }
 }
