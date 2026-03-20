@@ -1,57 +1,1238 @@
 [
-  {"id":"blades-strike","name":"Strike","deckAffinity":"Blades","rarity":"Common","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 5 damage.","effects":[{"type":"DealDamage","amount":5,"target":"Enemy"}]},
-  {"id":"blades-guard","name":"Guard","deckAffinity":"Blades","rarity":"Common","labels":["Defense"],"cost":{"type":"None"},"rulesText":"Gain 4 armor.","effects":[{"type":"GainArmor","amount":4,"target":"Self"}]},
-  {"id":"blades-quick-slash","name":"Quick Slash","deckAffinity":"Blades","rarity":"Common","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 3 damage. Gain 2 gm.","effects":[{"type":"DealDamage","amount":3,"target":"Enemy"},{"type":"GainGeneratedMomentum","amount":2,"target":"Self"}]},
-  {"id":"blades-feint","name":"Feint","deckAffinity":"Blades","rarity":"Common","labels":["Utility"],"cost":{"type":"None"},"rulesText":"Apply Weak 1. Gain 2 gm.","effects":[{"type":"ApplyStatus","status":"Weak","amount":1,"target":"Enemy"},{"type":"GainGeneratedMomentum","amount":2,"target":"Self"}]},
-  {"id":"blades-flurry","name":"Flurry","deckAffinity":"Blades","rarity":"Common","labels":["Attack"],"cost":{"type":"SpendUpToMomentum","max":3},"rulesText":"Spend up to 3 Momentum. Deal 4 damage per Momentum spent.","effects":[{"type":"DealDamagePerMomentumSpent","damagePerMomentum":4,"target":"Enemy"}]},
-  {"id":"blades-opening-cut","name":"Opening Cut","deckAffinity":"Blades","rarity":"Common","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 4 damage. Apply Vulnerable 1.","effects":[{"type":"DealDamage","amount":4,"target":"Enemy"},{"type":"ApplyStatus","status":"Vulnerable","amount":1,"target":"Enemy"}]},
-
-  {"id":"blades-flow-strike","name":"Flow Strike","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Deal 8 damage.","effects":[{"type":"DealDamage","amount":8,"target":"Enemy"}]},
-  {"id":"blades-twin-slash","name":"Twin Slash","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Deal 5 damage twice.","effects":[{"type":"DealDamageNTimes","amount":5,"times":2,"target":"Enemy"}]},
-  {"id":"blades-blade-dance","name":"Blade Dance","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"SpendMomentum","amount":2},"rulesText":"Spend 2 Momentum. Deal 4 damage three times.","effects":[{"type":"DealDamageNTimes","amount":4,"times":3,"target":"Enemy"}]},
-  {"id":"blades-momentum-step","name":"Momentum Step","deckAffinity":"Blades","rarity":"Uncommon","labels":["Utility","Deck"],"cost":{"type":"None"},"rulesText":"Gain 4 gm. Draw 1 card.","effects":[{"type":"GainGeneratedMomentum","amount":4,"target":"Self"},{"type":"DrawCards","amount":1,"target":"Self"}]},
-  {"id":"blades-tempo-cut","name":"Tempo Cut","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 5 damage. Gain 2 gm.","effects":[{"type":"DealDamage","amount":5,"target":"Enemy"},{"type":"GainGeneratedMomentum","amount":2,"target":"Self"}]},
-  {"id":"blades-edge-pressure","name":"Edge Pressure","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":3},"rulesText":"Requires Momentum 3. Deal 10 damage.","effects":[{"type":"DealDamage","amount":10,"target":"Enemy"}]},
-  {"id":"blades-sidestep","name":"Sidestep","deckAffinity":"Blades","rarity":"Uncommon","labels":["Defense"],"cost":{"type":"None"},"rulesText":"Gain 6 armor. Gain 2 gm.","effects":[{"type":"GainArmor","amount":6,"target":"Self"},{"type":"GainGeneratedMomentum","amount":2,"target":"Self"}]},
-  {"id":"blades-riposte","name":"Riposte","deckAffinity":"Blades","rarity":"Uncommon","labels":["Defense"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Gain 5 armor. Next enemy attack deals 4 damage back.","effects":[{"type":"GainArmor","amount":5,"target":"Self"},{"type":"ReflectNextEnemyAttackDamage","amount":4,"target":"Self"}]},
-  {"id":"blades-accelerate","name":"Accelerate","deckAffinity":"Blades","rarity":"Uncommon","labels":["Utility"],"cost":{"type":"None"},"rulesText":"Gain gm equal to attacks played this turn.","effects":[{"type":"AttackCountThisTurnToGm","target":"Self"}]},
-  {"id":"blades-blood-draw","name":"Blood Draw","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"costs":[{"type":"RequireMomentum","minimum":2},{"type":"SpendMomentum","amount":1}],"rulesText":"Requires Momentum 2. Spend 1 Momentum. Deal 6 damage. Heal 50% of damage dealt.","effects":[{"type":"DealDamage","amount":6,"target":"Enemy"},{"type":"LifestealPercentOfDamageDealt","percent":50,"target":"Self"}]},
-  {"id":"blades-piercing-strike","name":"Piercing Strike","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":3},"rulesText":"Requires Momentum 3. Deal 9 damage ignoring armor.","effects":[{"type":"DealDamageIgnoringArmor","amount":9,"target":"Enemy"}]},
-  {"id":"blades-blade-tempo","name":"Blade Tempo","deckAffinity":"Blades","rarity":"Uncommon","labels":["Utility"],"cost":{"type":"None"},"rulesText":"Gain 3 gm. Your next attack this turn deals +3 damage.","effects":[{"type":"GainGeneratedMomentum","amount":3,"target":"Self"},{"type":"NextAttackBonusDamageThisTurn","amount":3,"target":"Self"}]},
-  {"id":"blades-skirmish","name":"Skirmish","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 4 damage twice. Gain 1 gm.","effects":[{"type":"DealDamageNTimes","amount":4,"times":2,"target":"Enemy"},{"type":"GainGeneratedMomentum","amount":1,"target":"Self"}]},
-  {"id":"blades-flash-cut","name":"Flash Cut","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack","Deck"],"cost":{"type":"None"},"rulesText":"Deal 4 damage plus 2 per attack played this turn. Draw 1 card.","effects":[{"type":"DamageWithAttackCountScaling","baseAmount":4,"damagePerAttackPlayedThisTurn":2,"target":"Enemy"},{"type":"DrawCards","amount":1,"target":"Self"}]},
-  {"id":"blades-blade-flow","name":"Blade Flow","deckAffinity":"Blades","rarity":"Uncommon","labels":["Utility","Defense"],"cost":{"type":"None"},"rulesText":"Gain 3 gm. Gain 3 armor.","effects":[{"type":"GainGeneratedMomentum","amount":3,"target":"Self"},{"type":"GainArmor","amount":3,"target":"Self"}]},
-  {"id":"blades-pressure-combo","name":"Pressure Combo","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":3},"rulesText":"Requires Momentum 3. Deal 6 damage twice.","effects":[{"type":"DealDamageNTimes","amount":6,"times":2,"target":"Enemy"}]},
-  {"id":"blades-tactical-retreat","name":"Tactical Retreat","deckAffinity":"Blades","rarity":"Uncommon","labels":["Defense"],"cost":{"type":"None"},"rulesText":"Gain 8 armor. Gain 2 gm.","effects":[{"type":"GainArmor","amount":8,"target":"Self"},{"type":"GainGeneratedMomentum","amount":2,"target":"Self"}]},
-  {"id":"blades-draw-cut","name":"Draw Cut","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack","Deck"],"cost":{"type":"None"},"rulesText":"Deal 4 damage. Draw 1 card.","effects":[{"type":"DealDamage","amount":4,"target":"Enemy"},{"type":"DrawCards","amount":1,"target":"Self"}]},
-  {"id":"blades-forward-assault","name":"Forward Assault","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Deal 7 damage.","effects":[{"type":"DealDamage","amount":7,"target":"Enemy"}]},
-  {"id":"blades-tempo-guard","name":"Tempo Guard","deckAffinity":"Blades","rarity":"Uncommon","labels":["Defense"],"cost":{"type":"None"},"rulesText":"Gain 5 armor. If Momentum is at least 2, gain 3 more armor.","effects":[{"type":"GainArmor","amount":5,"target":"Self"},{"type":"ConditionalGainArmorIfMomentumAtLeast","minimumMomentum":2,"amount":3,"target":"Self"}]},
-  {"id":"blades-momentum-burst","name":"Momentum Burst","deckAffinity":"Blades","rarity":"Uncommon","labels":["Utility"],"cost":{"type":"None"},"rulesText":"Gain 5 gm.","effects":[{"type":"GainGeneratedMomentum","amount":5,"target":"Self"}]},
-  {"id":"blades-bleeding-cut","name":"Bleeding Cut","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 5 damage. Apply Bleed 3.","effects":[{"type":"DealDamage","amount":5,"target":"Enemy"},{"type":"ApplyBleed","amount":3,"target":"Enemy"}]},
-  {"id":"blades-precision-strike","name":"Precision Strike","deckAffinity":"Blades","rarity":"Uncommon","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":3},"rulesText":"Requires Momentum 3. Deal 12 damage.","effects":[{"type":"DealDamage","amount":12,"target":"Enemy"}]},
-  {"id":"blades-quick-footwork","name":"Quick Footwork","deckAffinity":"Blades","rarity":"Uncommon","labels":["Utility","Deck"],"cost":{"type":"None"},"rulesText":"Gain 3 gm. Draw 1 card.","effects":[{"type":"GainGeneratedMomentum","amount":3,"target":"Self"},{"type":"DrawCards","amount":1,"target":"Self"}]},
-
-  {"id":"blades-execution-cut","name":"Execution Cut","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"costs":[{"type":"RequireMomentum","minimum":3},{"type":"SpendMomentum","amount":1}],"rulesText":"Requires Momentum 3. Spend 1 Momentum. Deal 14 damage.","effects":[{"type":"DealDamage","amount":14,"target":"Enemy"}]},
-  {"id":"blades-storm-blades","name":"Storm Blades","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"SpendMomentum","amount":2},"rulesText":"Spend 2 Momentum. Deal 3 damage to all enemies three times.","effects":[{"type":"DealDamageToAllEnemies","amount":3},{"type":"DealDamageToAllEnemies","amount":3},{"type":"DealDamageToAllEnemies","amount":3}]},
-  {"id":"blades-rising-tempo","name":"Rising Tempo","deckAffinity":"Blades","rarity":"Rare","labels":["Utility"],"cost":{"type":"None"},"rulesText":"Gain 3 gm. All attacks this turn gain +2 damage.","effects":[{"type":"GainGeneratedMomentum","amount":3,"target":"Self"},{"type":"TemporaryBuffAllAttacksPlusDamageThisTurn","amount":2,"target":"Self"}]},
-  {"id":"blades-relentless-assault","name":"Relentless Assault","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Deal 4 damage three times.","effects":[{"type":"DealDamageNTimes","amount":4,"times":3,"target":"Enemy"}]},
-  {"id":"blades-kill-window","name":"Kill Window","deckAffinity":"Blades","rarity":"Rare","labels":["Utility"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Select an enemy. Apply Vulnerable 1 plus 2 per current Momentum.","effects":[{"type":"ApplyStatusPerCurrentMomentum","status":"Vulnerable","baseAmount":1,"amountPerCurrentMomentum":2,"target":"Enemy"}]},
-  {"id":"blades-crimson-flow","name":"Crimson Flow","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 8 damage. Heal 50% of damage dealt.","effects":[{"type":"DealDamage","amount":8,"target":"Enemy"},{"type":"LifestealPercentOfDamageDealt","percent":50,"target":"Self"}]},
-  {"id":"blades-momentum-overload","name":"Momentum Overload","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"SpendAllMomentum"},"rulesText":"Spend all Momentum. Deal 6 damage per Momentum spent.","effects":[{"type":"DealDamagePerAllMomentumSpent","damagePerMomentum":6,"target":"Enemy"}]},
-  {"id":"blades-blade-barrage","name":"Blade Barrage","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 3 damage four times.","effects":[{"type":"DealDamageNTimes","amount":3,"times":4,"target":"Enemy"}]},
-  {"id":"blades-predator-strike","name":"Predator Strike","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":2},"rulesText":"Requires Momentum 2. Deal 7 damage. Apply Weak 2.","effects":[{"type":"DealDamage","amount":7,"target":"Enemy"},{"type":"ApplyStatus","status":"Weak","amount":2,"target":"Enemy"}]},
-  {"id":"blades-tactical-flow","name":"Tactical Flow","deckAffinity":"Blades","rarity":"Rare","labels":["Utility","Deck"],"cost":{"type":"None"},"rulesText":"Gain 2 gm. Draw 2 cards.","effects":[{"type":"GainGeneratedMomentum","amount":2,"target":"Self"},{"type":"DrawCards","amount":2,"target":"Self"}]},
-  {"id":"blades-pressure-storm","name":"Pressure Storm","deckAffinity":"Blades","rarity":"Rare","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":3},"rulesText":"Requires Momentum 3. Deal 5 damage to all enemies.","effects":[{"type":"DealDamageToAllEnemies","amount":5}]},
-  {"id":"blades-blood-rush","name":"Blood Rush","deckAffinity":"Blades","rarity":"Rare","labels":["Utility"],"cost":{"type":"None"},"rulesText":"All attacks this turn gain +2 damage. Heal 25% of damage dealt this card.","effects":[{"type":"TemporaryBuffAllAttacksPlusDamageThisTurn","amount":2,"target":"Self"},{"type":"LifestealPercentOfDamageDealt","percent":25,"target":"Self"}]},
-
-  {"id":"blades-bladed-frenzy","name":"Bladed Frenzy","deckAffinity":"Blades","rarity":"Epic","labels":["Attack"],"cost":{"type":"SpendMomentum","amount":3},"rulesText":"Spend 3 Momentum. Deal 5 damage three times.","effects":[{"type":"DealDamageNTimes","amount":5,"times":3,"target":"Enemy"}]},
-  {"id":"blades-predator-flow","name":"Predator Flow","deckAffinity":"Blades","rarity":"Epic","labels":["Utility"],"cost":{"type":"None"},"rulesText":"Gain 3 gm. All attacks this turn deal double damage.","effects":[{"type":"GainGeneratedMomentum","amount":3,"target":"Self"},{"type":"TemporaryBuffAllAttacksDoubleDamageThisTurn","target":"Self"}]},
-  {"id":"blades-blade-storm","name":"Blade Storm","deckAffinity":"Blades","rarity":"Epic","labels":["Attack"],"cost":{"type":"RequireMomentum","minimum":3},"rulesText":"Requires Momentum 3. Deal 4 damage to all enemies twice.","effects":[{"type":"DealDamageToAllEnemies","amount":4},{"type":"DealDamageToAllEnemies","amount":4}]},
-  {"id":"blades-blood-tempo","name":"Blood Tempo","deckAffinity":"Blades","rarity":"Epic","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Deal 5 damage. Heal 50% of damage dealt. Gain 2 gm.","effects":[{"type":"DealDamage","amount":5,"target":"Enemy"},{"type":"LifestealPercentOfDamageDealt","percent":50,"target":"Self"},{"type":"GainGeneratedMomentum","amount":2,"target":"Self"}]},
-  {"id":"blades-perfect-flow","name":"Perfect Flow","deckAffinity":"Blades","rarity":"Epic","labels":["Attack","Deck"],"cost":{"type":"None"},"rulesText":"Deal 2 damage and draw 1 card per current Momentum.","effects":[{"type":"DealDamageAndDrawPerCurrentMomentum","damagePerMomentum":2,"drawPerMomentum":1,"target":"Enemy"}]},
-  {"id":"blades-vampiric-dance","name":"Vampiric Dance","deckAffinity":"Blades","rarity":"Epic","labels":["Attack"],"cost":{"type":"SpendMomentum","amount":2},"rulesText":"Spend 2 Momentum. Deal 4 damage twice. Heal 50% of damage dealt.","effects":[{"type":"DealDamageNTimes","amount":4,"times":2,"target":"Enemy"},{"type":"LifestealPercentOfDamageDealt","percent":50,"target":"Self"}]},
-
-  {"id":"blades-master-of-blades","name":"Master of Blades","deckAffinity":"Blades","rarity":"Legendary","labels":["Utility"],"cost":{"type":"None"},"rulesText":"All attacks this turn gain +3 damage and deal double damage.","effects":[{"type":"AllAttacksBonusDamageThisTurn","amount":3,"target":"Self"},{"type":"AllAttacksDoubleDamageThisTurn","target":"Self"}]},
-  {"id":"blades-infinite-dance","name":"Infinite Dance","deckAffinity":"Blades","rarity":"Legendary","labels":["Attack"],"cost":{"type":"None"},"rulesText":"Repeat: deal 2 damage and apply Bleed 1 per current Momentum.","effects":[{"type":"RepeatEffectsPerCurrentMomentum","target":"Self","effects":[{"type":"DealDamage","amount":2,"target":"Enemy"},{"type":"ApplyStatus","status":"Bleed","amount":1,"target":"Enemy"}]}]},
-  {"id":"blades-killing-crescendo","name":"Killing Crescendo","deckAffinity":"Blades","rarity":"Legendary","labels":["Attack"],"costs":[{"type":"RequireMomentum","minimum":3},{"type":"SpendMomentum","amount":2}],"rulesText":"Requires Momentum 3. Spend 2 Momentum. Deal 7 damage twice.","effects":[{"type":"DealDamageNTimes","amount":7,"times":2,"target":"Enemy"}]}
+  {
+    "id": "blades-strike",
+    "name": "Strike",
+    "deckAffinity": "Blades",
+    "rarity": "Common",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 5 damage.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 5,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-guard",
+    "name": "Guard",
+    "deckAffinity": "Blades",
+    "rarity": "Common",
+    "labels": [
+      "Defense"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 4 armor.",
+    "effects": [
+      {
+        "type": "GainArmor",
+        "amount": 4,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-quick-slash",
+    "name": "Quick Slash",
+    "deckAffinity": "Blades",
+    "rarity": "Common",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 3 damage. Gain 2 gm.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 3,
+        "target": "Enemy"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-feint",
+    "name": "Feint",
+    "deckAffinity": "Blades",
+    "rarity": "Common",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Apply Weak 1. Gain 2 gm.",
+    "effects": [
+      {
+        "type": "ApplyStatus",
+        "status": "Weak",
+        "amount": 1,
+        "target": "Enemy"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-flurry",
+    "name": "Flurry",
+    "deckAffinity": "Blades",
+    "rarity": "Common",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "SpendUpToMomentum",
+      "max": 3
+    },
+    "rulesText": "Spend up to 3 Momentum. Deal 4 damage per Momentum spent.",
+    "effects": [
+      {
+        "type": "DealDamagePerMomentumSpent",
+        "damagePerMomentum": 4,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-opening-cut",
+    "name": "Opening Cut",
+    "deckAffinity": "Blades",
+    "rarity": "Common",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 4 damage. Apply Vulnerable 1.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 4,
+        "target": "Enemy"
+      },
+      {
+        "type": "ApplyStatus",
+        "status": "Vulnerable",
+        "amount": 1,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-flow-strike",
+    "name": "Flow Strike",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Deal 8 damage.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 8,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-twin-slash",
+    "name": "Twin Slash",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Deal 5 damage twice.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 5,
+        "times": 2,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-blade-dance",
+    "name": "Blade Dance",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "SpendMomentum",
+      "amount": 2
+    },
+    "rulesText": "Spend 2 Momentum. Deal 4 damage three times.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 4,
+        "times": 3,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-momentum-step",
+    "name": "Momentum Step",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Utility",
+      "Deck"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 4 gm. Draw 1 card.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 4,
+        "target": "Self"
+      },
+      {
+        "type": "DrawCards",
+        "amount": 1,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-tempo-cut",
+    "name": "Tempo Cut",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 5 damage. Gain 2 gm.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 5,
+        "target": "Enemy"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-edge-pressure",
+    "name": "Edge Pressure",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 3
+    },
+    "rulesText": "Requires Momentum 3. Deal 10 damage.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 10,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-sidestep",
+    "name": "Sidestep",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Defense"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 6 armor. Gain 2 gm.",
+    "effects": [
+      {
+        "type": "GainArmor",
+        "amount": 6,
+        "target": "Self"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-riposte",
+    "name": "Riposte",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Defense"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Gain 5 armor. Next enemy attack deals 4 damage back.",
+    "effects": [
+      {
+        "type": "GainArmor",
+        "amount": 5,
+        "target": "Self"
+      },
+      {
+        "type": "ReflectNextEnemyAttackDamage",
+        "amount": 4,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-accelerate",
+    "name": "Accelerate",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain gm equal to attacks played this turn.",
+    "effects": [
+      {
+        "type": "AttackCountThisTurnToGm",
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-blood-draw",
+    "name": "Blood Draw",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
+      },
+      {
+        "type": "SpendMomentum",
+        "amount": 1
+      }
+    ],
+    "rulesText": "Requires Momentum 2. Spend 1 Momentum. Deal 6 damage. Heal 50% of damage dealt.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 6,
+        "target": "Enemy"
+      },
+      {
+        "type": "LifestealPercentOfDamageDealt",
+        "percent": 50,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-piercing-strike",
+    "name": "Piercing Strike",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 3
+    },
+    "rulesText": "Requires Momentum 3. Deal 9 damage ignoring armor.",
+    "effects": [
+      {
+        "type": "DealDamageIgnoringArmor",
+        "amount": 9,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-blade-tempo",
+    "name": "Blade Tempo",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 3 gm. Your next attack this turn deals +3 damage.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 3,
+        "target": "Self"
+      },
+      {
+        "type": "NextAttackBonusDamageThisTurn",
+        "amount": 3,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-skirmish",
+    "name": "Skirmish",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 4 damage twice. Gain 1 gm.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 4,
+        "times": 2,
+        "target": "Enemy"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 1,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-flash-cut",
+    "name": "Flash Cut",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack",
+      "Deck"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 4 damage plus 2 per attack played this turn. Draw 1 card.",
+    "effects": [
+      {
+        "type": "DamageWithAttackCountScaling",
+        "baseAmount": 4,
+        "damagePerAttackPlayedThisTurn": 2,
+        "target": "Enemy"
+      },
+      {
+        "type": "DrawCards",
+        "amount": 1,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-blade-flow",
+    "name": "Blade Flow",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Utility",
+      "Defense"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 3 gm. Gain 3 armor.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 3,
+        "target": "Self"
+      },
+      {
+        "type": "GainArmor",
+        "amount": 3,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-pressure-combo",
+    "name": "Pressure Combo",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 3
+    },
+    "rulesText": "Requires Momentum 3. Deal 6 damage twice.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 6,
+        "times": 2,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-tactical-retreat",
+    "name": "Tactical Retreat",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Defense"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 8 armor. Gain 2 gm.",
+    "effects": [
+      {
+        "type": "GainArmor",
+        "amount": 8,
+        "target": "Self"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-draw-cut",
+    "name": "Draw Cut",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack",
+      "Deck"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 4 damage. Draw 1 card.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 4,
+        "target": "Enemy"
+      },
+      {
+        "type": "DrawCards",
+        "amount": 1,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-forward-assault",
+    "name": "Forward Assault",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Deal 7 damage.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 7,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-tempo-guard",
+    "name": "Tempo Guard",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Defense"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 5 armor. If Momentum is at least 2, gain 3 more armor.",
+    "effects": [
+      {
+        "type": "GainArmor",
+        "amount": 5,
+        "target": "Self"
+      },
+      {
+        "type": "ConditionalGainArmorIfMomentumAtLeast",
+        "minimumMomentum": 2,
+        "amount": 3,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-momentum-burst",
+    "name": "Momentum Burst",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 5 gm.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 5,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-bleeding-cut",
+    "name": "Bleeding Cut",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 5 damage. Apply Bleed 1 + 1 per current Momentum.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 5,
+        "target": "Enemy"
+      },
+      {
+        "type": "ApplyStatusPerCurrentMomentum",
+        "status": "Bleed",
+        "baseAmount": 1,
+        "amountPerCurrentMomentum": 1,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-precision-strike",
+    "name": "Precision Strike",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 3
+    },
+    "rulesText": "Requires Momentum 3. Deal 12 damage.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 12,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-quick-footwork",
+    "name": "Quick Footwork",
+    "deckAffinity": "Blades",
+    "rarity": "Uncommon",
+    "labels": [
+      "Utility",
+      "Deck"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 3 gm. Draw 1 card.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 3,
+        "target": "Self"
+      },
+      {
+        "type": "DrawCards",
+        "amount": 1,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-execution-cut",
+    "name": "Execution Cut",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
+      },
+      {
+        "type": "SpendMomentum",
+        "amount": 1
+      }
+    ],
+    "rulesText": "Requires Momentum 3. Spend 1 Momentum. Deal 14 damage.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 14,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-storm-blades",
+    "name": "Storm Blades",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "SpendMomentum",
+      "amount": 2
+    },
+    "rulesText": "Spend 2 Momentum. Deal 3 damage per current Momentum.",
+    "effects": [
+      {
+        "type": "DealDamagePerCurrentMomentum",
+        "damagePerMomentum": 3,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-rising-tempo",
+    "name": "Rising Tempo",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 3 gm. Your next attack this turn deals double damage.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 3,
+        "target": "Self"
+      },
+      {
+        "type": "NextAttackDoubleDamageThisTurn",
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-relentless-assault",
+    "name": "Relentless Assault",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Deal 4 damage three times. Apply Weak 1.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 4,
+        "times": 3,
+        "target": "Enemy"
+      },
+      {
+        "type": "ApplyStatus",
+        "status": "Weak",
+        "amount": 1,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-kill-window",
+    "name": "Kill Window",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Apply Vulnerable 1 + 2 per current Momentum to a single enemy.",
+    "effects": [
+      {
+        "type": "ApplyStatusPerCurrentMomentum",
+        "status": "Vulnerable",
+        "baseAmount": 1,
+        "amountPerCurrentMomentum": 2,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-crimson-flow",
+    "name": "Crimson Flow",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 8 damage. Heal 50% of damage dealt.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 8,
+        "target": "Enemy"
+      },
+      {
+        "type": "LifestealPercentOfDamageDealt",
+        "percent": 50,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-momentum-overload",
+    "name": "Momentum Overload",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "SpendAllMomentum"
+    },
+    "rulesText": "Spend all Momentum. Deal 6 damage per Momentum spent.",
+    "effects": [
+      {
+        "type": "DealDamagePerAllMomentumSpent",
+        "damagePerMomentum": 6,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-blade-barrage",
+    "name": "Blade Barrage",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 3 damage four times.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 3,
+        "times": 4,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-predator-strike",
+    "name": "Predator Strike",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 2
+    },
+    "rulesText": "Requires Momentum 2. Deal 7 damage. Apply Weak 2.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 7,
+        "target": "Enemy"
+      },
+      {
+        "type": "ApplyStatus",
+        "status": "Weak",
+        "amount": 2,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-tactical-flow",
+    "name": "Tactical Flow",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Utility",
+      "Deck"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 2 gm. Draw 2 cards.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      },
+      {
+        "type": "DrawCards",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-pressure-storm",
+    "name": "Pressure Storm",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 3
+    },
+    "rulesText": "Requires Momentum 3. Deal 5 damage to all enemies.",
+    "effects": [
+      {
+        "type": "DealDamageToAllEnemies",
+        "amount": 5
+      }
+    ]
+  },
+  {
+    "id": "blades-blood-rush",
+    "name": "Blood Rush",
+    "deckAffinity": "Blades",
+    "rarity": "Rare",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "All attacks this turn gain +2 damage. Heal 25% of damage dealt this card.",
+    "effects": [
+      {
+        "type": "TemporaryBuffAllAttacksPlusDamageThisTurn",
+        "amount": 2,
+        "target": "Self"
+      },
+      {
+        "type": "LifestealPercentOfDamageDealt",
+        "percent": 25,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-bladed-frenzy",
+    "name": "Bladed Frenzy",
+    "deckAffinity": "Blades",
+    "rarity": "Epic",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "SpendMomentum",
+      "amount": 3
+    },
+    "rulesText": "Spend 3 Momentum. Deal 5 damage three times.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 5,
+        "times": 3,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-predator-flow",
+    "name": "Predator Flow",
+    "deckAffinity": "Blades",
+    "rarity": "Epic",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Gain 3 gm. All attacks this turn deal double damage.",
+    "effects": [
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 3,
+        "target": "Self"
+      },
+      {
+        "type": "TemporaryBuffAllAttacksDoubleDamageThisTurn",
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-blade-storm",
+    "name": "Blade Storm",
+    "deckAffinity": "Blades",
+    "rarity": "Epic",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "RequireMomentum",
+      "minimum": 3
+    },
+    "rulesText": "Requires Momentum 3. Deal 4 damage to all enemies twice.",
+    "effects": [
+      {
+        "type": "DealDamageToAllEnemies",
+        "amount": 4
+      },
+      {
+        "type": "DealDamageToAllEnemies",
+        "amount": 4
+      }
+    ]
+  },
+  {
+    "id": "blades-blood-tempo",
+    "name": "Blood Tempo",
+    "deckAffinity": "Blades",
+    "rarity": "Epic",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 5 damage. Heal 50% of damage dealt. Gain 2 gm.",
+    "effects": [
+      {
+        "type": "DealDamage",
+        "amount": 5,
+        "target": "Enemy"
+      },
+      {
+        "type": "LifestealPercentOfDamageDealt",
+        "percent": 50,
+        "target": "Self"
+      },
+      {
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-perfect-flow",
+    "name": "Perfect Flow",
+    "deckAffinity": "Blades",
+    "rarity": "Epic",
+    "labels": [
+      "Attack",
+      "Deck"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Deal 2 damage and draw 1 card per current Momentum.",
+    "effects": [
+      {
+        "type": "DealDamageAndDrawPerCurrentMomentum",
+        "damagePerMomentum": 2,
+        "drawPerMomentum": 1,
+        "target": "Enemy"
+      }
+    ]
+  },
+  {
+    "id": "blades-vampiric-dance",
+    "name": "Vampiric Dance",
+    "deckAffinity": "Blades",
+    "rarity": "Epic",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "SpendMomentum",
+      "amount": 2
+    },
+    "rulesText": "Spend 2 Momentum. Deal 4 damage twice. Heal 50% of damage dealt.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 4,
+        "times": 2,
+        "target": "Enemy"
+      },
+      {
+        "type": "LifestealPercentOfDamageDealt",
+        "percent": 50,
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-master-of-blades",
+    "name": "Master of Blades",
+    "deckAffinity": "Blades",
+    "rarity": "Legendary",
+    "labels": [
+      "Utility"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "All attacks this turn gain +3 damage and deal double damage.",
+    "effects": [
+      {
+        "type": "AllAttacksBonusDamageThisTurn",
+        "amount": 3,
+        "target": "Self"
+      },
+      {
+        "type": "AllAttacksDoubleDamageThisTurn",
+        "target": "Self"
+      }
+    ]
+  },
+  {
+    "id": "blades-infinite-dance",
+    "name": "Infinite Dance",
+    "deckAffinity": "Blades",
+    "rarity": "Legendary",
+    "labels": [
+      "Attack"
+    ],
+    "cost": {
+      "type": "None"
+    },
+    "rulesText": "Repeat: deal 2 damage and apply Bleed 1 per current Momentum.",
+    "effects": [
+      {
+        "type": "RepeatEffectsPerCurrentMomentum",
+        "target": "Self",
+        "effects": [
+          {
+            "type": "DealDamage",
+            "amount": 2,
+            "target": "Enemy"
+          },
+          {
+            "type": "ApplyStatus",
+            "status": "Bleed",
+            "amount": 1,
+            "target": "Enemy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "blades-killing-crescendo",
+    "name": "Killing Crescendo",
+    "deckAffinity": "Blades",
+    "rarity": "Legendary",
+    "labels": [
+      "Attack"
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
+      },
+      {
+        "type": "SpendMomentum",
+        "amount": 2
+      }
+    ],
+    "rulesText": "Requires Momentum 3. Spend 2 Momentum. Deal 7 damage twice.",
+    "effects": [
+      {
+        "type": "DealDamageNTimes",
+        "amount": 7,
+        "times": 2,
+        "target": "Enemy"
+      }
+    ]
+  }
 ]
