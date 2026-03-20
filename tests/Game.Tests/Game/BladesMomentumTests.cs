@@ -449,14 +449,14 @@ public class BladesMomentumTests
     public void KillWindowStyleEffectTargetsOnlySelectedEnemy()
     {
         var card = new CardDefinition(new CardId("kill-window"), "Kill Window", 0,
-            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Vulnerable, 1, 2, CardTarget.Opponent)],
+            [new RemoveEnemyArmorCardEffect(CardTarget.Opponent)],
             new RequireMomentumCost(2), new HashSet<string> { "Utility" });
-        var state = BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30, extraEnemies: [CreateEnemy("e2", 30, 0)]);
+        var state = BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30, enemyArmor: 6, extraEnemies: [CreateEnemy("e2", 30, 4)]);
 
         var result = GameReducer.Reduce(state, new PlayCardAction(0, 1));
 
-        Assert.Equal(0, result.NewState.Combat!.Enemies[0].Vulnerable);
-        Assert.Equal(7, result.NewState.Combat.Enemies[1].Vulnerable);
+        Assert.Equal(6, result.NewState.Combat!.Enemies[0].Armor);
+        Assert.Equal(0, result.NewState.Combat.Enemies[1].Armor);
     }
 
     [Fact]

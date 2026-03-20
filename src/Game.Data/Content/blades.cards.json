@@ -76,19 +76,19 @@
     "deckAffinity": "Blades",
     "rarity": "Common",
     "labels": [
-      "Utility"
+      "Attack",
+      "Deck"
     ],
-    "rulesText": "Apply Weak 1. Gain 2 gm.",
+    "rulesText": "Deal 1 damage. Draw 1 card.",
     "effects": [
       {
-        "type": "ApplyStatus",
-        "status": "Weak",
+        "type": "DealDamage",
         "amount": 1,
         "target": "Enemy"
       },
       {
-        "type": "GainGeneratedMomentum",
-        "amount": 2,
+        "type": "DrawCards",
+        "amount": 1,
         "target": "Self"
       }
     ],
@@ -887,13 +887,10 @@
     "labels": [
       "Utility"
     ],
-    "rulesText": "Requires Momentum 2. Apply Vulnerable 1 + 2 per current Momentum to a single enemy.",
+    "rulesText": "Requires Momentum 2. Set the selected enemy's armor to 0.",
     "effects": [
       {
-        "type": "ApplyStatusPerCurrentMomentum",
-        "status": "Vulnerable",
-        "baseAmount": 1,
-        "amountPerCurrentMomentum": 2,
+        "type": "RemoveEnemyArmor",
         "target": "Enemy"
       }
     ],
