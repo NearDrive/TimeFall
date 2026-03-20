@@ -161,6 +161,7 @@ internal static class BladesContentLoader
         {
             "Self" => CardTarget.Self,
             "Opponent" => CardTarget.Opponent,
+            "Enemy" => CardTarget.Opponent,
             var target => throw new JsonException($"Unsupported card target '{target}'."),
         };
     }

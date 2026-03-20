@@ -129,6 +129,35 @@ public sealed class BladesContentLoaderTests
     }
 
     [Fact]
+    public void LoadCards_SupportsLegacyEnemyTargetAlias()
+    {
+        using var tempDir = new TempContentDirectory(
+            """
+            [
+              {
+                "id": "enemy-target-card",
+                "name": "Enemy Target Card",
+                "deckAffinity": "Blades",
+                "rarity": "Common",
+                "labels": ["Attack"],
+                "costs": [
+                  { "type": "None" }
+                ],
+                "rulesText": "",
+                "effects": [
+                  { "type": "DealDamage", "amount": 3, "target": "Enemy" }
+                ]
+              }
+            ]
+            """);
+
+        var cards = BladesContentLoader.LoadCards(tempDir.Root);
+        var card = Assert.Single(cards).Value;
+
+        Assert.Collection(card.Effects, effect => Assert.Equal(new DamageCardEffect(3, CardTarget.Opponent), effect));
+    }
+
+    [Fact]
     public void LoadCards_InvalidOrIncompleteJsonThrowsJsonException()
     {
         using var missingAmountDir = new TempContentDirectory(
