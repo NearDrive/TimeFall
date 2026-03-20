@@ -158,7 +158,7 @@ public static class CardEffectResolver
                 break;
             case NextAttackDoubleThisTurnCardEffect:
             case NextAttackDoubleDamageThisTurnCardEffect:
-                mutable = mutable with { NextAttackDamageMultiplierThisTurn = mutable.NextAttackDamageMultiplierThisTurn + 2m };
+                mutable = mutable with { NextAttackDamageMultiplierThisTurn = mutable.NextAttackDamageMultiplierThisTurn + 1m };
                 break;
             case TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect e:
                 mutable = mutable with { AllAttacksBonusDamageThisTurn = mutable.AllAttacksBonusDamageThisTurn + e.Amount };
@@ -168,7 +168,7 @@ public static class CardEffectResolver
                 break;
             case TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect:
             case AllAttacksDoubleDamageThisTurnCardEffect:
-                mutable = mutable with { AllAttacksDamageMultiplierThisTurn = mutable.AllAttacksDamageMultiplierThisTurn + 2m };
+                mutable = mutable with { AllAttacksDamageMultiplierThisTurn = mutable.AllAttacksDamageMultiplierThisTurn + 1m };
                 break;
             case LifestealPercentOfDamageDealtCardEffect e:
                 var heal = (int)Math.Floor(mutable.LastCardDamageDealt * (e.Percent / 100.0));
@@ -328,7 +328,7 @@ public static class CardEffectResolver
             return damage;
         }
 
-        return (int)Math.Floor(damage * multiplier);
+        return (int)Math.Floor(damage * (1m + multiplier));
     }
 
     private static CombatEntity? ResolveActorEntity(CombatState state, TurnOwner actor, string? selectedEnemyId)

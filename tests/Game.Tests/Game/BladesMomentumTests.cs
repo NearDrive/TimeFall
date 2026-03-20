@@ -257,7 +257,7 @@ public class BladesMomentumTests
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 0, enemyHp: 30), new PlayCardAction(0));
         var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
 
-        Assert.Equal(16, hit.Damage);
+        Assert.Equal(12, hit.Damage);
     }
 
     [Fact]
