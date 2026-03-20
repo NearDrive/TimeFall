@@ -71,9 +71,9 @@ public sealed class BladesDeckContentTests
                 new GainGeneratedMomentumCardEffect(2, CardTarget.Self)
             ]);
 
-        AssertCard(content[new CardId("blades-kill-window")], "Kill Window", "Rare", "Utility", "Requires Momentum 2. Apply Vulnerable 1 + 2 per current Momentum to a single enemy.",
+        AssertCard(content[new CardId("blades-kill-window")], "Kill Window", "Rare", "Utility", "Requires Momentum 2. Set the selected enemy's armor to 0.",
             [new RequireMomentumCost(2)],
-            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Vulnerable, 1, 2, CardTarget.Opponent)]);
+            [new RemoveEnemyArmorCardEffect(CardTarget.Opponent)]);
 
         AssertCard(content[new CardId("blades-storm-blades")], "Storm Blades", "Rare", "Attack", "Spend 2 Momentum. Deal 3 damage per current Momentum.",
             [new SpendMomentumCost(2)],
