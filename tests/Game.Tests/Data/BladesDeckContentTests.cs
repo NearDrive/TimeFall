@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Game.Core.Cards;
 using Game.Core.Decks;
 using Game.Data.Content;
@@ -7,6 +8,20 @@ namespace Game.Tests.Data;
 [Trait("Lane", "unit")]
 public sealed class BladesDeckContentTests
 {
+
+    [Fact]
+    public void BladesCardsJson_UsesArrayCostModelWithoutLegacyCostField()
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content", "blades.cards.json")));
+
+        foreach (var card in document.RootElement.EnumerateArray())
+        {
+            Assert.False(card.TryGetProperty("cost", out _), $"Card '{card.GetProperty("id").GetString()}' still uses legacy cost property.");
+            Assert.True(card.TryGetProperty("costs", out var costs), $"Card '{card.GetProperty("id").GetString()}' is missing costs array.");
+            Assert.Equal(JsonValueKind.Array, costs.ValueKind);
+            Assert.NotEmpty(costs.EnumerateArray());
+        }
+    }
     [Fact]
     public void BladesRewardPool_ResolvesEveryConfiguredCardId()
     {
