@@ -15,8 +15,8 @@
       "blades-guard",
       "blades-quick-slash",
       "blades-feint",
-      "blades-focus",
-      "blades-flurry"
+      "blades-flurry",
+      "blades-opening-cut"
     ],
     "uncommons": [
       "blades-flow-strike",
@@ -80,7 +80,7 @@
     "blades-strike",
     "blades-guard",
     "blades-guard",
-    "blades-focus"
+    "blades-feint"
   ],
   "unlockRules": {
     "firstRunAvailableRarity": "Common",

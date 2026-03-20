@@ -27,7 +27,7 @@ public sealed class RewardPoolEditReducerTests
         Assert.Equal(8, started.RunDeck.Count);
         Assert.Equal(5, grouped["blades-strike"]);
         Assert.Equal(2, grouped["blades-guard"]);
-        Assert.Equal(1, grouped["blades-focus"]);
+        Assert.Equal(1, grouped["blades-feint"]);
         Assert.Equal(3, grouped.Count);
     }
 
@@ -100,7 +100,7 @@ public sealed class RewardPoolEditReducerTests
         Assert.Equal(8, started.RunDeck.Count);
         Assert.Equal(5, started.RunDeck.Count(c => c.DefinitionId.Value == "blades-strike"));
         Assert.Equal(2, started.RunDeck.Count(c => c.DefinitionId.Value == "blades-guard"));
-        Assert.Equal(1, started.RunDeck.Count(c => c.DefinitionId.Value == "blades-focus"));
+        Assert.Equal(1, started.RunDeck.Count(c => c.DefinitionId.Value == "blades-feint"));
     }
 
     [Fact]

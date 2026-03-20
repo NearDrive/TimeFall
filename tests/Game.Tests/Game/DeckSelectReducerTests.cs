@@ -84,7 +84,7 @@ public sealed class DeckSelectReducerTests
         Assert.Equal(8, started.RunDeck.Count);
         Assert.Equal(5, grouped["blades-strike"]);
         Assert.Equal(2, grouped["blades-guard"]);
-        Assert.Equal(1, grouped["blades-focus"]);
+        Assert.Equal(1, grouped["blades-feint"]);
         Assert.Equal(ResourceType.Momentum, content.DeckDefinitions["deck-blades"].ResourceType);
         Assert.NotNull(combatState.Combat);
         Assert.Equal(0, combatState.Combat!.Player.Resources.GetValueOrDefault(ResourceType.Momentum));
