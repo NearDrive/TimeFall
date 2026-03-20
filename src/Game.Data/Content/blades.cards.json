@@ -7,15 +7,17 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 5 damage.",
     "effects": [
       {
         "type": "DealDamage",
         "amount": 5,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -27,15 +29,17 @@
     "labels": [
       "Defense"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 4 armor.",
     "effects": [
       {
         "type": "GainArmor",
         "amount": 4,
         "target": "Self"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -47,9 +51,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 3 damage. Gain 2 gm.",
     "effects": [
       {
@@ -62,6 +63,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -72,9 +78,6 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Apply Weak 1. Gain 2 gm.",
     "effects": [
       {
@@ -88,6 +91,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -98,16 +106,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "SpendUpToMomentum",
-      "max": 3
-    },
     "rulesText": "Spend up to 3 Momentum. Deal 4 damage per Momentum spent.",
     "effects": [
       {
         "type": "DealDamagePerMomentumSpent",
         "damagePerMomentum": 4,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "SpendUpToMomentum",
+        "max": 3
       }
     ]
   },
@@ -119,9 +129,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 4 damage. Apply Vulnerable 1.",
     "effects": [
       {
@@ -135,6 +142,11 @@
         "amount": 1,
         "target": "Enemy"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -145,16 +157,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Deal 8 damage.",
     "effects": [
       {
         "type": "DealDamage",
         "amount": 8,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
       }
     ]
   },
@@ -166,10 +180,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Deal 5 damage twice.",
     "effects": [
       {
@@ -177,6 +187,12 @@
         "amount": 5,
         "times": 2,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
       }
     ]
   },
@@ -188,10 +204,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "SpendMomentum",
-      "amount": 2
-    },
     "rulesText": "Spend 2 Momentum. Deal 4 damage three times.",
     "effects": [
       {
@@ -199,6 +211,12 @@
         "amount": 4,
         "times": 3,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "SpendMomentum",
+        "amount": 2
       }
     ]
   },
@@ -211,9 +229,6 @@
       "Utility",
       "Deck"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 4 gm. Draw 1 card.",
     "effects": [
       {
@@ -226,6 +241,11 @@
         "amount": 1,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -236,9 +256,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 5 damage. Gain 2 gm.",
     "effects": [
       {
@@ -251,6 +268,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -261,16 +283,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 3
-    },
     "rulesText": "Requires Momentum 3. Deal 10 damage.",
     "effects": [
       {
         "type": "DealDamage",
         "amount": 10,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
       }
     ]
   },
@@ -282,9 +306,6 @@
     "labels": [
       "Defense"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 6 armor. Gain 2 gm.",
     "effects": [
       {
@@ -297,6 +318,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -307,10 +333,6 @@
     "labels": [
       "Defense"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Gain 5 armor. Next enemy attack deals 4 damage back.",
     "effects": [
       {
@@ -323,6 +345,12 @@
         "amount": 4,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
+      }
     ]
   },
   {
@@ -333,14 +361,16 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain gm equal to attacks played this turn.",
     "effects": [
       {
         "type": "AttackCountThisTurnToGm",
         "target": "Self"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -384,16 +414,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 3
-    },
     "rulesText": "Requires Momentum 3. Deal 9 damage ignoring armor.",
     "effects": [
       {
         "type": "DealDamageIgnoringArmor",
         "amount": 9,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
       }
     ]
   },
@@ -405,9 +437,6 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 3 gm. Your next attack this turn deals +3 damage.",
     "effects": [
       {
@@ -420,6 +449,11 @@
         "amount": 3,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -430,9 +464,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 4 damage twice. Gain 1 gm.",
     "effects": [
       {
@@ -446,6 +477,11 @@
         "amount": 1,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -457,9 +493,6 @@
       "Attack",
       "Deck"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 4 damage plus 2 per attack played this turn. Draw 1 card.",
     "effects": [
       {
@@ -473,6 +506,11 @@
         "amount": 1,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -484,9 +522,6 @@
       "Utility",
       "Defense"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 3 gm. Gain 3 armor.",
     "effects": [
       {
@@ -499,6 +534,11 @@
         "amount": 3,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -509,10 +549,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 3
-    },
     "rulesText": "Requires Momentum 3. Deal 6 damage twice.",
     "effects": [
       {
@@ -520,6 +556,12 @@
         "amount": 6,
         "times": 2,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
       }
     ]
   },
@@ -531,9 +573,6 @@
     "labels": [
       "Defense"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 8 armor. Gain 2 gm.",
     "effects": [
       {
@@ -546,6 +585,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -557,9 +601,6 @@
       "Attack",
       "Deck"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 4 damage. Draw 1 card.",
     "effects": [
       {
@@ -572,6 +613,11 @@
         "amount": 1,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -582,16 +628,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Deal 7 damage.",
     "effects": [
       {
         "type": "DealDamage",
         "amount": 7,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
       }
     ]
   },
@@ -603,9 +651,6 @@
     "labels": [
       "Defense"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 5 armor. If Momentum is at least 2, gain 3 more armor.",
     "effects": [
       {
@@ -619,6 +664,11 @@
         "amount": 3,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -629,15 +679,17 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 5 gm.",
     "effects": [
       {
         "type": "GainGeneratedMomentum",
         "amount": 5,
         "target": "Self"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -649,9 +701,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 5 damage. Apply Bleed 3 + 1 per current Momentum.",
     "effects": [
       {
@@ -666,6 +715,11 @@
         "amountPerCurrentMomentum": 1,
         "target": "Enemy"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -676,16 +730,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 3
-    },
     "rulesText": "Requires Momentum 3. Deal 12 damage.",
     "effects": [
       {
         "type": "DealDamage",
         "amount": 12,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
       }
     ]
   },
@@ -698,9 +754,6 @@
       "Utility",
       "Deck"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 3 gm. Draw 1 card.",
     "effects": [
       {
@@ -712,6 +765,11 @@
         "type": "DrawCards",
         "amount": 1,
         "target": "Self"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -750,16 +808,18 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "SpendMomentum",
-      "amount": 2
-    },
     "rulesText": "Spend 2 Momentum. Deal 3 damage per current Momentum.",
     "effects": [
       {
         "type": "DealDamagePerCurrentMomentum",
         "damagePerMomentum": 3,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "SpendMomentum",
+        "amount": 2
       }
     ]
   },
@@ -771,9 +831,6 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 3 gm. Your next attack this turn deals double damage.",
     "effects": [
       {
@@ -785,6 +842,11 @@
         "type": "NextAttackDoubleDamageThisTurn",
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -795,10 +857,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Deal 4 damage three times. Apply Weak 1.",
     "effects": [
       {
@@ -813,6 +871,12 @@
         "amount": 1,
         "target": "Enemy"
       }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
+      }
     ]
   },
   {
@@ -823,10 +887,6 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Apply Vulnerable 1 + 2 per current Momentum to a single enemy.",
     "effects": [
       {
@@ -835,6 +895,12 @@
         "baseAmount": 1,
         "amountPerCurrentMomentum": 2,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
       }
     ]
   },
@@ -846,9 +912,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 8 damage. Heal 50% of damage dealt.",
     "effects": [
       {
@@ -861,6 +924,11 @@
         "percent": 50,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -871,15 +939,17 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "SpendAllMomentum"
-    },
     "rulesText": "Spend all Momentum. Deal 6 damage per Momentum spent.",
     "effects": [
       {
         "type": "DealDamagePerAllMomentumSpent",
         "damagePerMomentum": 6,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "SpendAllMomentum"
       }
     ]
   },
@@ -891,9 +961,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 3 damage four times.",
     "effects": [
       {
@@ -901,6 +968,11 @@
         "amount": 3,
         "times": 4,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -912,10 +984,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 2
-    },
     "rulesText": "Requires Momentum 2. Deal 7 damage. Apply Weak 2.",
     "effects": [
       {
@@ -929,6 +997,12 @@
         "amount": 2,
         "target": "Enemy"
       }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 2
+      }
     ]
   },
   {
@@ -940,9 +1014,6 @@
       "Utility",
       "Deck"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 2 gm. Draw 2 cards.",
     "effects": [
       {
@@ -955,6 +1026,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -965,15 +1041,17 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 3
-    },
     "rulesText": "Requires Momentum 3. Deal 5 damage to all enemies.",
     "effects": [
       {
         "type": "DealDamageToAllEnemies",
         "amount": 5
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
       }
     ]
   },
@@ -985,15 +1063,17 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "All attacks this turn gain +2 damage.",
     "effects": [
       {
         "type": "TemporaryBuffAllAttacksPlusDamageThisTurn",
         "amount": 2,
         "target": "Self"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -1005,10 +1085,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "SpendMomentum",
-      "amount": 3
-    },
     "rulesText": "Spend 3 Momentum. Deal 5 damage three times.",
     "effects": [
       {
@@ -1016,6 +1092,12 @@
         "amount": 5,
         "times": 3,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "SpendMomentum",
+        "amount": 3
       }
     ]
   },
@@ -1027,9 +1109,6 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Gain 3 gm. All attacks this turn deal double damage.",
     "effects": [
       {
@@ -1041,6 +1120,11 @@
         "type": "TemporaryBuffAllAttacksDoubleDamageThisTurn",
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -1051,10 +1135,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "RequireMomentum",
-      "minimum": 3
-    },
     "rulesText": "Requires Momentum 3. Deal 4 damage to all enemies twice.",
     "effects": [
       {
@@ -1064,6 +1144,12 @@
       {
         "type": "DealDamageToAllEnemies",
         "amount": 4
+      }
+    ],
+    "costs": [
+      {
+        "type": "RequireMomentum",
+        "minimum": 3
       }
     ]
   },
@@ -1075,9 +1161,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 5 damage. Heal 50% of damage dealt. Gain 2 gm.",
     "effects": [
       {
@@ -1095,6 +1178,11 @@
         "amount": 2,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -1106,9 +1194,6 @@
       "Attack",
       "Deck"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Deal 2 damage and draw 1 card per current Momentum.",
     "effects": [
       {
@@ -1116,6 +1201,11 @@
         "damagePerMomentum": 2,
         "drawPerMomentum": 1,
         "target": "Enemy"
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
@@ -1127,10 +1217,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "SpendMomentum",
-      "amount": 2
-    },
     "rulesText": "Spend 2 Momentum. Deal 4 damage twice. Heal 50% of damage dealt.",
     "effects": [
       {
@@ -1144,6 +1230,12 @@
         "percent": 50,
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "SpendMomentum",
+        "amount": 2
+      }
     ]
   },
   {
@@ -1154,9 +1246,6 @@
     "labels": [
       "Utility"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "All attacks this turn gain +3 damage and deal double damage.",
     "effects": [
       {
@@ -1168,6 +1257,11 @@
         "type": "AllAttacksDoubleDamageThisTurn",
         "target": "Self"
       }
+    ],
+    "costs": [
+      {
+        "type": "None"
+      }
     ]
   },
   {
@@ -1178,9 +1272,6 @@
     "labels": [
       "Attack"
     ],
-    "cost": {
-      "type": "None"
-    },
     "rulesText": "Repeat: deal 2 damage and apply Bleed 1 per current Momentum.",
     "effects": [
       {
@@ -1199,6 +1290,11 @@
             "target": "Enemy"
           }
         ]
+      }
+    ],
+    "costs": [
+      {
+        "type": "None"
       }
     ]
   },
