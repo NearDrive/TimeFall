@@ -652,7 +652,7 @@
     "cost": {
       "type": "None"
     },
-    "rulesText": "Deal 5 damage. Apply Bleed 1 + 1 per current Momentum.",
+    "rulesText": "Deal 5 damage. Apply Bleed 3 + 1 per current Momentum.",
     "effects": [
       {
         "type": "DealDamage",
@@ -662,7 +662,7 @@
       {
         "type": "ApplyStatusPerCurrentMomentum",
         "status": "Bleed",
-        "baseAmount": 1,
+        "baseAmount": 3,
         "amountPerCurrentMomentum": 1,
         "target": "Enemy"
       }

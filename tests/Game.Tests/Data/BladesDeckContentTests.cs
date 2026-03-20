@@ -78,11 +78,11 @@ public sealed class BladesDeckContentTests
                 new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent)
             ]);
 
-        AssertCard(content[new CardId("blades-bleeding-cut")], "Bleeding Cut", "Uncommon", "Attack", "Deal 5 damage. Apply Bleed 1 + 1 per current Momentum.",
+        AssertCard(content[new CardId("blades-bleeding-cut")], "Bleeding Cut", "Uncommon", "Attack", "Deal 5 damage. Apply Bleed 3 + 1 per current Momentum.",
             [new NoCost()],
             [
                 new DamageCardEffect(5, CardTarget.Opponent),
-                new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 1, 1, CardTarget.Opponent)
+                new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 3, 1, CardTarget.Opponent)
             ]);
 
         Assert.Equal(new DealDamageToAllEnemiesCardEffect(5), Assert.Single(content[new CardId("blades-pressure-storm")].Effects));

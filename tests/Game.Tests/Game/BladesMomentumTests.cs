@@ -419,14 +419,14 @@ public class BladesMomentumTests
     public void BleedingCutStyleEffectUsesCurrentMomentumSnapshot()
     {
         var card = new CardDefinition(new CardId("bleeding-cut"), "Bleeding Cut", 0,
-            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 1, 1, CardTarget.Opponent)],
+            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 3, 1, CardTarget.Opponent)],
             new NoCost(), new HashSet<string> { "Attack" });
 
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30), new PlayCardAction(0));
 
-        Assert.Equal(3, result.NewState.Combat!.Enemy.Bleed);
+        Assert.Equal(6, result.NewState.Combat!.Enemy.Bleed);
         var applied = Assert.Single(result.Events.OfType<StatusApplied>());
-        Assert.Equal(3, applied.Amount);
+        Assert.Equal(6, applied.Amount);
     }
 
 
@@ -479,7 +479,9 @@ public class BladesMomentumTests
         var afterAttack = GameReducer.Reduce(afterBuff, new PlayCardAction(0));
         var hit = Assert.Single(afterAttack.Events.OfType<PlayerStrikePlayed>());
 
-        Assert.Equal(8, hit.Damage);
+        Assert.Equal(6, hit.BaseDamage);
+        Assert.Equal(2, hit.MomentumBonus);
+        Assert.Equal(12, hit.Damage);
     }
 
     [Fact]
