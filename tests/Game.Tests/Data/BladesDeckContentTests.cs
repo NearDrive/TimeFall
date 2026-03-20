@@ -64,11 +64,11 @@ public sealed class BladesDeckContentTests
     {
         var content = StaticGameContentProvider.LoadDefault().CardDefinitions;
 
-        AssertCard(content[new CardId("blades-feint")], "Feint", "Common", "Attack", "Deal 1 damage. Draw 1 card.",
+        AssertCard(content[new CardId("blades-feint")], "Feint", "Common", "Utility", "Apply Weak 1. Gain 2 gm.",
             [new NoCost()],
             [
-                new DamageCardEffect(1, CardTarget.Opponent),
-                new DrawCardsCardEffect(1, CardTarget.Self)
+                new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent),
+                new GainGeneratedMomentumCardEffect(2, CardTarget.Self)
             ]);
 
         AssertCard(content[new CardId("blades-kill-window")], "Kill Window", "Rare", "Utility", "Requires Momentum 2. Set the selected enemy's armor to 0.",

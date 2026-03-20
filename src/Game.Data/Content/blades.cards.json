@@ -76,19 +76,19 @@
     "deckAffinity": "Blades",
     "rarity": "Common",
     "labels": [
-      "Attack",
-      "Deck"
+      "Utility"
     ],
-    "rulesText": "Deal 1 damage. Draw 1 card.",
+    "rulesText": "Apply Weak 1. Gain 2 gm.",
     "effects": [
       {
-        "type": "DealDamage",
+        "type": "ApplyStatus",
+        "status": "Weak",
         "amount": 1,
         "target": "Enemy"
       },
       {
-        "type": "DrawCards",
-        "amount": 1,
+        "type": "GainGeneratedMomentum",
+        "amount": 2,
         "target": "Self"
       }
     ],
