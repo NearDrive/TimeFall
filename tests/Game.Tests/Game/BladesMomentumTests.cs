@@ -419,14 +419,69 @@ public class BladesMomentumTests
     public void BleedingCutStyleEffectUsesCurrentMomentumSnapshot()
     {
         var card = new CardDefinition(new CardId("bleeding-cut"), "Bleeding Cut", 0,
-            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 1, 1, CardTarget.Opponent)],
+            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 3, 1, CardTarget.Opponent)],
             new NoCost(), new HashSet<string> { "Attack" });
 
         var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30), new PlayCardAction(0));
 
-        Assert.Equal(3, result.NewState.Combat!.Enemy.Bleed);
+        Assert.Equal(6, result.NewState.Combat!.Enemy.Bleed);
         var applied = Assert.Single(result.Events.OfType<StatusApplied>());
-        Assert.Equal(3, applied.Amount);
+        Assert.Equal(6, applied.Amount);
+    }
+
+
+    [Fact]
+    public void StormBladesStyleEffectUsesCurrentMomentumAfterPaymentSnapshot()
+    {
+        var card = new CardDefinition(new CardId("storm-blades"), "Storm Blades", 0,
+            [new DealDamagePerCurrentMomentumCardEffect(3, CardTarget.Opponent)],
+            new SpendMomentumCost(2), new HashSet<string> { "Attack" });
+
+        var result = GameReducer.Reduce(BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30), new PlayCardAction(0));
+        var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
+
+        Assert.Equal(3, hit.BaseDamage);
+        Assert.Equal(1, hit.MomentumBonus);
+        Assert.Equal(4, hit.Damage);
+    }
+
+    [Fact]
+    public void KillWindowStyleEffectTargetsOnlySelectedEnemy()
+    {
+        var card = new CardDefinition(new CardId("kill-window"), "Kill Window", 0,
+            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Vulnerable, 1, 2, CardTarget.Opponent)],
+            new RequireMomentumCost(2), new HashSet<string> { "Utility" });
+        var state = BuildState(card.Id, Defs(card), gm: 5, enemyHp: 30, extraEnemies: [CreateEnemy("e2", 30, 0)]);
+
+        var result = GameReducer.Reduce(state, new PlayCardAction(0, 1));
+
+        Assert.Equal(0, result.NewState.Combat!.Enemies[0].Vulnerable);
+        Assert.Equal(7, result.NewState.Combat.Enemies[1].Vulnerable);
+    }
+
+    [Fact]
+    public void RisingTempoStyleEffectUsesNextAttackDoubleMultiplier()
+    {
+        var buffId = new CardId("rising-tempo");
+        var attackId = new CardId("follow-up");
+        var defs = new Dictionary<CardId, CardDefinition>
+        {
+            [buffId] = new(buffId, "Rising Tempo", 0,
+                [new GainGeneratedMomentumCardEffect(3, CardTarget.Self), new NextAttackDoubleDamageThisTurnCardEffect(CardTarget.Self)],
+                new NoCost(), new HashSet<string> { "Utility" }),
+            [attackId] = new(attackId, "Follow Up", 0,
+                [new DamageCardEffect(4, CardTarget.Opponent)],
+                new NoCost(), new HashSet<string> { "Attack" })
+        };
+
+        var state = BuildState([buffId, attackId], defs, gm: 0, enemyHp: 30);
+        var afterBuff = GameReducer.Reduce(state, new PlayCardAction(0)).NewState;
+        var afterAttack = GameReducer.Reduce(afterBuff, new PlayCardAction(0));
+        var hit = Assert.Single(afterAttack.Events.OfType<PlayerStrikePlayed>());
+
+        Assert.Equal(6, hit.BaseDamage);
+        Assert.Equal(2, hit.MomentumBonus);
+        Assert.Equal(12, hit.Damage);
     }
 
     [Fact]
