@@ -46,6 +46,13 @@ public sealed class BladesContentLoaderTests
                   { "type": "AllAttacksDoubleDamageThisTurn", "target": "Self" },
                   { "type": "LifestealPercentOfDamageDealt", "percent": 50, "target": "Self" },
                   { "type": "ApplyStatus", "status": "Weak", "amount": 1, "target": "Opponent" },
+                  { "type": "DealDamageAndDrawPerCurrentMomentum", "damagePerMomentum": 2, "drawPerMomentum": 1, "target": "Opponent" },
+                  { "type": "DamageWithAttackCountScaling", "baseAmount": 4, "damagePerAttackPlayedThisTurn": 2, "target": "Opponent" },
+                  { "type": "ApplyStatusPerCurrentMomentum", "status": "Vulnerable", "baseAmount": 1, "amountPerCurrentMomentum": 2, "target": "Opponent" },
+                  { "type": "ConditionalGainArmorIfMomentumAtLeast", "minimumMomentum": 2, "amount": 6, "target": "Self" },
+                  { "type": "NextAttackDoubleThisTurn", "target": "Self" },
+                  { "type": "TemporaryBuffAllAttacksPlusDamageThisTurn", "amount": 4, "target": "Self" },
+                  { "type": "TemporaryBuffAllAttacksDoubleDamageThisTurn", "target": "Self" },
                   {
                     "type": "RepeatEffectsPerCurrentMomentum",
                     "target": "Self",
@@ -91,6 +98,13 @@ public sealed class BladesContentLoaderTests
             effect => Assert.Equal(new AllAttacksDoubleDamageThisTurnCardEffect(CardTarget.Self), effect),
             effect => Assert.Equal(new LifestealPercentOfDamageDealtCardEffect(50, CardTarget.Self), effect),
             effect => Assert.Equal(new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent), effect),
+            effect => Assert.Equal(new DealDamageAndDrawPerCurrentMomentumCardEffect(2, 1, CardTarget.Opponent), effect),
+            effect => Assert.Equal(new DamageWithAttackCountScalingCardEffect(4, 2, CardTarget.Opponent), effect),
+            effect => Assert.Equal(new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Vulnerable, 1, 2, CardTarget.Opponent), effect),
+            effect => Assert.Equal(new ConditionalGainArmorIfMomentumAtLeastCardEffect(2, 6, CardTarget.Self), effect),
+            effect => Assert.Equal(new NextAttackDoubleThisTurnCardEffect(CardTarget.Self), effect),
+            effect => Assert.Equal(new TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect(4, CardTarget.Self), effect),
+            effect => Assert.Equal(new TemporaryBuffAllAttacksDoubleDamageThisTurnCardEffect(CardTarget.Self), effect),
             effect =>
             {
                 var repeated = Assert.IsType<RepeatEffectsPerCurrentMomentumCardEffect>(effect);
@@ -206,6 +220,29 @@ public sealed class BladesContentLoaderTests
 
         var unknownEffect = Assert.Throws<JsonException>(() => BladesContentLoader.LoadCards(unknownEffectDir.Root));
         Assert.Contains("Unsupported card effect type", unknownEffect.Message, StringComparison.OrdinalIgnoreCase);
+
+        using var invalidLabelsDir = new TempContentDirectory(
+            """
+            [
+              {
+                "id": "invalid-labels-card",
+                "name": "Invalid Labels Card",
+                "deckAffinity": "Blades",
+                "rarity": "Common",
+                "labels": "Attack",
+                "costs": [
+                  { "type": "None" }
+                ],
+                "rulesText": "",
+                "effects": [
+                  { "type": "DealDamage", "amount": 2, "target": "Opponent" }
+                ]
+              }
+            ]
+            """);
+
+        var invalidLabels = Assert.Throws<JsonException>(() => BladesContentLoader.LoadCards(invalidLabelsDir.Root));
+        Assert.Contains("labels", invalidLabels.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class TempContentDirectory : IDisposable

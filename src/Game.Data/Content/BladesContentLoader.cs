@@ -19,9 +19,9 @@ internal static class BladesContentLoader
             var rarity = GetRequiredString(card, "rarity");
             var deckAffinity = GetRequiredString(card, "deckAffinity");
             var rulesText = GetRequiredString(card, "rulesText");
-            var labels = card.GetProperty("labels").EnumerateArray().Select(x => x.GetString() ?? throw new JsonException("Card labels must be strings.")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var labels = GetRequiredStringArray(card, "labels").ToHashSet(StringComparer.OrdinalIgnoreCase);
             var costs = ParseCosts(card);
-            var effects = card.GetProperty("effects").EnumerateArray().Select(ParseEffect).ToArray();
+            var effects = GetRequiredArray(card, "effects").Select(ParseEffect).ToArray();
             result.Add(id, new CardDefinition(id, name, 0, effects, costs, labels, deckAffinity, rarity, rulesText));
         }
 
@@ -142,12 +142,7 @@ internal static class BladesContentLoader
 
     private static IReadOnlyList<CardEffect> ParseNestedEffects(JsonElement effect)
     {
-        if (!effect.TryGetProperty("effects", out var nestedEffects) || nestedEffects.ValueKind != JsonValueKind.Array)
-        {
-            throw new JsonException("Composite card effects must contain an 'effects' array.");
-        }
-
-        return nestedEffects.EnumerateArray().Select(ParseEffect).ToArray();
+        return GetRequiredArray(effect, "effects").Select(ParseEffect).ToArray();
     }
 
     private static CardTarget ParseTarget(JsonElement e)
@@ -181,6 +176,26 @@ internal static class BladesContentLoader
 
     private static string GetRequiredString(JsonElement element)
         => element.GetString() ?? throw new JsonException("Expected a non-null string value.");
+
+    private static IReadOnlyList<string> GetRequiredStringArray(JsonElement element, string propertyName)
+        => GetRequiredArray(element, propertyName)
+            .Select(x => x.GetString() ?? throw new JsonException($"Property '{propertyName}' must contain only strings."))
+            .ToArray();
+
+    private static IReadOnlyList<JsonElement> GetRequiredArray(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        if (property.ValueKind != JsonValueKind.Array)
+        {
+            throw new JsonException($"Property '{propertyName}' must be an array.");
+        }
+
+        return property.EnumerateArray().ToArray();
+    }
 
     private static int GetRequiredInt32(JsonElement element, string propertyName)
     {
