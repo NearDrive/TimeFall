@@ -32,14 +32,14 @@ public sealed class CardRenderingReadabilityTests
         {
             Reward = new RewardState(
                 RewardType.CardChoice,
-                ImmutableList.Create(new CardId("blades-focus"), new CardId("blades-twin-slash")),
+                ImmutableList.Create(new CardId("blades-feint"), new CardId("blades-twin-slash")),
                 false,
                 new NodeId("combat-1"))
         };
 
         var output = CaptureConsole(() => CliRenderer.RenderState(state, [], Content.CardDefinitions));
 
-        Assert.Contains("[C] Focus", output);
+        Assert.Contains("[C] Feint", output);
         Assert.Contains("[U] Twin Slash", output);
     }
 
@@ -154,7 +154,7 @@ public sealed class CardRenderingReadabilityTests
                     cardId,
                     new CardId("blades-strike"),
                     new CardId("blades-guard"),
-                    new CardId("blades-focus"),
+                    new CardId("blades-feint"),
                     new CardId("blades-quick-slash"),
                 ]),
             Enemy: new CombatantBlueprint(
