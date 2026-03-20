@@ -86,6 +86,10 @@ public sealed class BladesDeckContentTests
             ]);
 
         Assert.Equal(new DealDamageToAllEnemiesCardEffect(5), Assert.Single(content[new CardId("blades-pressure-storm")].Effects));
+
+        AssertCard(content[new CardId("blades-blood-rush")], "Blood Rush", "Rare", "Utility", "All attacks this turn gain +2 damage.",
+            [new NoCost()],
+            [new TemporaryBuffAllAttacksPlusDamageThisTurnCardEffect(2, CardTarget.Self)]);
     }
 
     private static void AssertCard(
