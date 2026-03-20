@@ -988,16 +988,11 @@
     "cost": {
       "type": "None"
     },
-    "rulesText": "All attacks this turn gain +2 damage. Heal 25% of damage dealt this card.",
+    "rulesText": "All attacks this turn gain +2 damage.",
     "effects": [
       {
         "type": "TemporaryBuffAllAttacksPlusDamageThisTurn",
         "amount": 2,
-        "target": "Self"
-      },
-      {
-        "type": "LifestealPercentOfDamageDealt",
-        "percent": 25,
         "target": "Self"
       }
     ]
