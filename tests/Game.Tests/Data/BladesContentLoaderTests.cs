@@ -91,14 +91,15 @@ public sealed class BladesContentLoaderTests
             effect => Assert.Equal(new AllAttacksDoubleDamageThisTurnCardEffect(CardTarget.Self), effect),
             effect => Assert.Equal(new LifestealPercentOfDamageDealtCardEffect(50, CardTarget.Self), effect),
             effect => Assert.Equal(new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent), effect),
-            effect => Assert.Equal(
-                new RepeatEffectsPerCurrentMomentumCardEffect(
-                    [
-                        new GainGeneratedMomentumCardEffect(1, CardTarget.Self),
-                        new DrawCardsCardEffect(1, CardTarget.Self),
-                    ],
-                    CardTarget.Self),
-                effect));
+            effect =>
+            {
+                var repeated = Assert.IsType<RepeatEffectsPerCurrentMomentumCardEffect>(effect);
+                Assert.Equal(CardTarget.Self, repeated.Target);
+                Assert.Collection(
+                    repeated.Effects,
+                    nested => Assert.Equal(new GainGeneratedMomentumCardEffect(1, CardTarget.Self), nested),
+                    nested => Assert.Equal(new DrawCardsCardEffect(1, CardTarget.Self), nested));
+            });
     }
 
     [Fact]
