@@ -49,84 +49,60 @@ public sealed class BladesDeckContentTests
     {
         var content = StaticGameContentProvider.LoadDefault().CardDefinitions;
 
-        Assert.Equal(
-            new CardDefinition(
-                new CardId("blades-feint"),
-                "Feint",
-                0,
-                [
-                    new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent),
-                    new GainGeneratedMomentumCardEffect(2, CardTarget.Self)
-                ],
-                new NoCost(),
-                new HashSet<string> { "Utility" },
-                RulesText: "Apply Weak 1. Gain 2 gm."),
-            content[new CardId("blades-feint")]);
+        AssertCard(content[new CardId("blades-feint")], "Feint", "Common", "Utility", "Apply Weak 1. Gain 2 gm.",
+            [new NoCost()],
+            [
+                new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent),
+                new GainGeneratedMomentumCardEffect(2, CardTarget.Self)
+            ]);
 
-        Assert.Equal(
-            new CardDefinition(
-                new CardId("blades-kill-window"),
-                "Kill Window",
-                0,
-                [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Vulnerable, 1, 2, CardTarget.Opponent)],
-                new RequireMomentumCost(2),
-                new HashSet<string> { "Utility" },
-                RulesText: "Requires Momentum 2. Apply Vulnerable 1 + 2 per current Momentum to a single enemy."),
-            content[new CardId("blades-kill-window")]);
+        AssertCard(content[new CardId("blades-kill-window")], "Kill Window", "Rare", "Utility", "Requires Momentum 2. Apply Vulnerable 1 + 2 per current Momentum to a single enemy.",
+            [new RequireMomentumCost(2)],
+            [new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Vulnerable, 1, 2, CardTarget.Opponent)]);
 
-        Assert.Equal(
-            new CardDefinition(
-                new CardId("blades-storm-blades"),
-                "Storm Blades",
-                0,
-                [new DealDamagePerCurrentMomentumCardEffect(3, CardTarget.Opponent)],
-                new SpendMomentumCost(2),
-                new HashSet<string> { "Attack" },
-                RulesText: "Spend 2 Momentum. Deal 3 damage per current Momentum."),
-            content[new CardId("blades-storm-blades")]);
+        AssertCard(content[new CardId("blades-storm-blades")], "Storm Blades", "Rare", "Attack", "Spend 2 Momentum. Deal 3 damage per current Momentum.",
+            [new SpendMomentumCost(2)],
+            [new DealDamagePerCurrentMomentumCardEffect(3, CardTarget.Opponent)]);
 
-        Assert.Equal(
-            new CardDefinition(
-                new CardId("blades-rising-tempo"),
-                "Rising Tempo",
-                0,
-                [
-                    new GainGeneratedMomentumCardEffect(3, CardTarget.Self),
-                    new NextAttackDoubleDamageThisTurnCardEffect(CardTarget.Self)
-                ],
-                new NoCost(),
-                new HashSet<string> { "Utility" },
-                RulesText: "Gain 3 gm. Your next attack this turn deals double damage."),
-            content[new CardId("blades-rising-tempo")]);
+        AssertCard(content[new CardId("blades-rising-tempo")], "Rising Tempo", "Rare", "Utility", "Gain 3 gm. Your next attack this turn deals double damage.",
+            [new NoCost()],
+            [
+                new GainGeneratedMomentumCardEffect(3, CardTarget.Self),
+                new NextAttackDoubleDamageThisTurnCardEffect(CardTarget.Self)
+            ]);
 
-        Assert.Equal(
-            new CardDefinition(
-                new CardId("blades-relentless-assault"),
-                "Relentless Assault",
-                0,
-                [
-                    new DamageNTimesCardEffect(4, 3, CardTarget.Opponent),
-                    new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent)
-                ],
-                new RequireMomentumCost(2),
-                new HashSet<string> { "Attack" },
-                RulesText: "Requires Momentum 2. Deal 4 damage three times. Apply Weak 1."),
-            content[new CardId("blades-relentless-assault")]);
+        AssertCard(content[new CardId("blades-relentless-assault")], "Relentless Assault", "Rare", "Attack", "Requires Momentum 2. Deal 4 damage three times. Apply Weak 1.",
+            [new RequireMomentumCost(2)],
+            [
+                new DamageNTimesCardEffect(4, 3, CardTarget.Opponent),
+                new ApplyStatusCardEffect(StatusKind.Weak, 1, CardTarget.Opponent)
+            ]);
 
-        Assert.Equal(
-            new CardDefinition(
-                new CardId("blades-bleeding-cut"),
-                "Bleeding Cut",
-                0,
-                [
-                    new DamageCardEffect(5, CardTarget.Opponent),
-                    new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 1, 1, CardTarget.Opponent)
-                ],
-                new NoCost(),
-                new HashSet<string> { "Attack" },
-                RulesText: "Deal 5 damage. Apply Bleed 1 + 1 per current Momentum."),
-            content[new CardId("blades-bleeding-cut")]);
+        AssertCard(content[new CardId("blades-bleeding-cut")], "Bleeding Cut", "Uncommon", "Attack", "Deal 5 damage. Apply Bleed 1 + 1 per current Momentum.",
+            [new NoCost()],
+            [
+                new DamageCardEffect(5, CardTarget.Opponent),
+                new ApplyStatusPerCurrentMomentumCardEffect(StatusKind.Bleed, 1, 1, CardTarget.Opponent)
+            ]);
 
         Assert.Equal(new DealDamageToAllEnemiesCardEffect(5), Assert.Single(content[new CardId("blades-pressure-storm")].Effects));
+    }
+
+    private static void AssertCard(
+        CardDefinition actual,
+        string expectedName,
+        string expectedRarity,
+        string expectedLabel,
+        string expectedRulesText,
+        IReadOnlyList<CardCost> expectedCosts,
+        IReadOnlyList<CardEffect> expectedEffects)
+    {
+        Assert.Equal(expectedName, actual.Name);
+        Assert.Equal("Blades", actual.DeckAffinity);
+        Assert.Equal(expectedRarity, actual.Rarity);
+        Assert.Equal(expectedRulesText, actual.RulesText);
+        Assert.Contains(expectedLabel, actual.LabelsOrEmpty);
+        Assert.Equal(expectedCosts, actual.PlayCostsOrDefault);
+        Assert.Equal(expectedEffects, actual.Effects);
     }
 }
