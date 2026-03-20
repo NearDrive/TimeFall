@@ -225,9 +225,9 @@ public static class CardEffectResolver
         }
 
         var before = cs.Player.Resources.GetValueOrDefault(ResourceType.Momentum, 0);
-        var gained = MomentumMath.Threshold(amount);
-        var after = Math.Max(0, before + gained);
-        events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, $"{reason} (GM +{gained} from M {amount})"));
+        var gained = Math.Max(0, amount);
+        var after = MomentumMath.GainGm(before, gained);
+        events.Add(new ResourceChanged(TurnOwner.Player, ResourceType.Momentum, before, after, $"{reason} (GM +{gained})"));
         return cs with { Player = cs.Player with { Resources = cs.Player.Resources.SetItem(ResourceType.Momentum, after) } };
     }
 

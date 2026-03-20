@@ -171,7 +171,9 @@ public class BladesMomentumTests
         var state = BuildState(cardId, defs, gm: 2, enemyHp: 20, enemyArmor: 0);
         var result = GameReducer.Reduce(state, new PlayCardAction(0));
 
-        Assert.Equal(6, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        Assert.Equal(5, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+        var gain = Assert.IsType<ResourceChanged>(result.Events.First(e => e is ResourceChanged { ResourceType: ResourceType.Momentum }));
+        Assert.Equal("Card effect (GM +3)", gain.Reason);
     }
 
     [Fact]
@@ -180,6 +182,28 @@ public class BladesMomentumTests
         var state = BuildState(new CardId("a"), new Dictionary<CardId, CardDefinition>(), gm: 10);
         var result = GameReducer.Reduce(state, new EndTurnAction());
         Assert.Equal(2, result.NewState.Combat!.Player.Resources[ResourceType.Momentum]);
+    }
+
+
+    [Fact]
+    public void GainingGmPreservesOverflowTowardNextMomentumLevel()
+    {
+        Assert.Equal(5, MomentumMath.GainGm(3, 2));
+        Assert.Equal(3, MomentumMath.DerivedMomentumFromGm(MomentumMath.GainGm(3, 2)));
+    }
+
+    [Fact]
+    public void SpendVisibleMomentumSnapsToBaseGmOfTargetMomentumLevel()
+    {
+        Assert.Equal(2, MomentumMath.SpendVisibleMomentum(6, 1));
+        Assert.Equal(2, MomentumMath.DerivedMomentumFromGm(MomentumMath.SpendVisibleMomentum(6, 1)));
+    }
+
+    [Fact]
+    public void DecayVisibleMomentumUsesVisibleMomentumThenSnapsToBaseGm()
+    {
+        Assert.Equal(1, MomentumMath.DecayVisibleMomentum(7));
+        Assert.Equal(1, MomentumMath.DerivedMomentumFromGm(MomentumMath.DecayVisibleMomentum(7)));
     }
 
     [Fact]
@@ -308,8 +332,8 @@ public class BladesMomentumTests
         var hit = Assert.Single(result.Events.OfType<PlayerStrikePlayed>());
 
         Assert.Equal(6, hit.BaseDamage);
-        Assert.Equal(1, hit.MomentumBonus);
-        Assert.Equal(7, hit.Damage);
+        Assert.Equal(3, hit.MomentumBonus);
+        Assert.Equal(9, hit.Damage);
     }
 
     [Fact]

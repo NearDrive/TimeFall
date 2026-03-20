@@ -5,9 +5,13 @@
   "baseMaxHp": 120,
   "resourceRules": {
     "generatedMomentumField": "GeneratedMomentum",
+    "internalModel": "Single accumulated gm integer; visible Momentum is derived from that gm total via thresholds.",
     "derivedMomentumFormula": "floor(log2(gm)) + 1 when gm > 0 else 0",
+    "baseGmPerMomentumLevel": "M0=0; M1=1; M2=2; M3=4; M4=8; in general base gm for momentum M is 2^(M-1) for M > 0",
+    "gainingGm": "Gain effects and attack-label bonuses add gm directly to the internal total, preserving any overflow toward the next visible Momentum level.",
+    "losingMomentum": "When an effect spends or removes visible Momentum, the internal gm total snaps to the base gm of the target visible Momentum level.",
     "attackLabelGeneratesGm": 1,
-    "endTurnWithoutAttackDecay": "floor(gm / 2)"
+    "endTurnWithoutAttackDecay": "derive visible Momentum from current gm, apply floor(momentum / 2), then snap gm to the base value of that new visible Momentum level"
   },
   "cardPool": {
     "commons": [

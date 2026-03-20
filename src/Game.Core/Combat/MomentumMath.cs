@@ -13,6 +13,9 @@ public static class MomentumMath
     }
 
     public static int Threshold(int momentum)
+        => BaseGmForMomentum(momentum);
+
+    public static int BaseGmForMomentum(int momentum)
     {
         if (momentum <= 0)
         {
@@ -22,8 +25,8 @@ public static class MomentumMath
         return 1 << (momentum - 1);
     }
 
-    public static int BaseGmForMomentum(int momentum)
-        => Threshold(momentum);
+    public static int GainGm(int gm, int amount)
+        => Math.Max(0, gm + Math.Max(0, amount));
 
     public static int SpendVisibleMomentum(int gm, int momentumToSpend)
     {
