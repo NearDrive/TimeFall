@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Game.Application\Game.Application.csproj" />
     <ProjectReference Include="..\..\src\Game.Core\Game.Core.csproj" />
     <ProjectReference Include="..\..\src\Game.Data\Game.Data.csproj" />
     <ProjectReference Include="..\..\src\Game.Cli\Game.Cli.csproj" />
