@@ -74,9 +74,24 @@ internal sealed class CliLoop
                 Console.WriteLine("Select a deck first using 'select <deckId|index>'.");
                 continue;
             }
+            if (action is EnterSandboxModeAction && state.Phase != GamePhase.MainMenu)
+            {
+                Console.WriteLine("Sandbox can only be entered from Main Menu.");
+                continue;
+            }
             if (action is OpenDeckEditAction && state.SelectedDeckId is null)
             {
                 Console.WriteLine("No deck selected. Use 'select-deck' then 'select <deckId|index>' first.");
+                continue;
+            }
+            if (!IsSandboxActionAvailable(action, state))
+            {
+                Console.WriteLine($"Command '{command.Name}' is not available during phase {state.Phase}.");
+                continue;
+            }
+            if (action is ToggleSandboxLoadoutCardAction && state.Phase is not (GamePhase.SandboxDeckEdit or GamePhase.SandboxPostCombat))
+            {
+                Console.WriteLine("Loadout can only be edited in sandbox setup.");
                 continue;
             }
             if (action is DiscardOverflowAction discardOverflowAction && !TryValidateOverflowDiscard(discardOverflowAction, state, out var overflowError))
@@ -207,8 +222,19 @@ internal sealed class CliLoop
             {
                 GamePhase.NewRunMenu => new ReturnToMainMenuAction(),
                 GamePhase.DeckSelect or GamePhase.DeckEdit => new ReturnToNewRunMenuAction(),
+                GamePhase.SandboxDeckSelect or GamePhase.SandboxDeckEdit or GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat => new LeaveSandboxModeAction(),
                 _ => command.Action,
             };
+        }
+
+        if (command.Argument == "change-deck")
+        {
+            return new LeaveSandboxModeAction();
+        }
+
+        if (command.Action is StartRunAction && state.Mode == GameMode.Sandbox)
+        {
+            return new StartSandboxCombatAction();
         }
 
         if (command.Argument is null)
@@ -226,6 +252,30 @@ internal sealed class CliLoop
                 }
 
                 return new SelectDeckAction(state.AvailableDeckIds[index]);
+            }
+
+            if (state.Phase is GamePhase.SandboxDeckSelect or GamePhase.SandboxDeckEdit or GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat)
+            {
+                if (command.Action is SelectSandboxDeckAction)
+                {
+                    if (index < 0 || index >= state.AvailableDeckIds.Count)
+                    {
+                        return null;
+                    }
+
+                    return new SelectSandboxDeckAction(state.AvailableDeckIds[index]);
+                }
+
+                if (command.Action is SelectSandboxEnemyAction)
+                {
+                    var enemyIds = state.EnemyDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray();
+                    if (index < 0 || index >= enemyIds.Length)
+                    {
+                        return null;
+                    }
+
+                    return new SelectSandboxEnemyAction(enemyIds[index]);
+                }
             }
 
             if (command.Action is MoveToNodeAction && state.Phase == GamePhase.MapExploration)
@@ -263,6 +313,23 @@ internal sealed class CliLoop
                     ToggleRewardPoolCardAction => new ToggleRewardPoolCardAction(deckEditCardId),
                     _ => command.Action,
                 };
+            }
+
+            if (state.Mode == GameMode.Sandbox &&
+                state.Sandbox?.SelectedDeckId is { } sandboxDeckId &&
+                state.DeckDefinitions.TryGetValue(sandboxDeckId, out var sandboxDeck) &&
+                command.Action is ToggleSandboxLoadoutCardAction)
+            {
+                var allowed = sandboxDeck.StarterCardIds
+                    .Distinct()
+                    .OrderBy(id => id.Value, StringComparer.Ordinal)
+                    .ToArray();
+                if (index < 0 || index >= allowed.Length)
+                {
+                    return null;
+                }
+
+                return new ToggleSandboxLoadoutCardAction(allowed[index]);
             }
 
             if (index < 0 || index >= state.RunDeck.Count)
@@ -307,6 +374,49 @@ internal sealed class CliLoop
         if (command.Action is SelectDeckAction)
         {
             return new SelectDeckAction(command.Argument);
+        }
+
+        if (command.Action is SelectSandboxDeckAction)
+        {
+            return new SelectSandboxDeckAction(command.Argument);
+        }
+
+        if (command.Action is ToggleSandboxLoadoutCardAction toggleSandboxLoadoutCardAction)
+        {
+            if (command.Argument.StartsWith("-", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var normalizedCardId = toggleSandboxLoadoutCardAction.CardId;
+            if (state.Mode == GameMode.Sandbox &&
+                state.Sandbox?.SelectedDeckId is { } sandboxDeckId &&
+                state.DeckDefinitions.TryGetValue(sandboxDeckId, out var sandboxDeck))
+            {
+                var allowed = sandboxDeck.StarterCardIds.ToHashSet();
+                if (!allowed.Contains(normalizedCardId))
+                {
+                    return null;
+                }
+            }
+
+            var isEquipped = state.Sandbox?.EquippedCardIds.Contains(normalizedCardId) == true;
+            if (command.Name == "equip" && isEquipped)
+            {
+                return null;
+            }
+
+            if (command.Name == "unequip" && !isEquipped)
+            {
+                return null;
+            }
+
+            return toggleSandboxLoadoutCardAction;
+        }
+
+        if (command.Action is SelectSandboxEnemyAction)
+        {
+            return new SelectSandboxEnemyAction(command.Argument);
         }
 
         if (command.Action is EnableRewardPoolCardAction)
@@ -377,8 +487,31 @@ internal sealed class CliLoop
                     ? "At shop: use 'remove <cardId|deckIndex>' to remove one card."
                     : "Not currently at a shop node.");
                 break;
+            case CliView.SandboxCards:
+                CliRenderer.RenderSandboxCards(state, _content.CardDefinitions);
+                break;
+            case CliView.SandboxEnemies:
+                CliRenderer.RenderSandboxEnemies(state);
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(view), view, null);
         }
+    }
+
+    private static bool IsSandboxActionAvailable(GameAction action, GameState state)
+    {
+        return action switch
+        {
+            EnterSandboxModeAction => state.Phase == GamePhase.MainMenu,
+            LeaveSandboxModeAction => state.Mode == GameMode.Sandbox,
+            SelectSandboxDeckAction => state.Phase is GamePhase.SandboxDeckSelect or GamePhase.SandboxDeckEdit or GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat,
+            OpenSandboxDeckEditAction => state.Phase is GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat or GamePhase.SandboxDeckEdit,
+            ToggleSandboxLoadoutCardAction or ClearSandboxLoadoutAction => state.Phase is GamePhase.SandboxDeckEdit or GamePhase.SandboxPostCombat,
+            OpenSandboxEnemySelectAction => state.Phase is GamePhase.SandboxDeckEdit or GamePhase.SandboxPostCombat or GamePhase.SandboxEnemySelect,
+            SelectSandboxEnemyAction => state.Phase is GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat,
+            StartSandboxCombatAction => state.Phase is GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat,
+            RepeatSandboxCombatAction => state.Phase == GamePhase.SandboxPostCombat,
+            _ => true,
+        };
     }
 }
