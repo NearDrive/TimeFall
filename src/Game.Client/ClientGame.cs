@@ -1,6 +1,7 @@
 using Game.Application;
 using Game.Client.Screens;
 using Game.Core.Game;
+using Game.Data.Content;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -12,15 +13,20 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
     private readonly GraphicsDeviceManager _graphics;
     private readonly IGameSession _session;
     private readonly ScreenManager _screenManager;
+    private readonly InputHandler _input;
 
     private SpriteBatch _spriteBatch = null!;
-    private KeyboardState _previousKeyboardState;
 
     public ClientGame()
     {
         _graphics = new GraphicsDeviceManager(this);
-        _session = new GameSession(GameState.Initial);
-        _screenManager = new ScreenManager(ScreenType.MainMenu);
+        var content = StaticGameContentProvider.LoadDefault();
+        var initialState = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
+        _session = new GameSession(initialState);
+        BootstrapRunForInputTesting();
+
+        _input = new InputHandler();
+        _screenManager = new ScreenManager(ScreenType.MainMenu, _session, _input);
 
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
@@ -34,25 +40,24 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
     protected override void Update(GameTime gameTime)
     {
         _ = _session.State;
-        var keyboardState = Keyboard.GetState();
+        _input.Update();
 
-        if (IsKeyPressed(keyboardState, Keys.F1))
+        if (_input.IsKeyPressed(Keys.F1))
         {
             _screenManager.SwitchTo(ScreenType.MainMenu);
         }
 
-        if (IsKeyPressed(keyboardState, Keys.F2))
+        if (_input.IsKeyPressed(Keys.F2))
         {
             _screenManager.SwitchTo(ScreenType.Map);
         }
 
-        if (IsKeyPressed(keyboardState, Keys.F3))
+        if (_input.IsKeyPressed(Keys.F3))
         {
             _screenManager.SwitchTo(ScreenType.Combat);
         }
 
         _screenManager.Update(gameTime);
-        _previousKeyboardState = keyboardState;
 
         base.Update(gameTime);
     }
@@ -63,8 +68,17 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
         base.Draw(gameTime);
     }
 
-    private bool IsKeyPressed(KeyboardState currentState, Keys key)
+    private void BootstrapRunForInputTesting()
     {
-        return currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
+        if (_session.State.AvailableDeckIds.Count == 0)
+        {
+            return;
+        }
+
+        _session.ApplyPlayerAction(new EnterNewRunMenuAction());
+        _session.ApplyPlayerAction(new OpenDeckSelectAction());
+        _session.ApplyPlayerAction(new SelectDeckAction(_session.State.AvailableDeckIds[0]));
+        _session.ApplyPlayerAction(new ReturnToNewRunMenuAction());
+        _session.ApplyPlayerAction(new StartRunAction(12345));
     }
 }
