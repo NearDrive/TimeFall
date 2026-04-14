@@ -69,3 +69,10 @@ Notes:
 - CLI and future client can reuse the same player-action pipeline.
 - CLI no longer calls `GameReducer` directly.
 - `Game.Core` remains the single place for gameplay rules.
+
+## Sandbox mode extension (Core + Application)
+- `Game.Core.GameState` now carries explicit `GameMode` and `SandboxState` data.
+- Sandbox flow is modeled with dedicated phases (`SandboxDeckSelect`, `SandboxDeckEdit`, `SandboxEnemySelect`, `SandboxCombat`, `SandboxPostCombat`), not with run-phase flags.
+- Sandbox actions are first-class `GameAction` values and are reduced through `GameReducer` like run actions.
+- Combat still uses the same combat systems (`CreateCombatState`, hand draw, card play, end-turn resolution), but sandbox combat completion transitions to sandbox post-combat state (no run reward/map progression).
+- `Game.Application.GameSession` continues to orchestrate all actions through the same pipeline; sandbox entry/flow uses the exact same session action path as other gameplay actions.

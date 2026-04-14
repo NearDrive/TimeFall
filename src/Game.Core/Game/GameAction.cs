@@ -12,6 +12,10 @@ public sealed record SetContinueAvailabilityAction(bool HasActiveSave) : GameAct
 
 public sealed record EnterNewRunMenuAction : GameAction;
 
+public sealed record EnterSandboxModeAction(int Seed) : GameAction;
+
+public sealed record LeaveSandboxModeAction : GameAction;
+
 public sealed record ReturnToMainMenuAction : GameAction;
 
 public sealed record OpenDeckSelectAction : GameAction;
@@ -39,6 +43,22 @@ public sealed record CancelRewardPoolEditAction : GameAction;
 public sealed record ReturnToNewRunMenuAction : GameAction;
 
 public sealed record SelectDeckAction(string DeckId) : GameAction;
+
+public sealed record SelectSandboxDeckAction(string DeckId) : GameAction;
+
+public sealed record OpenSandboxDeckEditAction : GameAction;
+
+public sealed record ToggleSandboxLoadoutCardAction(CardId CardId) : GameAction;
+
+public sealed record ClearSandboxLoadoutAction : GameAction;
+
+public sealed record OpenSandboxEnemySelectAction : GameAction;
+
+public sealed record SelectSandboxEnemyAction(string EnemyId) : GameAction;
+
+public sealed record StartSandboxCombatAction : GameAction;
+
+public sealed record RepeatSandboxCombatAction : GameAction;
 
 public sealed record StartRunAction(int Seed) : GameAction;
 

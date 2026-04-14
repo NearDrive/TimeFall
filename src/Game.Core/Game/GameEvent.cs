@@ -29,6 +29,8 @@ public sealed record RewardPoolEditConfirmed(int EnabledCount) : GameEvent;
 
 public sealed record RunStarted(int Seed) : GameEvent;
 
+public sealed record SandboxCombatStarted(int Seed) : GameEvent;
+
 public sealed record EnteredCombat(NodeId? NodeId, NodeType? NodeType) : GameEvent;
 
 public sealed record CardDrawn(CardInstance Card) : GameEvent;

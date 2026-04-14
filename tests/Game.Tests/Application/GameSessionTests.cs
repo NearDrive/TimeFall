@@ -46,4 +46,22 @@ public sealed class GameSessionTests
 
         Assert.False(session.State.HasActiveRunSave);
     }
+
+    [Fact]
+    public void SandboxActions_AreOrchestratedThroughSessionPipeline()
+    {
+        var session = new GameSession(GameStateTestFactory.CreateInitialWithContent(), savedRunState: null);
+
+        session.ApplyPlayerAction(new EnterSandboxModeAction(1234));
+        session.ApplyPlayerAction(new SelectSandboxDeckAction(session.State.AvailableDeckIds[0]));
+        session.ApplyPlayerAction(new OpenSandboxEnemySelectAction());
+        var enemyId = session.State.EnemyDefinitions.Keys.OrderBy(x => x, StringComparer.Ordinal).First();
+        session.ApplyPlayerAction(new SelectSandboxEnemyAction(enemyId));
+        var events = session.ApplyPlayerAction(new StartSandboxCombatAction());
+
+        Assert.Equal(GameMode.Sandbox, session.State.Mode);
+        Assert.Equal(GamePhase.SandboxCombat, session.State.Phase);
+        Assert.Contains(events, e => e is SandboxCombatStarted);
+        Assert.False(session.State.HasActiveRunSave);
+    }
 }

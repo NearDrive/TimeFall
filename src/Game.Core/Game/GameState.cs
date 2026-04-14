@@ -31,7 +31,9 @@ public sealed record GameState(
     int RunMaxHp,
     NodeInteractionState? NodeInteraction,
     IReadOnlyDictionary<string, EnemyDefinition> EnemyDefinitions,
-    ZoneSpawnTable? Zone1SpawnTable)
+    ZoneSpawnTable? Zone1SpawnTable,
+    SandboxState? Sandbox = null,
+    GameMode Mode = GameMode.Run)
 {
     public const int DefaultRunMaxHp = 80;
     public const int RestHealAmount = 20;
@@ -59,6 +61,7 @@ public sealed record GameState(
         DefaultRunMaxHp,
         null,
         ImmutableDictionary<string, EnemyDefinition>.Empty,
+        null,
         null);
 
     public static GameState CreateInitial(
@@ -77,6 +80,7 @@ public sealed record GameState(
             EnabledRewardPoolCardIds = rewardCardPool.ToImmutableList(),
             EnemyDefinitions = enemyDefinitions ?? ImmutableDictionary<string, EnemyDefinition>.Empty,
             Zone1SpawnTable = zone1SpawnTable,
+            Sandbox = null,
         };
     }
 
@@ -102,6 +106,7 @@ public sealed record GameState(
             RunHp = maxHp,
             RunMaxHp = maxHp,
             NodeInteraction = null,
+            Sandbox = null,
         };
     }
 }
