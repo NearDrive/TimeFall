@@ -5,6 +5,7 @@ This client now implements **Phase 3** of the visual roadmap: it renders real `G
 ## What is implemented
 
 - MonoGame client still bootstraps with real game content from `Game.Data` and runs on a real `GameSession`.
+- Client now sets a default backbuffer size of `1280x720` so Phase 3 debug panels/buttons are visible without manual window resize.
 - Added shared rendering primitives:
   - 1x1 white pixel texture for colored rectangle UI blocks.
   - Minimal built-in bitmap debug text renderer (no content-pipeline font dependency).

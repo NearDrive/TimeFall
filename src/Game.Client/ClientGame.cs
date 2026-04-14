@@ -20,6 +20,8 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
     public ClientGame()
     {
         _graphics = new GraphicsDeviceManager(this);
+        _graphics.PreferredBackBufferWidth = 1280;
+        _graphics.PreferredBackBufferHeight = 720;
         var content = StaticGameContentProvider.LoadDefault();
         var initialState = GameState.CreateInitial(content.CardDefinitions, content.DeckDefinitions, content.RewardCardPool, content.EnemyDefinitions, content.Zone1SpawnTable);
         _session = new GameSession(initialState);
