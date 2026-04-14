@@ -7,7 +7,7 @@ This client now implements **Phase 3** of the visual roadmap: it renders real `G
 - MonoGame client still bootstraps with real game content from `Game.Data` and runs on a real `GameSession`.
 - Added shared rendering primitives:
   - 1x1 white pixel texture for colored rectangle UI blocks.
-  - SpriteFont content (`DefaultFont`) for debug text rendering.
+  - Minimal built-in bitmap debug text renderer (no content-pipeline font dependency).
 - `CombatScreen` now renders real combat state:
   - Player HP / Armor / Resources / deck counts.
   - One enemy panel per enemy with id, HP, Armor, Resources.
@@ -52,6 +52,6 @@ Once the game window is open:
 
 ## Current limitations
 
-- Rendering is intentionally simple (rectangles + text + flat colors) for debug visibility.
+- Rendering is intentionally simple (rectangles + debug text + flat colors) for debug visibility.
 - No animation/event playback, drag/drop, tooltip, VFX, SFX, or polished layout system in this phase.
 - No gameplay logic is duplicated in the client.

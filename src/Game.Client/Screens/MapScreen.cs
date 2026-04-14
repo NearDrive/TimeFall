@@ -47,15 +47,14 @@ public sealed class MapScreen : IScreen
     private void DrawMap(SpriteBatch spriteBatch)
     {
         var pixel = RenderPrimitives.Pixel;
-        var font = RenderPrimitives.Font;
 
         if (_session.State.Phase != GamePhase.MapExploration)
         {
-            spriteBatch.DrawString(font, "Map available during MapExploration phase.", new Vector2(20, 20), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, "MAP AVAILABLE IN MAP EXPLORATION", new Vector2(20, 20), Color.White);
             return;
         }
 
-        spriteBatch.DrawString(font, "Map Nodes (click adjacent nodes to move)", new Vector2(20, 20), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "MAP NODES (CLICK ADJACENT)", new Vector2(20, 20), Color.White);
 
         foreach (var renderInfo in _nodeRenderInfos)
         {
@@ -68,7 +67,7 @@ public sealed class MapScreen : IScreen
                         : Color.DarkSlateBlue;
 
             spriteBatch.Draw(pixel, renderInfo.Region, color);
-            spriteBatch.DrawString(font, renderInfo.Label, new Vector2(renderInfo.Region.X + 8, renderInfo.Region.Y + 12), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, renderInfo.Label, new Vector2(renderInfo.Region.X + 8, renderInfo.Region.Y + 12), Color.White);
         }
     }
 

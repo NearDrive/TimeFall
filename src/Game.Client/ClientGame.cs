@@ -35,7 +35,7 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        RenderPrimitives.Initialize(GraphicsDevice, Content);
+        RenderPrimitives.Initialize(GraphicsDevice);
     }
 
     protected override void Update(GameTime gameTime)

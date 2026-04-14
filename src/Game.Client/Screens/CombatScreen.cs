@@ -56,40 +56,39 @@ public sealed class CombatScreen : IScreen
     private void DrawCombatState(SpriteBatch spriteBatch)
     {
         var pixel = RenderPrimitives.Pixel;
-        var font = RenderPrimitives.Font;
 
         if (_session.State.Phase != GamePhase.Combat || _session.State.Combat is null)
         {
-            spriteBatch.DrawString(font, "No active combat. Press F2 for Map or F3 to auto-start combat.", new Vector2(20, 20), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, "NO ACTIVE COMBAT", new Vector2(20, 20), Color.White);
             return;
         }
 
         var combat = _session.State.Combat;
 
-        DrawPlayerPanel(spriteBatch, pixel, font, combat.Player);
-        DrawEnemyPanels(spriteBatch, pixel, font, combat.Enemies);
-        DrawHand(spriteBatch, pixel, font, combat.Player.Deck.Hand);
+        DrawPlayerPanel(spriteBatch, pixel, combat.Player);
+        DrawEnemyPanels(spriteBatch, pixel, combat.Enemies);
+        DrawHand(spriteBatch, pixel, combat.Player.Deck.Hand);
 
         spriteBatch.Draw(pixel, _endTurnRegion, Color.DarkOrange);
-        spriteBatch.DrawString(font, "End Turn (E)", new Vector2(_endTurnRegion.X + 18, _endTurnRegion.Y + 22), Color.Black);
-        spriteBatch.DrawString(font, $"Turn: {combat.TurnOwner}", new Vector2(950, 575), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "END TURN (E)", new Vector2(_endTurnRegion.X + 14, _endTurnRegion.Y + 22), Color.Black);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"TURN: {combat.TurnOwner}", new Vector2(950, 575), Color.White);
     }
 
-    private static void DrawPlayerPanel(SpriteBatch spriteBatch, Texture2D pixel, SpriteFont font, CombatEntity player)
+    private static void DrawPlayerPanel(SpriteBatch spriteBatch, Texture2D pixel, CombatEntity player)
     {
-        var playerPanel = new Rectangle(20, 20, 380, 160);
+        var playerPanel = new Rectangle(20, 20, 420, 180);
         spriteBatch.Draw(pixel, playerPanel, new Color(35, 49, 64));
 
-        spriteBatch.DrawString(font, "Player", new Vector2(playerPanel.X + 12, playerPanel.Y + 10), Color.White);
-        spriteBatch.DrawString(font, $"HP: {player.HP}/{player.MaxHP}", new Vector2(playerPanel.X + 12, playerPanel.Y + 40), Color.White);
-        spriteBatch.DrawString(font, $"Armor: {player.Armor}", new Vector2(playerPanel.X + 12, playerPanel.Y + 65), Color.White);
-        spriteBatch.DrawString(font, $"Resources: {FormatResources(player.Resources)}", new Vector2(playerPanel.X + 12, playerPanel.Y + 90), Color.White);
-        spriteBatch.DrawString(font, $"Draw/Discard/Burn: {player.Deck.DrawPile.Count}/{player.Deck.DiscardPile.Count}/{player.Deck.BurnPile.Count}", new Vector2(playerPanel.X + 12, playerPanel.Y + 115), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "PLAYER", new Vector2(playerPanel.X + 12, playerPanel.Y + 10), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"HP: {player.HP}/{player.MaxHP}", new Vector2(playerPanel.X + 12, playerPanel.Y + 35), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"ARMOR: {player.Armor}", new Vector2(playerPanel.X + 12, playerPanel.Y + 60), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"RESOURCES: {FormatResources(player.Resources)}", new Vector2(playerPanel.X + 12, playerPanel.Y + 85), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"DRAW/DISCARD/BURN: {player.Deck.DrawPile.Count}/{player.Deck.DiscardPile.Count}/{player.Deck.BurnPile.Count}", new Vector2(playerPanel.X + 12, playerPanel.Y + 110), Color.White);
     }
 
-    private static void DrawEnemyPanels(SpriteBatch spriteBatch, Texture2D pixel, SpriteFont font, IReadOnlyList<CombatEntity> enemies)
+    private static void DrawEnemyPanels(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CombatEntity> enemies)
     {
-        const int startX = 430;
+        const int startX = 470;
         const int startY = 20;
         const int panelWidth = 340;
         const int panelHeight = 130;
@@ -101,17 +100,14 @@ public sealed class CombatScreen : IScreen
             var panel = new Rectangle(startX + ((panelWidth + gap) * index), startY, panelWidth, panelHeight);
             spriteBatch.Draw(pixel, panel, new Color(77, 39, 39));
 
-            var enemyTitle = _sessionEnemyLabel(enemy, index);
-            spriteBatch.DrawString(font, enemyTitle, new Vector2(panel.X + 12, panel.Y + 10), Color.White);
-            spriteBatch.DrawString(font, $"HP: {enemy.HP}/{enemy.MaxHP}", new Vector2(panel.X + 12, panel.Y + 40), Color.White);
-            spriteBatch.DrawString(font, $"Armor: {enemy.Armor}", new Vector2(panel.X + 12, panel.Y + 65), Color.White);
-            spriteBatch.DrawString(font, $"Resources: {FormatResources(enemy.Resources)}", new Vector2(panel.X + 12, panel.Y + 90), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"ENEMY {index + 1}: {enemy.EntityId}", new Vector2(panel.X + 12, panel.Y + 10), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"HP: {enemy.HP}/{enemy.MaxHP}", new Vector2(panel.X + 12, panel.Y + 38), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"ARMOR: {enemy.Armor}", new Vector2(panel.X + 12, panel.Y + 64), Color.White);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"RESOURCES: {FormatResources(enemy.Resources)}", new Vector2(panel.X + 12, panel.Y + 90), Color.White);
         }
-
-        static string _sessionEnemyLabel(CombatEntity enemy, int index) => $"Enemy {index + 1}: {enemy.EntityId}";
     }
 
-    private void DrawHand(SpriteBatch spriteBatch, Texture2D pixel, SpriteFont font, IReadOnlyList<CardInstance> hand)
+    private void DrawHand(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand)
     {
         for (var index = 0; index < hand.Count && index < _cardRegions.Count; index++)
         {
@@ -123,9 +119,9 @@ public sealed class CombatScreen : IScreen
             var title = definition?.Name ?? card.DefinitionId.Value;
             var cost = definition?.Cost ?? 0;
 
-            spriteBatch.DrawString(font, $"[{index}] {title}", new Vector2(cardRegion.X + 8, cardRegion.Y + 10), Color.Black);
-            spriteBatch.DrawString(font, $"Cost: {cost}", new Vector2(cardRegion.X + 8, cardRegion.Y + 36), Color.Black);
-            spriteBatch.DrawString(font, card.DefinitionId.Value, new Vector2(cardRegion.X + 8, cardRegion.Y + 62), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"[{index}] {title}", new Vector2(cardRegion.X + 8, cardRegion.Y + 10), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"COST: {cost}", new Vector2(cardRegion.X + 8, cardRegion.Y + 35), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, card.DefinitionId.Value, new Vector2(cardRegion.X + 8, cardRegion.Y + 60), Color.Black);
         }
     }
 
@@ -179,7 +175,7 @@ public sealed class CombatScreen : IScreen
     {
         if (resources.Count == 0)
         {
-            return "None";
+            return "NONE";
         }
 
         return string.Join(", ", resources.OrderBy(entry => entry.Key).Select(entry => $"{entry.Key}:{entry.Value}"));
