@@ -1,6 +1,6 @@
 # Game.Client (Timefall Deck)
 
-This client now implements **Phase 4** of the visual roadmap: the client is playable end-to-end from the visual loop (`Map -> Combat -> Reward -> Map`) and routes screens from real `GameSession.State`.
+This client now implements **Phase 5** of the visual roadmap: the client is playable end-to-end from the visual loop (`Map -> Combat -> Reward -> Map`), routes screens from real `GameSession.State`, and adds minimal sequential event playback feedback.
 
 ## What is implemented
 
@@ -27,6 +27,18 @@ This client now implements **Phase 4** of the visual roadmap: the client is play
   - `Combat -> CombatScreen`
   - `RewardSelection -> RewardScreen`
   - Routing runs automatically on update and after every dispatched player action.
+- Added a minimal **client-side event playback queue** in `ScreenManager`:
+  - Events returned by `IGameSession.ApplyPlayerAction` are enqueued.
+  - Playback runs sequentially (one active event at a time) with short per-event durations.
+  - `CombatScreen` reads active playback visuals from the dispatcher.
+- Added minimal visual feedback in `CombatScreen`:
+  - **Damage feedback** from real game events:
+    - `PlayerStrikePlayed` -> damage number in enemy area.
+    - `EnemyAttackPlayed` -> damage number in player panel area.
+    - `StatusTriggered` with HP decrease -> damage number for player/enemy area.
+  - **Card-play feedback** from real game events:
+    - `PlayerStrikePlayed` and `CardDiscarded` -> temporary card highlight border.
+    - If the card is no longer visible in hand, fallback highlight uses the last clicked card region.
 - Input behavior remains Phase 2 aligned:
   - Rendered hand card rectangles are exactly the clickable `PlayCardAction(index)` regions.
   - Rendered end-turn rectangle is exactly the clickable `EndTurnAction` region.
@@ -69,6 +81,7 @@ Once the game window is open:
 ## Current limitations
 
 - Rendering is intentionally simple (rectangles + debug text + flat colors) for debug visibility.
-- No animation/event playback, drag/drop, tooltip, VFX, SFX, or polished layout system in this phase.
+- Event playback is intentionally minimal (timed sequential overlays), not a full animation timeline system.
+- No drag/drop, tooltip, VFX, SFX, or polished layout system in this phase.
 - Client still does not call `GameReducer` directly; it dispatches through `IGameSession.ApplyPlayerAction`.
 - No gameplay logic is duplicated in the client.

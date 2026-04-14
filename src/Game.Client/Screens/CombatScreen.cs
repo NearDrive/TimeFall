@@ -10,11 +10,15 @@ namespace Game.Client.Screens;
 
 public sealed class CombatScreen : IScreen
 {
+    private static readonly Rectangle PlayerPanelRegion = new(20, 20, 420, 180);
+    private static readonly Rectangle EnemyAreaRegion = new(470, 20, 700, 130);
+
     private readonly IGameSession _session;
     private readonly InputHandler _input;
     private readonly IClientActionDispatcher _dispatcher;
     private readonly List<Rectangle> _cardRegions = new();
     private readonly Rectangle _endTurnRegion = new(950, 610, 220, 70);
+    private Rectangle? _lastPlayedCardRegion;
 
     public CombatScreen(IGameSession session, InputHandler input, IClientActionDispatcher dispatcher)
     {
@@ -32,6 +36,7 @@ public sealed class CombatScreen : IScreen
         {
             if (_input.IsLeftClick(_cardRegions[index]))
             {
+                _lastPlayedCardRegion = _cardRegions[index];
                 _dispatcher.Dispatch(new PlayCardAction(index));
                 BuildCardRegions();
                 return;
@@ -68,6 +73,7 @@ public sealed class CombatScreen : IScreen
         DrawPlayerPanel(spriteBatch, pixel, combat.Player);
         DrawEnemyPanels(spriteBatch, pixel, combat.Enemies);
         DrawHand(spriteBatch, pixel, combat.Player.Deck.Hand);
+        DrawPlaybackVisuals(spriteBatch, pixel, combat.Player.Deck.Hand);
 
         spriteBatch.Draw(pixel, _endTurnRegion, Color.DarkOrange);
         DebugTextRenderer.DrawText(spriteBatch, pixel, "END TURN (E)", new Vector2(_endTurnRegion.X + 14, _endTurnRegion.Y + 22), Color.Black);
@@ -76,14 +82,13 @@ public sealed class CombatScreen : IScreen
 
     private static void DrawPlayerPanel(SpriteBatch spriteBatch, Texture2D pixel, CombatEntity player)
     {
-        var playerPanel = new Rectangle(20, 20, 420, 180);
-        spriteBatch.Draw(pixel, playerPanel, new Color(35, 49, 64));
+        spriteBatch.Draw(pixel, PlayerPanelRegion, new Color(35, 49, 64));
 
-        DebugTextRenderer.DrawText(spriteBatch, pixel, "PLAYER", new Vector2(playerPanel.X + 12, playerPanel.Y + 10), Color.White);
-        DebugTextRenderer.DrawText(spriteBatch, pixel, $"HP: {player.HP}/{player.MaxHP}", new Vector2(playerPanel.X + 12, playerPanel.Y + 35), Color.White);
-        DebugTextRenderer.DrawText(spriteBatch, pixel, $"ARMOR: {player.Armor}", new Vector2(playerPanel.X + 12, playerPanel.Y + 60), Color.White);
-        DebugTextRenderer.DrawText(spriteBatch, pixel, $"RESOURCES: {FormatResources(player.Resources)}", new Vector2(playerPanel.X + 12, playerPanel.Y + 85), Color.White);
-        DebugTextRenderer.DrawText(spriteBatch, pixel, $"DRAW/DISCARD/BURN: {player.Deck.DrawPile.Count}/{player.Deck.DiscardPile.Count}/{player.Deck.BurnPile.Count}", new Vector2(playerPanel.X + 12, playerPanel.Y + 110), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "PLAYER", new Vector2(PlayerPanelRegion.X + 12, PlayerPanelRegion.Y + 10), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"HP: {player.HP}/{player.MaxHP}", new Vector2(PlayerPanelRegion.X + 12, PlayerPanelRegion.Y + 35), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"ARMOR: {player.Armor}", new Vector2(PlayerPanelRegion.X + 12, PlayerPanelRegion.Y + 60), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"RESOURCES: {FormatResources(player.Resources)}", new Vector2(PlayerPanelRegion.X + 12, PlayerPanelRegion.Y + 85), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"DRAW/DISCARD/BURN: {player.Deck.DrawPile.Count}/{player.Deck.DiscardPile.Count}/{player.Deck.BurnPile.Count}", new Vector2(PlayerPanelRegion.X + 12, PlayerPanelRegion.Y + 110), Color.White);
     }
 
     private static void DrawEnemyPanels(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CombatEntity> enemies)
@@ -157,5 +162,63 @@ public sealed class CombatScreen : IScreen
         }
 
         return string.Join(", ", resources.OrderBy(entry => entry.Key).Select(entry => $"{entry.Key}:{entry.Value}"));
+    }
+
+    private void DrawPlaybackVisuals(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand)
+    {
+        var playback = _dispatcher.ActivePlayback;
+        if (playback is null)
+        {
+            return;
+        }
+
+        if (playback.DamageFeedback is { } damageFeedback)
+        {
+            DrawDamageFeedback(spriteBatch, pixel, damageFeedback);
+        }
+
+        if (playback.CardHighlight is { } cardHighlight)
+        {
+            DrawCardHighlight(spriteBatch, pixel, hand, cardHighlight);
+        }
+    }
+
+    private void DrawDamageFeedback(SpriteBatch spriteBatch, Texture2D pixel, DamageFeedbackVisual damageFeedback)
+    {
+        var text = $"-{damageFeedback.Amount}";
+        var origin = damageFeedback.Target == DamageFeedbackTarget.Player
+            ? new Vector2(PlayerPanelRegion.X + PlayerPanelRegion.Width - 120, PlayerPanelRegion.Y + 20)
+            : new Vector2(EnemyAreaRegion.X + 20, EnemyAreaRegion.Y + 20);
+
+        DebugTextRenderer.DrawText(spriteBatch, pixel, text, origin, Color.OrangeRed);
+    }
+
+    private void DrawCardHighlight(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand, CardHighlightVisual cardHighlight)
+    {
+        Rectangle? highlightRegion = null;
+        for (var index = 0; index < hand.Count && index < _cardRegions.Count; index++)
+        {
+            if (hand[index].DefinitionId == cardHighlight.CardId)
+            {
+                highlightRegion = _cardRegions[index];
+                break;
+            }
+        }
+
+        highlightRegion ??= _lastPlayedCardRegion;
+        if (highlightRegion is not { } region)
+        {
+            return;
+        }
+
+        DrawBorder(spriteBatch, pixel, region, 4, Color.Gold);
+    }
+
+    private static void DrawBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle region, int thickness, Color color)
+    {
+        spriteBatch.Draw(pixel, new Rectangle(region.X, region.Y, region.Width, thickness), color);
+        spriteBatch.Draw(pixel, new Rectangle(region.X, region.Bottom - thickness, region.Width, thickness), color);
+        spriteBatch.Draw(pixel, new Rectangle(region.X, region.Y, thickness, region.Height), color);
+        spriteBatch.Draw(pixel, new Rectangle(region.Right - thickness, region.Y, thickness, region.Height), color);
     }
 }

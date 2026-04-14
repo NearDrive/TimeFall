@@ -9,6 +9,7 @@ public sealed class ScreenManager : IClientActionDispatcher
 {
     private readonly IGameSession _session;
     private readonly InputHandler _input;
+    private readonly EventPlaybackController _playbackController = new();
     private IScreen _currentScreen;
 
     public ScreenManager(ScreenType initialScreen, IGameSession session, InputHandler input)
@@ -21,6 +22,7 @@ public sealed class ScreenManager : IClientActionDispatcher
     }
 
     public ScreenType CurrentScreenType { get; private set; }
+    public ActiveEventPlayback? ActivePlayback => _playbackController.ActivePlayback;
 
     public void SwitchTo(ScreenType screenType)
     {
@@ -36,6 +38,7 @@ public sealed class ScreenManager : IClientActionDispatcher
     public IReadOnlyList<GameEvent> Dispatch(GameAction action)
     {
         var events = _session.ApplyPlayerAction(action);
+        _playbackController.EnqueueRange(events);
         SyncScreenWithSessionState();
         return events;
     }
@@ -43,6 +46,7 @@ public sealed class ScreenManager : IClientActionDispatcher
     public void Update(GameTime time)
     {
         SyncScreenWithSessionState();
+        _playbackController.Update(time);
         _currentScreen.Update(time);
         SyncScreenWithSessionState();
     }
