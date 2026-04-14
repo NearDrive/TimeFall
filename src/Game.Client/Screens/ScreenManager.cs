@@ -1,3 +1,4 @@
+using Game.Application;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -5,10 +6,14 @@ namespace Game.Client.Screens;
 
 public sealed class ScreenManager
 {
+    private readonly IGameSession _session;
+    private readonly InputHandler _input;
     private IScreen _currentScreen;
 
-    public ScreenManager(ScreenType initialScreen)
+    public ScreenManager(ScreenType initialScreen, IGameSession session, InputHandler input)
     {
+        _session = session;
+        _input = input;
         CurrentScreenType = initialScreen;
         _currentScreen = CreateScreen(initialScreen);
     }
@@ -36,12 +41,12 @@ public sealed class ScreenManager
         _currentScreen.Draw(spriteBatch);
     }
 
-    private static IScreen CreateScreen(ScreenType screenType) => screenType switch
+    private IScreen CreateScreen(ScreenType screenType) => screenType switch
     {
         ScreenType.MainMenu => new MainMenuScreen(),
-        ScreenType.Map => new MapScreen(),
-        ScreenType.Combat => new CombatScreen(),
-        ScreenType.Reward => throw new NotSupportedException("Reward screen is not part of Phase 1."),
+        ScreenType.Map => new MapScreen(_session, _input),
+        ScreenType.Combat => new CombatScreen(_session, _input),
+        ScreenType.Reward => throw new NotSupportedException("Reward screen is not part of Phase 2."),
         _ => throw new ArgumentOutOfRangeException(nameof(screenType), screenType, "Unsupported screen type."),
     };
 }
