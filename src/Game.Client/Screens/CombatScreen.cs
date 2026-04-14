@@ -195,17 +195,23 @@ public sealed class CombatScreen : IScreen
 
     private void DrawCardHighlight(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand, CardHighlightVisual cardHighlight)
     {
-        Rectangle? highlightRegion = null;
-        for (var index = 0; index < hand.Count && index < _cardRegions.Count; index++)
+        var activePlaybackEvent = _dispatcher.ActivePlayback?.Event;
+        var highlightRegion = activePlaybackEvent is PlayerStrikePlayed or CardDiscarded
+            ? _lastPlayedCardRegion
+            : null;
+
+        if (highlightRegion is null)
         {
-            if (hand[index].DefinitionId == cardHighlight.CardId)
+            for (var index = 0; index < hand.Count && index < _cardRegions.Count; index++)
             {
-                highlightRegion = _cardRegions[index];
-                break;
+                if (hand[index].DefinitionId == cardHighlight.CardId)
+                {
+                    highlightRegion = _cardRegions[index];
+                    break;
+                }
             }
         }
 
-        highlightRegion ??= _lastPlayedCardRegion;
         if (highlightRegion is not { } region)
         {
             return;

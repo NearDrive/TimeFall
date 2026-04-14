@@ -51,13 +51,17 @@ public sealed class EventPlaybackController
             PlayerStrikePlayed strike => new ActiveEventPlayback(
                 gameEvent,
                 DamageEventDurationSeconds,
-                new DamageFeedbackVisual(DamageFeedbackTarget.EnemyArea, strike.Damage),
+                new DamageFeedbackVisual(
+                    DamageFeedbackTarget.EnemyArea,
+                    Math.Max(0, strike.EnemyHpBeforeHit - strike.EnemyHpAfterHit)),
                 new CardHighlightVisual(strike.Card.DefinitionId)),
 
             EnemyAttackPlayed enemyAttack => new ActiveEventPlayback(
                 gameEvent,
                 DamageEventDurationSeconds,
-                new DamageFeedbackVisual(DamageFeedbackTarget.Player, enemyAttack.Damage),
+                new DamageFeedbackVisual(
+                    DamageFeedbackTarget.Player,
+                    Math.Max(0, enemyAttack.PlayerHpBeforeHit - enemyAttack.PlayerHpAfterHit)),
                 null),
 
             StatusTriggered triggered when triggered.HpAfter < triggered.HpBefore => new ActiveEventPlayback(
