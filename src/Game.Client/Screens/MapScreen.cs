@@ -10,13 +10,15 @@ public sealed class MapScreen : IScreen
 {
     private readonly IGameSession _session;
     private readonly InputHandler _input;
+    private readonly IClientActionDispatcher _dispatcher;
     private readonly List<(NodeId NodeId, Rectangle Region)> _clickableNodeRegions = new();
     private readonly List<MapNodeRenderInfo> _nodeRenderInfos = new();
 
-    public MapScreen(IGameSession session, InputHandler input)
+    public MapScreen(IGameSession session, InputHandler input, IClientActionDispatcher dispatcher)
     {
         _session = session;
         _input = input;
+        _dispatcher = dispatcher;
     }
 
     public void Update(GameTime time)
@@ -28,7 +30,7 @@ public sealed class MapScreen : IScreen
         {
             if (_input.IsLeftClick(nodeRegion.Region))
             {
-                _session.ApplyPlayerAction(new MoveToNodeAction(nodeRegion.NodeId));
+                _dispatcher.Dispatch(new MoveToNodeAction(nodeRegion.NodeId));
                 BuildNodeRegions();
                 break;
             }

@@ -50,16 +50,6 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
             _screenManager.SwitchTo(ScreenType.MainMenu);
         }
 
-        if (_input.IsKeyPressed(Keys.F2))
-        {
-            _screenManager.SwitchTo(ScreenType.Map);
-        }
-
-        if (_input.IsKeyPressed(Keys.F3))
-        {
-            _screenManager.SwitchTo(ScreenType.Combat);
-        }
-
         _screenManager.Update(gameTime);
 
         base.Update(gameTime);

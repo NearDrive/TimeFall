@@ -2,7 +2,6 @@ using Game.Application;
 using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Game;
-using Game.Core.Map;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -13,26 +12,27 @@ public sealed class CombatScreen : IScreen
 {
     private readonly IGameSession _session;
     private readonly InputHandler _input;
+    private readonly IClientActionDispatcher _dispatcher;
     private readonly List<Rectangle> _cardRegions = new();
     private readonly Rectangle _endTurnRegion = new(950, 610, 220, 70);
 
-    public CombatScreen(IGameSession session, InputHandler input)
+    public CombatScreen(IGameSession session, InputHandler input, IClientActionDispatcher dispatcher)
     {
         _session = session;
         _input = input;
+        _dispatcher = dispatcher;
     }
 
     public void Update(GameTime time)
     {
         _ = time;
-        EnsureDebugCombatState();
         BuildCardRegions();
 
         for (var index = 0; index < _cardRegions.Count; index++)
         {
             if (_input.IsLeftClick(_cardRegions[index]))
             {
-                _session.ApplyPlayerAction(new PlayCardAction(index));
+                _dispatcher.Dispatch(new PlayCardAction(index));
                 BuildCardRegions();
                 return;
             }
@@ -40,7 +40,7 @@ public sealed class CombatScreen : IScreen
 
         if (_input.IsLeftClick(_endTurnRegion) || _input.IsKeyPressed(Keys.E))
         {
-            _session.ApplyPlayerAction(new EndTurnAction());
+            _dispatcher.Dispatch(new EndTurnAction());
         }
     }
 
@@ -147,28 +147,6 @@ public sealed class CombatScreen : IScreen
             var x = 20 + (index * 150);
             _cardRegions.Add(new Rectangle(x, 440, 140, 150));
         }
-    }
-
-    private void EnsureDebugCombatState()
-    {
-        if (_session.State.Phase == GamePhase.Combat)
-        {
-            return;
-        }
-
-        if (_session.State.Phase != GamePhase.MapExploration)
-        {
-            return;
-        }
-
-        var firstEnemy = _session.State.EnemyDefinitions.Values.FirstOrDefault();
-        if (firstEnemy is null)
-        {
-            return;
-        }
-
-        var blueprint = EnemyEncounterFactory.CreateBlueprint(firstEnemy);
-        _session.ApplyPlayerAction(new BeginCombatAction(blueprint, _session.State.CardDefinitions, _session.State.EnabledRewardPoolCardIds));
     }
 
     private static string FormatResources(IReadOnlyDictionary<ResourceType, int> resources)
