@@ -7,7 +7,7 @@ namespace Game.Client.Screens;
 
 public sealed class ScreenManager : IClientActionDispatcher
 {
-    private readonly IGameSession _session;
+    private IGameSession _session;
     private readonly InputHandler _input;
     private readonly EventPlaybackController _playbackController = new();
     private IScreen _currentScreen;
@@ -22,7 +22,9 @@ public sealed class ScreenManager : IClientActionDispatcher
     }
 
     public ScreenType CurrentScreenType { get; private set; }
+    public IGameSession Session => _session;
     public ActiveEventPlayback? ActivePlayback => _playbackController.ActivePlayback;
+    public IReadOnlyList<GameEvent> RecentEvents => _playbackController.RecentEvents;
 
     public void SwitchTo(ScreenType screenType)
     {
@@ -54,6 +56,18 @@ public sealed class ScreenManager : IClientActionDispatcher
     public void Draw(SpriteBatch spriteBatch)
     {
         _currentScreen.Draw(spriteBatch);
+
+        spriteBatch.Begin();
+        DebugOverlayRenderer.Draw(spriteBatch, _session.State, CurrentScreenType, _playbackController.RecentEvents);
+        spriteBatch.End();
+    }
+
+    public void ResetSession(IGameSession session)
+    {
+        _session = session;
+        _playbackController.Reset();
+        _currentScreen = CreateScreen(CurrentScreenType);
+        SyncScreenWithSessionState();
     }
 
     private IScreen CreateScreen(ScreenType screenType) => screenType switch

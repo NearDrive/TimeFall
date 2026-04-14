@@ -1,6 +1,6 @@
 # Game.Client (Timefall Deck)
 
-This client now implements **Phase 5** of the visual roadmap: the client is playable end-to-end from the visual loop (`Map -> Combat -> Reward -> Map`), routes screens from real `GameSession.State`, and adds minimal sequential event playback feedback.
+This client now implements **Phase 6** of the visual roadmap: playtesting-oriented debug/stability tooling on top of the playable visual loop and event playback.
 
 ## What is implemented
 
@@ -37,8 +37,17 @@ This client now implements **Phase 5** of the visual roadmap: the client is play
     - `EnemyAttackPlayed` -> damage number in player panel area.
     - `StatusTriggered` with HP decrease -> damage number for player/enemy area.
   - **Card-play feedback** from real game events:
-    - `PlayerStrikePlayed` and `CardDiscarded` -> temporary card highlight border.
-    - If the card is no longer visible in hand, fallback highlight uses the last clicked card region.
+  - `PlayerStrikePlayed` and `CardDiscarded` -> temporary card highlight border.
+  - If the card is no longer visible in hand, fallback highlight uses the last clicked card region.
+- Added a **debug/playtest overlay** rendered by `ScreenManager` on top of all screens:
+  - Current screen + game phase.
+  - Draw pile count (count-only, no hidden draw-order exposure).
+  - Discard pile count and a short discard preview list while in combat.
+  - Rolling recent event history (latest first, short summaries).
+- Extended event playback plumbing with rolling recent-event history (client-side, bounded list).
+- Added debug stability controls:
+  - `F5` restarts the run by creating a **fresh `GameSession` through the same startup/bootstrap path**.
+  - `F6` writes a concise debug dump to console with screen, phase, combat/map summaries, pile counts, and recent events.
 - Input behavior remains Phase 2 aligned:
   - Rendered hand card rectangles are exactly the clickable `PlayCardAction(index)` regions.
   - Rendered end-turn rectangle is exactly the clickable `EndTurnAction` region.
@@ -72,6 +81,8 @@ Once the game window is open:
   - Click `Skip` (or press `S`) to dispatch `SkipRewardAction`.
   - When reward is resolved and phase returns to map exploration, the client auto-switches to **Map**.
 - `F1` can still be used as a manual debug switch to MainMenu.
+- `F5` restarts the current run from a fresh session via normal client bootstrap.
+- `F6` prints a debug dump to the console.
 
 ## Temporary debug assumptions
 
@@ -82,6 +93,7 @@ Once the game window is open:
 
 - Rendering is intentionally simple (rectangles + debug text + flat colors) for debug visibility.
 - Event playback is intentionally minimal (timed sequential overlays), not a full animation timeline system.
+- Debug overlay intentionally avoids exposing hidden draw order; only draw pile count is shown.
 - No drag/drop, tooltip, VFX, SFX, or polished layout system in this phase.
 - Client still does not call `GameReducer` directly; it dispatches through `IGameSession.ApplyPlayerAction`.
 - No gameplay logic is duplicated in the client.
