@@ -10,17 +10,21 @@ public sealed class EventPlaybackController
     private const float DefaultEventDurationSeconds = 0.12f;
     private const float DamageEventDurationSeconds = 0.7f;
     private const float CardHighlightDurationSeconds = 0.45f;
+    private const int MaxRecentEvents = 16;
 
     private readonly Queue<GameEvent> _eventQueue = new();
+    private readonly List<GameEvent> _recentEvents = new();
     private ActiveEventPlayback? _activePlayback;
 
     public ActiveEventPlayback? ActivePlayback => _activePlayback;
+    public IReadOnlyList<GameEvent> RecentEvents => _recentEvents;
 
     public void EnqueueRange(IEnumerable<GameEvent> events)
     {
         foreach (var gameEvent in events)
         {
             _eventQueue.Enqueue(gameEvent);
+            AddRecentEvent(gameEvent);
         }
     }
 
@@ -41,6 +45,22 @@ public sealed class EventPlaybackController
         if (_eventQueue.Count > 0)
         {
             _activePlayback = BuildPlayback(_eventQueue.Dequeue());
+        }
+    }
+
+    public void Reset()
+    {
+        _eventQueue.Clear();
+        _recentEvents.Clear();
+        _activePlayback = null;
+    }
+
+    private void AddRecentEvent(GameEvent gameEvent)
+    {
+        _recentEvents.Add(gameEvent);
+        if (_recentEvents.Count > MaxRecentEvents)
+        {
+            _recentEvents.RemoveAt(0);
         }
     }
 
