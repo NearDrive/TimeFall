@@ -89,7 +89,7 @@ public sealed class SandboxReducerTests
     public void SandboxCombatEnd_GoesToSandboxPostCombat_NotRewardOrMap()
     {
         var combat = StartSandboxCombat(404);
-        var victoryReady = combat with { Combat = combat.Combat! with { Enemies = ImmutableList<Game.Core.Combat.CombatEntity>.Empty } };
+        var victoryReady = combat with { Combat = combat.Combat! with { Enemies = ImmutableList<global::Game.Core.Combat.CombatEntity>.Empty } };
 
         var resolved = GameReducer.Reduce(victoryReady, new EndTurnAction()).NewState;
 
@@ -148,7 +148,7 @@ public sealed class SandboxReducerTests
     private static GameState BuildRepeatedSandboxCombatState(int seed)
     {
         var combat = StartSandboxCombat(seed);
-        var won = combat with { Combat = combat.Combat! with { Enemies = ImmutableList<Game.Core.Combat.CombatEntity>.Empty } };
+        var won = combat with { Combat = combat.Combat! with { Enemies = ImmutableList<global::Game.Core.Combat.CombatEntity>.Empty } };
         var post = GameReducer.Reduce(won, new EndTurnAction()).NewState;
         return GameReducer.Reduce(post, new RepeatSandboxCombatAction()).NewState;
     }
