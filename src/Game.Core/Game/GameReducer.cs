@@ -1376,6 +1376,7 @@ public static class GameReducer
         {
             Rng = combatRng,
             RunDeck = loadout.Select(id => new CardInstance(id)).ToImmutableList(),
+            RunHp = deck.BaseMaxHp,
             RunMaxHp = deck.BaseMaxHp,
             Sandbox = sandbox with
             {

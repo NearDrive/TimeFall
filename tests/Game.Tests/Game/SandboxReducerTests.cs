@@ -111,6 +111,21 @@ public sealed class SandboxReducerTests
     }
 
     [Fact]
+    public void SandboxRepeatCombat_AfterLoss_ResetsPlayerHpToDeckMax()
+    {
+        var combat = StartSandboxCombat(556);
+        var lost = combat with { Combat = combat.Combat! with { Player = combat.Combat.Player with { HP = 0 } } };
+        var postLoss = GameReducer.Reduce(lost, new EndTurnAction()).NewState;
+
+        var repeated = GameReducer.Reduce(postLoss, new RepeatSandboxCombatAction()).NewState;
+
+        Assert.Equal(GamePhase.SandboxCombat, repeated.Phase);
+        Assert.NotNull(repeated.Combat);
+        Assert.Equal(repeated.RunMaxHp, repeated.RunHp);
+        Assert.Equal(repeated.RunHp, repeated.Combat!.Player.HP);
+    }
+
+    [Fact]
     public void SandboxFlow_DoesNotChangeRunMetaState()
     {
         var initial = GameStateTestFactory.CreateInitialWithContent();
