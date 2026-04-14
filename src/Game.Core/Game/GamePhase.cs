@@ -11,4 +11,9 @@ public enum GamePhase
     RewardSelection = 6,
     DeckRemoval = 7,
     RunEnded = 8,
+    SandboxDeckSelect = 9,
+    SandboxDeckEdit = 10,
+    SandboxEnemySelect = 11,
+    SandboxCombat = 12,
+    SandboxPostCombat = 13,
 }

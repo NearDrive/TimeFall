@@ -30,6 +30,8 @@ public static class GameReducer
             ContinueRunAction continueRunAction => ContinueRun(state, continueRunAction),
             SetContinueAvailabilityAction setContinueAvailabilityAction => SetContinueAvailability(state, setContinueAvailabilityAction),
             EnterNewRunMenuAction => EnterNewRunMenu(state),
+            EnterSandboxModeAction enterSandboxModeAction => EnterSandboxMode(state, enterSandboxModeAction),
+            LeaveSandboxModeAction => LeaveSandboxMode(state),
             ReturnToMainMenuAction => ReturnToMainMenu(state),
             OpenDeckSelectAction => OpenDeckSelect(state),
             OpenDeckEditAction => OpenDeckEdit(state),
@@ -44,6 +46,14 @@ public static class GameReducer
             CancelRewardPoolEditAction => CancelRewardPoolEdit(state),
             ReturnToNewRunMenuAction => ReturnToNewRunMenu(state),
             SelectDeckAction selectDeckAction => SelectDeck(state, selectDeckAction),
+            SelectSandboxDeckAction selectSandboxDeckAction => SelectSandboxDeck(state, selectSandboxDeckAction),
+            OpenSandboxDeckEditAction => OpenSandboxDeckEdit(state),
+            ToggleSandboxLoadoutCardAction toggleSandboxLoadoutCardAction => ToggleSandboxLoadoutCard(state, toggleSandboxLoadoutCardAction),
+            ClearSandboxLoadoutAction => ClearSandboxLoadout(state),
+            OpenSandboxEnemySelectAction => OpenSandboxEnemySelect(state),
+            SelectSandboxEnemyAction selectSandboxEnemyAction => SelectSandboxEnemy(state, selectSandboxEnemyAction),
+            StartSandboxCombatAction => StartSandboxCombat(state),
+            RepeatSandboxCombatAction => RepeatSandboxCombat(state),
             StartRunAction startRunAction => StartRun(state, startRunAction),
             BeginCombatAction beginCombatAction => BeginCombat(state, beginCombatAction),
             PlayCardAction playCardAction => PlayCard(state, playCardAction),
@@ -79,7 +89,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) EnterNewRunMenu(GameState state)
     {
-        if (state.Phase != GamePhase.MainMenu)
+        if (state.Mode != GameMode.Run || state.Phase != GamePhase.MainMenu)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -87,9 +97,51 @@ public static class GameReducer
         return (state with { Phase = GamePhase.NewRunMenu }, Array.Empty<GameEvent>());
     }
 
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) EnterSandboxMode(GameState state, EnterSandboxModeAction action)
+    {
+        if (state.Phase != GamePhase.MainMenu)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with
+        {
+            Mode = GameMode.Sandbox,
+            Phase = GamePhase.SandboxDeckSelect,
+            Combat = null,
+            ActiveCombatNodeId = null,
+            Reward = null,
+            DeckEdit = null,
+            RewardPoolEdit = null,
+            NodeInteraction = null,
+            Sandbox = SandboxState.Create(action.Seed),
+        }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) LeaveSandboxMode(GameState state)
+    {
+        if (state.Mode != GameMode.Sandbox)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with
+        {
+            Mode = GameMode.Run,
+            Phase = GamePhase.MainMenu,
+            Combat = null,
+            ActiveCombatNodeId = null,
+            Reward = null,
+            DeckEdit = null,
+            RewardPoolEdit = null,
+            NodeInteraction = null,
+            Sandbox = null,
+        }, Array.Empty<GameEvent>());
+    }
+
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ReturnToMainMenu(GameState state)
     {
-        if (state.Phase != GamePhase.NewRunMenu)
+        if (state.Mode != GameMode.Run || state.Phase != GamePhase.NewRunMenu)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -100,6 +152,11 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ReturnToNewRunMenu(GameState state)
     {
+        if (state.Mode != GameMode.Run)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
         if (state.Phase != GamePhase.DeckSelect && state.Phase != GamePhase.DeckEdit)
         {
             return (state, Array.Empty<GameEvent>());
@@ -111,7 +168,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenDeckSelect(GameState state)
     {
-        if (state.Phase != GamePhase.NewRunMenu)
+        if (state.Mode != GameMode.Run || state.Phase != GamePhase.NewRunMenu)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -121,7 +178,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenDeckEdit(GameState state)
     {
-        if (state.Phase != GamePhase.NewRunMenu || state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var deck))
+        if (state.Mode != GameMode.Run || state.Phase != GamePhase.NewRunMenu || state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var deck))
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -135,7 +192,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) SelectDeck(GameState state, SelectDeckAction action)
     {
-        if (state.Phase != GamePhase.DeckSelect)
+        if (state.Mode != GameMode.Run || state.Phase != GamePhase.DeckSelect)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -149,6 +206,50 @@ public static class GameReducer
         var enabled = RewardPoolRules.NormalizeEnabled(selectedDeck.RewardPoolCardIds, selectedDeck.RewardPoolCardIds);
 
         return (state with { SelectedDeckId = action.DeckId, EnabledRewardPoolCardIds = enabled }, new GameEvent[] { new DeckSelected(action.DeckId) });
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) SelectSandboxDeck(GameState state, SelectSandboxDeckAction action)
+    {
+        if (!TryGetSandboxState(state, out var sandbox) ||
+            (state.Phase != GamePhase.SandboxDeckSelect && state.Phase != GamePhase.SandboxDeckEdit && state.Phase != GamePhase.SandboxEnemySelect && state.Phase != GamePhase.SandboxPostCombat))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (!state.DeckDefinitions.TryGetValue(action.DeckId, out var deck))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var equipped = ResolveSandboxAllowedDeckCards(deck)
+            .Take(deck.StartingCombatDeckCardIds.Count)
+            .ToImmutableList();
+        var nextSandbox = sandbox with
+        {
+            SelectedDeckId = action.DeckId,
+            EquippedCardIds = equipped,
+        };
+
+        return (state with
+        {
+            Phase = GamePhase.SandboxDeckEdit,
+            Sandbox = nextSandbox,
+        }, new GameEvent[] { new DeckSelected(action.DeckId) });
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenSandboxDeckEdit(GameState state)
+    {
+        if (!TryGetSandboxState(state, out var sandbox) || sandbox.SelectedDeckId is null)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (state.Phase is not (GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat or GamePhase.SandboxDeckEdit))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.SandboxDeckEdit }, Array.Empty<GameEvent>());
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) EnableRewardPoolCard(GameState state, EnableRewardPoolCardAction action)
@@ -267,7 +368,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartRun(GameState state, StartRunAction action)
     {
-        if (state.Phase != GamePhase.NewRunMenu)
+        if (state.Mode != GameMode.Run || state.Phase != GamePhase.NewRunMenu)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -300,14 +401,101 @@ public static class GameReducer
             selectedDeck.BaseMaxHp,
             null,
             state.EnemyDefinitions,
-            state.Zone1SpawnTable);
+            state.Zone1SpawnTable,
+            null);
         var events = new GameEvent[] { new RunStarted(action.Seed) };
 
         return (newState, events);
     }
 
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ToggleSandboxLoadoutCard(GameState state, ToggleSandboxLoadoutCardAction action)
+    {
+        if (!TryGetSandboxDeckContext(state, out var sandbox, out var deck))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var allowed = ResolveSandboxAllowedDeckCards(deck);
+        if (!allowed.Contains(action.CardId))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        var updated = sandbox.EquippedCardIds.Contains(action.CardId)
+            ? sandbox.EquippedCardIds.Remove(action.CardId)
+            : sandbox.EquippedCardIds.Add(action.CardId);
+        updated = NormalizeSandboxLoadout(updated, allowed);
+
+        return (state with { Sandbox = sandbox with { EquippedCardIds = updated } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) ClearSandboxLoadout(GameState state)
+    {
+        if (!TryGetSandboxDeckContext(state, out var sandbox, out _))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Sandbox = sandbox with { EquippedCardIds = ImmutableList<CardId>.Empty } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) OpenSandboxEnemySelect(GameState state)
+    {
+        if (!TryGetSandboxDeckContext(state, out _, out _))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (state.Phase is not (GamePhase.SandboxDeckEdit or GamePhase.SandboxPostCombat or GamePhase.SandboxEnemySelect))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Phase = GamePhase.SandboxEnemySelect }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) SelectSandboxEnemy(GameState state, SelectSandboxEnemyAction action)
+    {
+        if (!TryGetSandboxState(state, out var sandbox) || state.Phase is not (GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        if (!state.EnemyDefinitions.ContainsKey(action.EnemyId))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return (state with { Sandbox = sandbox with { SelectedEnemyId = action.EnemyId } }, Array.Empty<GameEvent>());
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) StartSandboxCombat(GameState state)
+    {
+        if (!TryPrepareSandboxCombat(state, out var preparedState, out var blueprint, out var combatSeed))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return BeginSandboxCombat(preparedState, blueprint, combatSeed);
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) RepeatSandboxCombat(GameState state)
+    {
+        if (!TryPrepareSandboxCombat(state, out var preparedState, out var blueprint, out var combatSeed, requirePostCombatPhase: true))
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
+        return BeginSandboxCombat(preparedState, blueprint, combatSeed);
+    }
+
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) BeginCombat(GameState state, BeginCombatAction action)
     {
+        if (state.Mode != GameMode.Run)
+        {
+            return (state, Array.Empty<GameEvent>());
+        }
+
         if (state.Combat is not null || state.Time.PlayerCaughtByTime)
         {
             return (state, Array.Empty<GameEvent>());
@@ -365,7 +553,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) PlayCard(GameState state, PlayCardAction action)
     {
-        if (state is not { Phase: GamePhase.Combat, Combat: { } combatState })
+        if (!IsCombatPhase(state.Phase) || state.Combat is not { } combatState)
         {
             return RejectPlayCard(state, PlayCardRejectionReason.NotInCombat, "You can only play cards while in combat.");
         }
@@ -463,7 +651,7 @@ public static class GameReducer
     {
         _ = action;
 
-        if (state is not { Phase: GamePhase.Combat, Combat: { } combatState })
+        if (!IsCombatPhase(state.Phase) || state.Combat is not { } combatState)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -650,7 +838,7 @@ public static class GameReducer
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) DiscardOverflow(GameState state, DiscardOverflowAction action)
     {
-        if (state.Phase != GamePhase.Combat || state.Combat is null || !state.Combat.NeedsOverflowDiscard)
+        if (!IsCombatPhase(state.Phase) || state.Combat is null || !state.Combat.NeedsOverflowDiscard)
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -877,7 +1065,7 @@ public static class GameReducer
             Resources = ResolveStartingResources(state, blueprint.Player.Resources),
         };
 
-        var shouldShuffleCombatDecks = state.SelectedDeckId is not null;
+        var shouldShuffleCombatDecks = TryResolveSelectedDeck(state, out _);
 
         var (player, nextRng) = CreateCombatEntity(playerBlueprint, rng, shuffleOnCreate: shouldShuffleCombatDecks);
         var enemies = ImmutableList.CreateBuilder<CombatEntity>();
@@ -916,12 +1104,36 @@ public static class GameReducer
 
     private static IReadOnlyDictionary<ResourceType, int> ResolveStartingResources(GameState state, IReadOnlyDictionary<ResourceType, int> fallback)
     {
-        if (state.SelectedDeckId is null || !state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var selectedDeck))
+        if (!TryResolveSelectedDeck(state, out var selectedDeck))
         {
             return fallback;
         }
 
         return selectedDeck.StartingResources;
+    }
+
+    private static bool TryResolveSelectedDeck(GameState state, out RunDeckDefinition selectedDeck)
+    {
+        selectedDeck = null!;
+        if (state.Mode == GameMode.Sandbox)
+        {
+            if (state.Sandbox?.SelectedDeckId is { } sandboxDeckId &&
+                state.DeckDefinitions.TryGetValue(sandboxDeckId, out var sandboxDeck))
+            {
+                selectedDeck = sandboxDeck;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (state.SelectedDeckId is not null && state.DeckDefinitions.TryGetValue(state.SelectedDeckId, out var runDeck))
+        {
+            selectedDeck = runDeck;
+            return true;
+        }
+
+        return false;
     }
 
     private static GameState EnsureRunDeckInitialized(GameState state, CombatBlueprint blueprint)
@@ -990,6 +1202,41 @@ public static class GameReducer
             return (state, events);
         }
 
+        if (state.Mode == GameMode.Sandbox)
+        {
+            if (state.Combat.Player.HP <= 0 || state.Combat.Enemies.Count == 0)
+            {
+                var won = state.Combat.Enemies.Count == 0 && state.Combat.Player.HP > 0;
+                var sandbox = state.Sandbox;
+                if (sandbox is null)
+                {
+                    return (state, events);
+                }
+
+                var resolvedEvents = new List<GameEvent>
+                {
+                    new CombatEnded(null, null, won),
+                };
+                if (won)
+                {
+                    resolvedEvents.Insert(0, new CombatVictory(null, null));
+                }
+
+                return (state with
+                {
+                    Phase = GamePhase.SandboxPostCombat,
+                    Combat = null,
+                    ActiveCombatNodeId = null,
+                    Reward = null,
+                    NodeInteraction = null,
+                    RunHp = state.Combat.Player.HP,
+                    Sandbox = sandbox with { LastCombatWon = won },
+                }, events.Concat(resolvedEvents).ToArray());
+            }
+
+            return (state, events);
+        }
+
         if (state.Combat.Player.HP <= 0)
         {
             var defeated = state with { Combat = null, ActiveCombatNodeId = null, Reward = null, RunHp = 0, NodeInteraction = null };
@@ -1032,6 +1279,145 @@ public static class GameReducer
         }
 
         return (state, events);
+    }
+
+    private static bool IsCombatPhase(GamePhase phase)
+    {
+        return phase is GamePhase.Combat or GamePhase.SandboxCombat;
+    }
+
+    private static bool TryGetSandboxState(GameState state, out SandboxState sandbox)
+    {
+        sandbox = null!;
+        if (state.Mode != GameMode.Sandbox || state.Sandbox is null)
+        {
+            return false;
+        }
+
+        sandbox = state.Sandbox;
+        return true;
+    }
+
+    private static bool TryGetSandboxDeckContext(GameState state, out SandboxState sandbox, out RunDeckDefinition deck)
+    {
+        sandbox = null!;
+        deck = null!;
+        if (!TryGetSandboxState(state, out var sandboxState) ||
+            sandboxState.SelectedDeckId is null ||
+            !state.DeckDefinitions.TryGetValue(sandboxState.SelectedDeckId, out var deckDefinition))
+        {
+            return false;
+        }
+
+        sandbox = sandboxState;
+        deck = deckDefinition;
+        return true;
+    }
+
+    private static ImmutableList<CardId> ResolveSandboxAllowedDeckCards(RunDeckDefinition deck)
+    {
+        return deck.StartingCombatDeckCardIds
+            .Concat(deck.RewardPoolCardIds)
+            .Distinct()
+            .OrderBy(id => id.Value, StringComparer.Ordinal)
+            .ToImmutableList();
+    }
+
+    private static ImmutableList<CardId> NormalizeSandboxLoadout(IReadOnlyList<CardId> loadout, IReadOnlyCollection<CardId> allowed)
+    {
+        return loadout
+            .Where(id => allowed.Contains(id))
+            .Distinct()
+            .OrderBy(id => id.Value, StringComparer.Ordinal)
+            .ToImmutableList();
+    }
+
+    private static bool TryPrepareSandboxCombat(
+        GameState state,
+        out GameState preparedState,
+        out CombatBlueprint blueprint,
+        out int combatSeed,
+        bool requirePostCombatPhase = false)
+    {
+        preparedState = state;
+        blueprint = default!;
+        combatSeed = 0;
+
+        if (!TryGetSandboxDeckContext(state, out var sandbox, out var deck))
+        {
+            return false;
+        }
+
+        var validStartPhase = requirePostCombatPhase
+            ? state.Phase == GamePhase.SandboxPostCombat
+            : state.Phase is GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat;
+        if (!validStartPhase)
+        {
+            return false;
+        }
+
+        if (sandbox.SelectedEnemyId is null ||
+            !state.EnemyDefinitions.TryGetValue(sandbox.SelectedEnemyId, out var enemy))
+        {
+            return false;
+        }
+
+        var allowed = ResolveSandboxAllowedDeckCards(deck);
+        var loadout = NormalizeSandboxLoadout(sandbox.EquippedCardIds, allowed);
+        if (loadout.Count == 0)
+        {
+            return false;
+        }
+
+        var combatCount = sandbox.CombatCount;
+        combatSeed = unchecked(sandbox.SessionSeed + (combatCount * 7919));
+        var combatRng = GameRng.FromSeed(combatSeed);
+        preparedState = state with
+        {
+            Rng = combatRng,
+            RunDeck = loadout.Select(id => new CardInstance(id)).ToImmutableList(),
+            RunHp = deck.BaseMaxHp,
+            RunMaxHp = deck.BaseMaxHp,
+            Sandbox = sandbox with
+            {
+                EquippedCardIds = loadout,
+                CombatCount = combatCount + 1,
+                LastCombatSeed = combatSeed,
+                LastCombatWon = null,
+            },
+        };
+
+        var player = new CombatantBlueprint(
+            EntityId: "player",
+            HP: deck.BaseMaxHp,
+            MaxHP: deck.BaseMaxHp,
+            Armor: 0,
+            Resources: deck.StartingResources,
+            DrawPile: loadout);
+        var enemyBlueprint = EnemyEncounterFactory.CreateBlueprint(enemy).Enemies[0];
+        blueprint = new CombatBlueprint(player, enemyBlueprint);
+        return true;
+    }
+
+    private static (GameState NewState, IReadOnlyList<GameEvent> Events) BeginSandboxCombat(GameState state, CombatBlueprint blueprint, int combatSeed)
+    {
+        var (combatState, combatRng) = CreateCombatState(state, blueprint, state.RunDeck, state.Rng);
+        var drawResult = HandManager.Draw(combatState, combatRng, 5);
+        var events = new List<GameEvent> { new SandboxCombatStarted(combatSeed), new EnteredCombat(null, null) };
+        events.AddRange(drawResult.Events);
+        events.AddRange(drawResult.DrawnCards.Select(c => new CardDrawn(c)));
+
+        return (state with
+        {
+            Phase = GamePhase.SandboxCombat,
+            Combat = drawResult.CombatState,
+            Rng = drawResult.Rng,
+            Reward = null,
+            ActiveCombatNodeId = null,
+            DeckEdit = null,
+            RewardPoolEdit = null,
+            NodeInteraction = null,
+        }, events);
     }
 
     private static bool TryPayCost(CombatState combatState, CardDefinition definition, List<GameEvent> events, out CombatState newState)
