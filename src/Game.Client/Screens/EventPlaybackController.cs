@@ -1,4 +1,5 @@
 using Game.Core.Cards;
+using Game.Core.Combat;
 using Game.Core.Game;
 using Microsoft.Xna.Framework;
 
