@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game.Core", "src\Game.Core\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game.Data", "src\Game.Data\Game.Data.csproj", "{4DAA1E53-8F9E-4B45-9A6D-EF2A5C3809D3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game.Application", "src\Game.Application\Game.Application.csproj", "{D1D95D87-C12F-4A8E-8D81-C03D0E57C13C}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game.Cli", "src\Game.Cli\Game.Cli.csproj", "{A9747A34-4DDE-4B84-8FD9-611FC53068F4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game.Tests", "tests\Game.Tests\Game.Tests.csproj", "{B77AF5FA-B49C-4635-9D08-30F9A17E07AA}"
@@ -24,6 +26,10 @@ Global
 		{4DAA1E53-8F9E-4B45-9A6D-EF2A5C3809D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4DAA1E53-8F9E-4B45-9A6D-EF2A5C3809D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4DAA1E53-8F9E-4B45-9A6D-EF2A5C3809D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1D95D87-C12F-4A8E-8D81-C03D0E57C13C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1D95D87-C12F-4A8E-8D81-C03D0E57C13C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1D95D87-C12F-4A8E-8D81-C03D0E57C13C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1D95D87-C12F-4A8E-8D81-C03D0E57C13C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A9747A34-4DDE-4B84-8FD9-611FC53068F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A9747A34-4DDE-4B84-8FD9-611FC53068F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9747A34-4DDE-4B84-8FD9-611FC53068F4}.Release|Any CPU.ActiveCfg = Release|Any CPU

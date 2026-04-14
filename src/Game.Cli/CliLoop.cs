@@ -1,5 +1,6 @@
 using Game.Core.Cards;
 using Game.Core.Game;
+using Game.Application;
 using Game.Data.Content;
 using Game.Data.Save;
 using Game.Core.Map;
@@ -21,10 +22,11 @@ internal sealed class CliLoop
 
     public void Run()
     {
-        var state = GameState.CreateInitial(_content.CardDefinitions, _content.DeckDefinitions, _content.RewardCardPool, _content.EnemyDefinitions, _content.Zone1SpawnTable);
         var eventLog = new List<GameEvent>();
+        var initialState = GameState.CreateInitial(_content.CardDefinitions, _content.DeckDefinitions, _content.RewardCardPool, _content.EnemyDefinitions, _content.Zone1SpawnTable);
         var hasActiveSave = _saveRepository.TryLoad(_content, out var savedState);
-        (state, _) = GameReducer.Reduce(state, new SetContinueAvailabilityAction(hasActiveSave));
+        var session = new GameSession(initialState, hasActiveSave ? savedState : null);
+        var state = session.State;
 
         Console.WriteLine("Timefall CLI playtest harness. Type 'help' for commands.");
 
@@ -52,20 +54,19 @@ internal sealed class CliLoop
 
             if (command.View is { } view)
             {
-                RenderView(view, state, eventLog);
+                RenderView(view, session.State, eventLog);
                 continue;
             }
 
+            state = session.State;
             var action = ResolveContextualAction(command, state) ?? command.Action;
             if (action is ContinueRunAction)
             {
-                if (!hasActiveSave || savedState is null)
+                if (savedState is null)
                 {
                     Console.WriteLine("No active run save to continue.");
                     continue;
                 }
-
-                action = new ContinueRunAction(savedState);
             }
 
             if (action is StartRunAction && state.SelectedDeckId is null)
@@ -90,7 +91,8 @@ internal sealed class CliLoop
             }
 
             var previousState = state;
-            (state, var newEvents) = GameReducer.Reduce(state, action);
+            var newEvents = session.ApplyPlayerAction(action);
+            state = session.State;
             var rejection = newEvents.OfType<PlayCardRejected>().LastOrDefault();
             if (rejection is not null)
             {
@@ -110,7 +112,8 @@ internal sealed class CliLoop
             savedState = hasActiveSave && _saveRepository.TryLoad(_content, out var loadedAfterPersistence)
                 ? loadedAfterPersistence
                 : null;
-            (state, _) = GameReducer.Reduce(state, new SetContinueAvailabilityAction(hasActiveSave));
+            eventLog.AddRange(session.SetSavedRunState(savedState));
+            state = session.State;
             CliRenderer.RenderState(state, eventLog, _content.CardDefinitions);
         }
     }
