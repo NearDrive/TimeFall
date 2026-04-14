@@ -10,8 +10,8 @@ public sealed class MapScreen : IScreen
 {
     private readonly IGameSession _session;
     private readonly InputHandler _input;
-    private readonly List<(NodeId NodeId, Rectangle Region)> _nodeRegions = new();
-    private Texture2D? _pixel;
+    private readonly List<(NodeId NodeId, Rectangle Region)> _clickableNodeRegions = new();
+    private readonly List<MapNodeRenderInfo> _nodeRenderInfos = new();
 
     public MapScreen(IGameSession session, InputHandler input)
     {
@@ -24,7 +24,7 @@ public sealed class MapScreen : IScreen
         _ = time;
         BuildNodeRegions();
 
-        foreach (var nodeRegion in _nodeRegions)
+        foreach (var nodeRegion in _clickableNodeRegions)
         {
             if (_input.IsLeftClick(nodeRegion.Region))
             {
@@ -37,45 +37,104 @@ public sealed class MapScreen : IScreen
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        spriteBatch.GraphicsDevice.Clear(Color.ForestGreen);
-        EnsurePixel(spriteBatch.GraphicsDevice);
+        spriteBatch.GraphicsDevice.Clear(new Color(21, 34, 28));
 
         spriteBatch.Begin();
-        foreach (var nodeRegion in _nodeRegions)
+        DrawMap(spriteBatch);
+        spriteBatch.End();
+    }
+
+    private void DrawMap(SpriteBatch spriteBatch)
+    {
+        var pixel = RenderPrimitives.Pixel;
+
+        if (_session.State.Phase != GamePhase.MapExploration)
         {
-            var isCurrent = nodeRegion.NodeId == _session.State.Map.CurrentNodeId;
-            var color = isCurrent ? Color.Gold : Color.DarkSlateBlue;
-            spriteBatch.Draw(_pixel!, nodeRegion.Region, color);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, "MAP AVAILABLE IN MAP EXPLORATION", new Vector2(20, 20), Color.White);
+            return;
         }
 
-        spriteBatch.End();
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "MAP NODES (CLICK ADJACENT)", new Vector2(20, 20), Color.White);
+
+        foreach (var renderInfo in _nodeRenderInfos)
+        {
+            var color = renderInfo.IsCurrent
+                ? Color.Gold
+                : renderInfo.IsAdjacent
+                    ? Color.CornflowerBlue
+                    : renderInfo.IsVisited
+                        ? Color.DimGray
+                        : Color.DarkSlateBlue;
+
+            spriteBatch.Draw(pixel, renderInfo.Region, color);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, renderInfo.Label, new Vector2(renderInfo.Region.X + 8, renderInfo.Region.Y + 12), Color.White);
+        }
     }
 
     private void BuildNodeRegions()
     {
-        _nodeRegions.Clear();
+        _clickableNodeRegions.Clear();
+        _nodeRenderInfos.Clear();
 
         if (_session.State.Phase != GamePhase.MapExploration)
         {
             return;
         }
 
-        var neighbors = _session.State.Map.Graph.GetNeighbors(_session.State.Map.CurrentNodeId).ToArray();
-        for (var index = 0; index < neighbors.Length; index++)
+        var graph = _session.State.Map.Graph;
+        var currentNodeId = _session.State.Map.CurrentNodeId;
+        var adjacentNodeIds = graph.GetNeighbors(currentNodeId).ToHashSet();
+        var allNodes = graph.Nodes
+            .OrderBy(node => _session.State.Map.DistanceFromStart.TryGetValue(node.Id, out var distance) ? distance : int.MaxValue)
+            .ThenBy(node => node.Id.Value, StringComparer.Ordinal)
+            .ToArray();
+
+        const int left = 20;
+        const int top = 70;
+        const int nodeWidth = 140;
+        const int nodeHeight = 70;
+        const int xGap = 25;
+        const int yGap = 30;
+
+        var rows = allNodes
+            .GroupBy(node => _session.State.Map.DistanceFromStart.TryGetValue(node.Id, out var distance) ? distance : 99)
+            .OrderBy(group => group.Key)
+            .ToArray();
+
+        for (var rowIndex = 0; rowIndex < rows.Length; rowIndex++)
         {
-            var x = 40 + (index * 120);
-            _nodeRegions.Add((neighbors[index], new Rectangle(x, 120, 90, 90)));
+            var rowNodes = rows[rowIndex].OrderBy(node => node.Id.Value, StringComparer.Ordinal).ToArray();
+            for (var columnIndex = 0; columnIndex < rowNodes.Length; columnIndex++)
+            {
+                var node = rowNodes[columnIndex];
+                var x = left + (columnIndex * (nodeWidth + xGap));
+                var y = top + (rowIndex * (nodeHeight + yGap));
+                var region = new Rectangle(x, y, nodeWidth, nodeHeight);
+                var isCurrent = node.Id == currentNodeId;
+                var isAdjacent = adjacentNodeIds.Contains(node.Id);
+                var isVisited = _session.State.Map.VisitedNodeIds.Contains(node.Id);
+
+                _nodeRenderInfos.Add(new MapNodeRenderInfo(
+                    node.Id,
+                    region,
+                    $"{node.Id.Value} ({node.Type})",
+                    isCurrent,
+                    isAdjacent,
+                    isVisited));
+
+                if (isAdjacent)
+                {
+                    _clickableNodeRegions.Add((node.Id, region));
+                }
+            }
         }
     }
 
-    private void EnsurePixel(GraphicsDevice graphicsDevice)
-    {
-        if (_pixel is not null)
-        {
-            return;
-        }
-
-        _pixel = new Texture2D(graphicsDevice, 1, 1);
-        _pixel.SetData(new[] { Color.White });
-    }
+    private sealed record MapNodeRenderInfo(
+        NodeId NodeId,
+        Rectangle Region,
+        string Label,
+        bool IsCurrent,
+        bool IsAdjacent,
+        bool IsVisited);
 }
