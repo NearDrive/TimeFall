@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Game.Client;
 
-public sealed class ClientGame : Game
+public sealed class ClientGame : Microsoft.Xna.Framework.Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
