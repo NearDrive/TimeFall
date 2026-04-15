@@ -6,4 +6,8 @@ public enum ScreenType
     Map,
     Combat,
     Reward,
+    SandboxDeckSelect,
+    SandboxDeckEdit,
+    SandboxEnemySelect,
+    SandboxPostCombat,
 }
