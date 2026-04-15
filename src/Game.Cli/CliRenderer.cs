@@ -395,7 +395,7 @@ internal static class CliRenderer
         }
 
         var equipped = state.Sandbox.EquippedCardIds.ToHashSet();
-        var cards = deck.StarterCardIds.Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+        var cards = deck.StartingCombatDeckCardIds.Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
         Console.WriteLine($"Sandbox cards for {deck.Name} ({deck.Id}):");
         for (var i = 0; i < cards.Length; i++)
         {
@@ -653,7 +653,7 @@ internal static class CliRenderer
             return;
         }
 
-        var allowed = deck.StarterCardIds.Distinct().ToHashSet();
+        var allowed = deck.StartingCombatDeckCardIds.Distinct().ToHashSet();
         var equipped = sandbox.EquippedCardIds.Where(allowed.Contains).ToArray();
         Console.WriteLine($"Loadout valid: {(equipped.Length > 0 && sandbox.SelectedEnemyId is not null ? "yes" : "no")}");
         Console.WriteLine($"Equipped cards: {equipped.Length}");

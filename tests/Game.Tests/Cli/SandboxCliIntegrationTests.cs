@@ -34,7 +34,7 @@ public sealed class SandboxCliIntegrationTests
     public void SandboxEquipAndUnequip_ResolveByIndexWithIntent()
     {
         var selectedDeck = SelectSandboxDeck(EnteredSandboxState());
-        var sortedCards = selectedDeck.DeckDefinitions[selectedDeck.Sandbox!.SelectedDeckId!].StarterCardIds
+        var sortedCards = selectedDeck.DeckDefinitions[selectedDeck.Sandbox!.SelectedDeckId!].StartingCombatDeckCardIds
             .Distinct()
             .OrderBy(id => id.Value, StringComparer.Ordinal)
             .ToArray();

@@ -84,6 +84,11 @@ internal sealed class CliLoop
                 Console.WriteLine("No deck selected. Use 'select-deck' then 'select <deckId|index>' first.");
                 continue;
             }
+            if (action is null)
+            {
+                Console.WriteLine("Command could not be resolved in current state.");
+                continue;
+            }
             if (!IsSandboxActionAvailable(action, state))
             {
                 Console.WriteLine($"Command '{command.Name}' is not available during phase {state.Phase}.");
@@ -99,12 +104,6 @@ internal sealed class CliLoop
                 Console.WriteLine(overflowError);
                 continue;
             }
-            if (action is null)
-            {
-                Console.WriteLine("Command could not be resolved in current state.");
-                continue;
-            }
-
             var previousState = state;
             var newEvents = session.ApplyPlayerAction(action);
             state = session.State;
@@ -256,7 +255,7 @@ internal sealed class CliLoop
 
             if (state.Phase is GamePhase.SandboxDeckSelect or GamePhase.SandboxDeckEdit or GamePhase.SandboxEnemySelect or GamePhase.SandboxPostCombat)
             {
-                if (command.Action is SelectSandboxDeckAction)
+                if (command.Name == "select-sandbox-deck")
                 {
                     if (index < 0 || index >= state.AvailableDeckIds.Count)
                     {
@@ -266,7 +265,7 @@ internal sealed class CliLoop
                     return new SelectSandboxDeckAction(state.AvailableDeckIds[index]);
                 }
 
-                if (command.Action is SelectSandboxEnemyAction)
+                if (command.Name == "select-enemy")
                 {
                     var enemyIds = state.EnemyDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray();
                     if (index < 0 || index >= enemyIds.Length)
@@ -318,9 +317,9 @@ internal sealed class CliLoop
             if (state.Mode == GameMode.Sandbox &&
                 state.Sandbox?.SelectedDeckId is { } sandboxDeckId &&
                 state.DeckDefinitions.TryGetValue(sandboxDeckId, out var sandboxDeck) &&
-                command.Action is ToggleSandboxLoadoutCardAction)
+                (command.Name == "equip" || command.Name == "unequip"))
             {
-                var allowed = sandboxDeck.StarterCardIds
+                var allowed = sandboxDeck.StartingCombatDeckCardIds
                     .Distinct()
                     .OrderBy(id => id.Value, StringComparer.Ordinal)
                     .ToArray();
@@ -393,7 +392,7 @@ internal sealed class CliLoop
                 state.Sandbox?.SelectedDeckId is { } sandboxDeckId &&
                 state.DeckDefinitions.TryGetValue(sandboxDeckId, out var sandboxDeck))
             {
-                var allowed = sandboxDeck.StarterCardIds.ToHashSet();
+                var allowed = sandboxDeck.StartingCombatDeckCardIds.ToHashSet();
                 if (!allowed.Contains(normalizedCardId))
                 {
                     return null;
