@@ -62,7 +62,7 @@ public sealed class CombatScreen : IScreen
     {
         var pixel = RenderPrimitives.Pixel;
 
-        if (_session.State.Phase != GamePhase.Combat || _session.State.Combat is null)
+        if (!IsCombatPhase(_session.State.Phase) || _session.State.Combat is null)
         {
             DebugTextRenderer.DrawText(spriteBatch, pixel, "NO ACTIVE COMBAT", new Vector2(20, 20), Color.White);
             return;
@@ -78,6 +78,7 @@ public sealed class CombatScreen : IScreen
         spriteBatch.Draw(pixel, _endTurnRegion, Color.DarkOrange);
         DebugTextRenderer.DrawText(spriteBatch, pixel, "END TURN (E)", new Vector2(_endTurnRegion.X + 14, _endTurnRegion.Y + 22), Color.Black);
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"TURN: {combat.TurnOwner}", new Vector2(950, 575), Color.White);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"MODE: {_session.State.Mode}", new Vector2(950, 545), Color.White);
     }
 
     private static void DrawPlayerPanel(SpriteBatch spriteBatch, Texture2D pixel, CombatEntity player)
@@ -141,7 +142,7 @@ public sealed class CombatScreen : IScreen
     {
         _cardRegions.Clear();
 
-        if (_session.State.Phase != GamePhase.Combat || _session.State.Combat is null)
+        if (!IsCombatPhase(_session.State.Phase) || _session.State.Combat is null)
         {
             return;
         }
@@ -162,6 +163,11 @@ public sealed class CombatScreen : IScreen
         }
 
         return string.Join(", ", resources.OrderBy(entry => entry.Key).Select(entry => $"{entry.Key}:{entry.Value}"));
+    }
+
+    private static bool IsCombatPhase(GamePhase phase)
+    {
+        return phase is GamePhase.Combat or GamePhase.SandboxCombat;
     }
 
     private void DrawPlaybackVisuals(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand)

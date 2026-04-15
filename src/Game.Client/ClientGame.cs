@@ -82,23 +82,7 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
             _content.EnemyDefinitions,
             _content.Zone1SpawnTable);
 
-        IGameSession session = new GameSession(initialState);
-        BootstrapRunForInputTesting(session);
-        return session;
-    }
-
-    private static void BootstrapRunForInputTesting(IGameSession session)
-    {
-        if (session.State.AvailableDeckIds.Count == 0)
-        {
-            return;
-        }
-
-        session.ApplyPlayerAction(new EnterNewRunMenuAction());
-        session.ApplyPlayerAction(new OpenDeckSelectAction());
-        session.ApplyPlayerAction(new SelectDeckAction(session.State.AvailableDeckIds[0]));
-        session.ApplyPlayerAction(new ReturnToNewRunMenuAction());
-        session.ApplyPlayerAction(new StartRunAction(12345));
+        return new GameSession(initialState);
     }
 
     private void RestartRun()

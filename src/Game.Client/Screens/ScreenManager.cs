@@ -72,10 +72,14 @@ public sealed class ScreenManager : IClientActionDispatcher
 
     private IScreen CreateScreen(ScreenType screenType) => screenType switch
     {
-        ScreenType.MainMenu => new MainMenuScreen(),
+        ScreenType.MainMenu => new MainMenuScreen(_session, _input, this),
         ScreenType.Map => new MapScreen(_session, _input, this),
         ScreenType.Combat => new CombatScreen(_session, _input, this),
         ScreenType.Reward => new RewardScreen(_session, _input, this),
+        ScreenType.SandboxDeckSelect => new SandboxDeckSelectScreen(_session, _input, this),
+        ScreenType.SandboxDeckEdit => new SandboxDeckEditScreen(_session, _input, this),
+        ScreenType.SandboxEnemySelect => new SandboxEnemySelectScreen(_session, _input, this),
+        ScreenType.SandboxPostCombat => new SandboxPostCombatScreen(_session, _input, this),
         _ => throw new ArgumentOutOfRangeException(nameof(screenType), screenType, "Unsupported screen type."),
     };
 
@@ -90,9 +94,15 @@ public sealed class ScreenManager : IClientActionDispatcher
 
     private static ScreenType? ResolveScreenType(GamePhase phase) => phase switch
     {
+        GamePhase.MainMenu => ScreenType.MainMenu,
         GamePhase.MapExploration => ScreenType.Map,
         GamePhase.Combat => ScreenType.Combat,
+        GamePhase.SandboxCombat => ScreenType.Combat,
         GamePhase.RewardSelection => ScreenType.Reward,
+        GamePhase.SandboxDeckSelect => ScreenType.SandboxDeckSelect,
+        GamePhase.SandboxDeckEdit => ScreenType.SandboxDeckEdit,
+        GamePhase.SandboxEnemySelect => ScreenType.SandboxEnemySelect,
+        GamePhase.SandboxPostCombat => ScreenType.SandboxPostCombat,
         _ => null,
     };
 }
