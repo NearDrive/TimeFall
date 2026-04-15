@@ -14,6 +14,7 @@ internal static class CliRenderer
         {
             Console.WriteLine("  continue            Continue active saved run");
             Console.WriteLine("  new                 Enter New Run menu");
+            Console.WriteLine("  sandbox [seed]      Enter official sandbox mode");
             Console.WriteLine("  help                Show commands");
             Console.WriteLine("  quit                Exit CLI");
             return;
@@ -51,6 +52,66 @@ internal static class CliRenderer
             Console.WriteLine("  autofill-max        Deterministically fill to maximum");
             Console.WriteLine("  done                Validate + apply reward pool");
             Console.WriteLine("  back                Cancel and return to New Run menu");
+            return;
+        }
+
+        if (phase == GamePhase.SandboxDeckSelect)
+        {
+            Console.WriteLine("  sandbox-decks       List available decks");
+            Console.WriteLine("  select-sandbox-deck <id|index> Select sandbox deck");
+            Console.WriteLine("  back                Leave sandbox and return to main menu");
+            Console.WriteLine("  help                Show commands");
+            Console.WriteLine("  quit                Exit CLI");
+            return;
+        }
+
+        if (phase == GamePhase.SandboxDeckEdit)
+        {
+            Console.WriteLine("  cards               List allowed cards + equipped loadout");
+            Console.WriteLine("  equip <id|index>    Equip card into sandbox loadout");
+            Console.WriteLine("  unequip <id|index>  Unequip card from sandbox loadout");
+            Console.WriteLine("  clear-loadout       Remove all equipped cards");
+            Console.WriteLine("  enemies             List enemies");
+            Console.WriteLine("  select-enemy <id|index> Select enemy");
+            Console.WriteLine("  change-enemy        Move to enemy selection phase");
+            Console.WriteLine("  start               Start sandbox combat (if valid)");
+            Console.WriteLine("  back                Leave sandbox and return to main menu");
+            return;
+        }
+
+        if (phase == GamePhase.SandboxEnemySelect)
+        {
+            Console.WriteLine("  enemies             List enemies");
+            Console.WriteLine("  select-enemy <id|index> Select enemy");
+            Console.WriteLine("  start               Start sandbox combat");
+            Console.WriteLine("  setup               Return to loadout setup");
+            Console.WriteLine("  change-deck         Leave sandbox (then re-enter to pick a deck)");
+            Console.WriteLine("  back                Leave sandbox and return to main menu");
+            return;
+        }
+
+        if (phase == GamePhase.SandboxCombat)
+        {
+            Console.WriteLine("  state | status      Show combat summary");
+            Console.WriteLine("  hand                Show combat hand");
+            Console.WriteLine("  play <index> [t]    Play card from hand (0-based index, optional target index)");
+            Console.WriteLine("  end                 End player turn");
+            Console.WriteLine("  discard <index...>  Discard overflow cards (0-based)");
+            Console.WriteLine("  discardpile         Show combat discard pile");
+            Console.WriteLine("  help                Show commands");
+            Console.WriteLine("  quit                Exit CLI");
+            return;
+        }
+
+        if (phase == GamePhase.SandboxPostCombat)
+        {
+            Console.WriteLine("  repeat              Start another combat with same setup");
+            Console.WriteLine("  setup               Return to loadout setup");
+            Console.WriteLine("  change-enemy        Return to enemy selection");
+            Console.WriteLine("  change-deck         Leave sandbox (then re-enter to pick a deck)");
+            Console.WriteLine("  cards               Show loadout");
+            Console.WriteLine("  enemies             Show enemy list");
+            Console.WriteLine("  back                Leave sandbox and return to main menu");
             return;
         }
 
@@ -105,6 +166,39 @@ internal static class CliRenderer
             Console.WriteLine($"Deck edit: {selectedDeck.Name} ({selectedDeck.Id})");
             Console.WriteLine($"Enabled reward cards: {working.Count}/{selectedDeck.RewardPoolCardIds.Count} (min 20 when available, max 30)");
             Console.WriteLine("Use 'enabled' / 'disabled' to inspect cards, then 'done' to apply or 'back' to cancel.");
+            return;
+        }
+        if (state.Phase == GamePhase.SandboxDeckSelect)
+        {
+            Console.WriteLine("Sandbox setup: choose a deck.");
+            RenderDecks(state);
+            Console.WriteLine("Commands: sandbox-decks, select-sandbox-deck <id|index>, back");
+            return;
+        }
+        if (state.Phase == GamePhase.SandboxDeckEdit)
+        {
+            RenderSandboxSetupSummary(state, cardDefinitions);
+            Console.WriteLine("Commands: cards, equip, unequip, clear-loadout, enemies, select-enemy, start");
+            return;
+        }
+        if (state.Phase == GamePhase.SandboxEnemySelect)
+        {
+            Console.WriteLine("Sandbox enemy selection");
+            RenderSandboxSetupSummary(state, cardDefinitions, includeCards: false);
+            RenderSandboxEnemies(state);
+            Console.WriteLine("Commands: select-enemy <id|index>, start, setup");
+            return;
+        }
+        if (state.Phase == GamePhase.SandboxPostCombat)
+        {
+            Console.WriteLine("Sandbox post-combat");
+            RenderSandboxSetupSummary(state, cardDefinitions, includeCards: false);
+            if (state.Sandbox is { } sandbox)
+            {
+                Console.WriteLine($"Last combat: seed {sandbox.LastCombatSeed?.ToString() ?? "(n/a)"} | won: {sandbox.LastCombatWon?.ToString() ?? "(n/a)"}");
+            }
+
+            Console.WriteLine("Commands: repeat, setup, change-enemy, cards");
             return;
         }
         Console.WriteLine($"Run HP: {state.RunHp}/{state.RunMaxHp}");
@@ -292,6 +386,44 @@ internal static class CliRenderer
         }
     }
 
+    public static void RenderSandboxCards(GameState state, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
+    {
+        if (state.Sandbox?.SelectedDeckId is not { } selectedDeckId || !state.DeckDefinitions.TryGetValue(selectedDeckId, out var deck))
+        {
+            Console.WriteLine("No sandbox deck selected.");
+            return;
+        }
+
+        var equipped = state.Sandbox.EquippedCardIds.ToHashSet();
+        var cards = deck.StartingCombatDeckCardIds.Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+        Console.WriteLine($"Sandbox cards for {deck.Name} ({deck.Id}):");
+        for (var i = 0; i < cards.Length; i++)
+        {
+            var marker = equipped.Contains(cards[i]) ? "*" : " ";
+            Console.WriteLine($"[{i}] {marker} {FormatCardSummary(cards[i], cardDefinitions)} ({cards[i].Value})");
+        }
+
+        Console.WriteLine($"Equipped: {state.Sandbox.EquippedCardIds.Count} card(s)");
+    }
+
+    public static void RenderSandboxEnemies(GameState state)
+    {
+        var enemyIds = state.EnemyDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray();
+        if (enemyIds.Length == 0)
+        {
+            Console.WriteLine("No enemies available.");
+            return;
+        }
+
+        var selectedEnemyId = state.Sandbox?.SelectedEnemyId;
+        Console.WriteLine("Sandbox enemies:");
+        for (var i = 0; i < enemyIds.Length; i++)
+        {
+            var marker = enemyIds[i] == selectedEnemyId ? "*" : " ";
+            Console.WriteLine($"[{i}] {marker} {enemyIds[i]}");
+        }
+    }
+
     private static void RenderCombat(CombatState combat, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions)
     {
         Console.WriteLine($"Combat turn: {combat.TurnOwner}");
@@ -330,6 +462,7 @@ internal static class CliRenderer
         return gameEvent switch
         {
             RunStarted e => $"Run started (seed {e.Seed})",
+            SandboxCombatStarted e => $"Sandbox combat started (seed {e.Seed})",
             DeckSelected e => $"Deck selected: {e.DeckId}",
             RewardPoolEditRejected e => $"Reward pool edit rejected: {e.Message}",
             RewardPoolEditConfirmed e => $"Reward pool edit confirmed ({e.EnabledCount} enabled)",
@@ -499,6 +632,41 @@ internal static class CliRenderer
         Console.WriteLine("- edit-deck");
         Console.WriteLine("- start");
         Console.WriteLine("- back");
+    }
+
+    private static void RenderSandboxSetupSummary(GameState state, IReadOnlyDictionary<CardId, CardDefinition> cardDefinitions, bool includeCards = true)
+    {
+        var sandbox = state.Sandbox;
+        if (sandbox is null)
+        {
+            Console.WriteLine("Sandbox state unavailable.");
+            return;
+        }
+
+        Console.WriteLine($"Deck: {sandbox.SelectedDeckId ?? "(none)"}");
+        Console.WriteLine($"Enemy: {sandbox.SelectedEnemyId ?? "(none)"}");
+        Console.WriteLine($"Combats played: {sandbox.CombatCount}");
+
+        if (sandbox.SelectedDeckId is not { } selectedDeckId || !state.DeckDefinitions.TryGetValue(selectedDeckId, out var deck))
+        {
+            Console.WriteLine("Loadout valid: no (select deck)");
+            return;
+        }
+
+        var allowed = deck.StartingCombatDeckCardIds.Distinct().ToHashSet();
+        var equipped = sandbox.EquippedCardIds.Where(allowed.Contains).ToArray();
+        Console.WriteLine($"Loadout valid: {(equipped.Length > 0 && sandbox.SelectedEnemyId is not null ? "yes" : "no")}");
+        Console.WriteLine($"Equipped cards: {equipped.Length}");
+
+        if (!includeCards)
+        {
+            return;
+        }
+
+        foreach (var cardId in equipped)
+        {
+            Console.WriteLine($"  - {FormatCardSummary(cardId, cardDefinitions)} ({cardId.Value})");
+        }
     }
 
 }
