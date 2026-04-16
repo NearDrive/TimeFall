@@ -57,6 +57,12 @@ public sealed class ClientGame : Microsoft.Xna.Framework.Game
             RestartRun();
         }
 
+        if (_input.IsKeyPressed(Keys.F3))
+        {
+            _screenManager.ToggleDebugHud();
+            Console.WriteLine($"[DEBUG] HUD {(_screenManager.IsDebugHudVisible ? "enabled" : "disabled")} via F3 at {DateTime.UtcNow:O}");
+        }
+
         if (_input.IsKeyPressed(Keys.F6))
         {
             WriteDebugDump();

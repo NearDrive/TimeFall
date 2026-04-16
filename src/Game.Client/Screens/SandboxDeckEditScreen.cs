@@ -8,6 +8,15 @@ namespace Game.Client.Screens;
 
 public sealed class SandboxDeckEditScreen : IScreen
 {
+    private const int CardsPerRow = 4;
+    private const int CardWidth = 210;
+    private const int CardHeight = 110;
+    private const int CardSpacingX = 230;
+    private const int CardSpacingY = 120;
+    private const int GridStartX = 20;
+    private const int GridStartY = 130;
+    private const int ScrollStepPixels = 45;
+
     private readonly IGameSession _session;
     private readonly InputHandler _input;
     private readonly IClientActionDispatcher _dispatcher;
@@ -16,6 +25,8 @@ public sealed class SandboxDeckEditScreen : IScreen
     private readonly Rectangle _clearRegion = new(960, 120, 260, 70);
     private readonly Rectangle _enemySelectRegion = new(960, 210, 260, 70);
     private readonly Rectangle _backDeckSelectRegion = new(960, 300, 260, 70);
+    private readonly Rectangle _scrollViewport = new(20, 130, 920, 570);
+    private int _scrollOffset;
 
     public SandboxDeckEditScreen(IGameSession session, InputHandler input, IClientActionDispatcher dispatcher)
     {
@@ -28,10 +39,12 @@ public sealed class SandboxDeckEditScreen : IScreen
     {
         _ = time;
         BuildCardRegions();
+        UpdateScrollOffset();
 
         foreach (var (cardId, region) in _cardRegions)
         {
-            if (_input.IsLeftClick(region))
+            var shifted = ShiftForScroll(region);
+            if (shifted.Intersects(_scrollViewport) && _input.IsLeftClick(shifted))
             {
                 _dispatcher.Dispatch(new ToggleSandboxLoadoutCardAction(cardId));
                 return;
@@ -74,21 +87,32 @@ public sealed class SandboxDeckEditScreen : IScreen
 
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"SANDBOX DECK EDIT: {selectedDeck.Name}", new Vector2(20, 20), Color.White);
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"EQUIPPED: {equipped.Count}", new Vector2(20, 50), Color.White);
-        DebugTextRenderer.DrawText(spriteBatch, pixel, "CLICK A CARD TO TOGGLE EQUIP", new Vector2(20, 80), Color.White);
+        var maxScroll = GetMaxScroll();
+        var scrollHint = maxScroll > 0
+            ? $"SCROLL: MOUSE WHEEL / UP / DOWN ({_scrollOffset}/{maxScroll})"
+            : "SCROLL: ALL CARDS FIT";
+        DebugTextRenderer.DrawText(spriteBatch, pixel, scrollHint, new Vector2(20, 80), Color.White);
+        spriteBatch.Draw(pixel, _scrollViewport, new Color(255, 255, 255, 18));
 
         foreach (var (cardId, region) in _cardRegions)
         {
+            var shifted = ShiftForScroll(region);
+            if (!shifted.Intersects(_scrollViewport))
+            {
+                continue;
+            }
+
             var equippedCard = equipped.Contains(cardId);
-            spriteBatch.Draw(pixel, region, equippedCard ? Color.Gold : new Color(173, 184, 207));
+            spriteBatch.Draw(pixel, shifted, equippedCard ? Color.Gold : new Color(173, 184, 207));
 
             var definition = _session.State.CardDefinitions.TryGetValue(cardId, out var card) ? card : null;
             var name = definition?.Name ?? cardId.Value;
             var cost = definition?.Cost ?? 0;
 
-            DebugTextRenderer.DrawText(spriteBatch, pixel, name, new Vector2(region.X + 8, region.Y + 10), Color.Black);
-            DebugTextRenderer.DrawText(spriteBatch, pixel, $"ID: {cardId.Value}", new Vector2(region.X + 8, region.Y + 35), Color.Black);
-            DebugTextRenderer.DrawText(spriteBatch, pixel, $"COST: {cost}", new Vector2(region.X + 8, region.Y + 60), Color.Black);
-            DebugTextRenderer.DrawText(spriteBatch, pixel, equippedCard ? "EQUIPPED" : "NOT EQUIPPED", new Vector2(region.X + 8, region.Y + 85), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, name, new Vector2(shifted.X + 8, shifted.Y + 10), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"ID: {cardId.Value}", new Vector2(shifted.X + 8, shifted.Y + 35), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, $"COST: {cost}", new Vector2(shifted.X + 8, shifted.Y + 60), Color.Black);
+            DebugTextRenderer.DrawText(spriteBatch, pixel, equippedCard ? "EQUIPPED" : "NOT EQUIPPED", new Vector2(shifted.X + 8, shifted.Y + 85), Color.Black);
         }
 
         DrawButton(spriteBatch, pixel, _clearRegion, "CLEAR LOADOUT");
@@ -131,11 +155,45 @@ public sealed class SandboxDeckEditScreen : IScreen
 
         for (var index = 0; index < allCardIds.Length; index++)
         {
-            var x = 20 + (index % 4) * 230;
-            var y = 130 + (index / 4) * 120;
-            _cardRegions.Add((allCardIds[index], new Rectangle(x, y, 210, 110)));
+            var x = GridStartX + (index % CardsPerRow) * CardSpacingX;
+            var y = GridStartY + (index / CardsPerRow) * CardSpacingY;
+            _cardRegions.Add((allCardIds[index], new Rectangle(x, y, CardWidth, CardHeight)));
         }
     }
+
+    private void UpdateScrollOffset()
+    {
+        var inputDelta = -_input.MouseWheelDelta;
+        if (_input.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Down))
+        {
+            inputDelta += ScrollStepPixels;
+        }
+
+        if (_input.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Up))
+        {
+            inputDelta -= ScrollStepPixels;
+        }
+
+        if (inputDelta == 0)
+        {
+            return;
+        }
+
+        _scrollOffset = Math.Clamp(_scrollOffset + inputDelta, 0, GetMaxScroll());
+    }
+
+    private int GetMaxScroll()
+    {
+        if (_cardRegions.Count == 0)
+        {
+            return 0;
+        }
+
+        var lastBottom = _cardRegions.Max(tuple => tuple.Region.Bottom);
+        return Math.Max(0, lastBottom - _scrollViewport.Bottom);
+    }
+
+    private Rectangle ShiftForScroll(Rectangle region) => new(region.X, region.Y - _scrollOffset, region.Width, region.Height);
 
     private static void DrawButton(SpriteBatch spriteBatch, Texture2D pixel, Rectangle region, string label)
     {

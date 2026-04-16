@@ -46,8 +46,12 @@ This client now implements **Phase 6** of the visual roadmap: playtesting-orient
   - Rolling recent event history (latest first, short summaries).
 - Extended event playback plumbing with rolling recent-event history (client-side, bounded list).
 - Added debug stability controls:
+  - `F3` toggles debug HUD visibility on/off.
   - `F5` restarts the run by creating a **fresh `GameSession` through the same startup/bootstrap path**.
   - `F6` writes a concise debug dump to console with screen, phase, combat/map summaries, pile counts, and recent events.
+- `SandboxDeckEditScreen` now supports scrolling long card lists:
+  - Mouse wheel or Up/Down arrows scroll the card grid viewport.
+  - Click targets remain aligned to visible card rectangles after scroll.
 - Input behavior remains Phase 2 aligned:
   - Rendered hand card rectangles are exactly the clickable `PlayCardAction(index)` regions.
   - Rendered end-turn rectangle is exactly the clickable `EndTurnAction` region.
@@ -81,6 +85,7 @@ Once the game window is open:
   - Click `Skip` (or press `S`) to dispatch `SkipRewardAction`.
   - When reward is resolved and phase returns to map exploration, the client auto-switches to **Map**.
 - `F1` can still be used as a manual debug switch to MainMenu.
+- `F3` toggles the debug HUD.
 - `F5` restarts the current run from a fresh session via normal client bootstrap.
 - `F6` prints a debug dump to the console.
 

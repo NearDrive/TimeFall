@@ -11,6 +11,7 @@ public sealed class ScreenManager : IClientActionDispatcher
     private readonly InputHandler _input;
     private readonly EventPlaybackController _playbackController = new();
     private IScreen _currentScreen;
+    private bool _isDebugHudVisible = true;
 
     public ScreenManager(ScreenType initialScreen, IGameSession session, InputHandler input)
     {
@@ -25,6 +26,7 @@ public sealed class ScreenManager : IClientActionDispatcher
     public IGameSession Session => _session;
     public ActiveEventPlayback? ActivePlayback => _playbackController.ActivePlayback;
     public IReadOnlyList<GameEvent> RecentEvents => _playbackController.RecentEvents;
+    public bool IsDebugHudVisible => _isDebugHudVisible;
 
     public void SwitchTo(ScreenType screenType)
     {
@@ -57,9 +59,19 @@ public sealed class ScreenManager : IClientActionDispatcher
     {
         _currentScreen.Draw(spriteBatch);
 
+        if (!_isDebugHudVisible)
+        {
+            return;
+        }
+
         spriteBatch.Begin();
         DebugOverlayRenderer.Draw(spriteBatch, _session.State, CurrentScreenType, _playbackController.RecentEvents);
         spriteBatch.End();
+    }
+
+    public void ToggleDebugHud()
+    {
+        _isDebugHudVisible = !_isDebugHudVisible;
     }
 
     public void ResetSession(IGameSession session)

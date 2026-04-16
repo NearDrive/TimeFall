@@ -40,6 +40,13 @@ public static class DebugOverlayRenderer
         }
 
         DrawLine(string.Empty, Color.White);
+        DrawLine("KEYS (CURRENT SCREEN):", Color.White);
+        foreach (var control in BuildControlHints(currentScreenType, state.Phase))
+        {
+            DrawLine($"  - {control}", Color.LightGray);
+        }
+
+        DrawLine(string.Empty, Color.White);
         DrawLine("RECENT EVENTS:", Color.White);
 
         var recent = recentEvents
@@ -90,6 +97,59 @@ public static class DebugOverlayRenderer
         }
 
         return $"{definition.Name} ({cardId.Value})";
+    }
+
+    private static IReadOnlyList<string> BuildControlHints(ScreenType currentScreenType, GamePhase phase)
+    {
+        var controls = new List<string>
+        {
+            "F3 Toggle Debug HUD",
+            "F5 Restart Session",
+            "F6 Dump Debug State",
+            "F1 Return to Main Menu",
+            "Left Click Use highlighted option/card",
+        };
+
+        if (phase is GamePhase.SandboxDeckEdit)
+        {
+            controls.Add("Mouse Wheel / Up / Down Scroll card list");
+        }
+
+        if (currentScreenType is ScreenType.Map)
+        {
+            controls.Add("Left Click on adjacent node to move");
+        }
+
+        if (currentScreenType is ScreenType.Combat)
+        {
+            controls.Add("Left Click card to PlayCardAction(index)");
+            controls.Add("Left Click END TURN button to pass turn");
+        }
+
+        if (currentScreenType is ScreenType.Reward)
+        {
+            controls.Add("Left Click reward card to pick");
+            controls.Add("Left Click SKIP to skip reward");
+        }
+
+        if (currentScreenType is ScreenType.SandboxDeckSelect)
+        {
+            controls.Add("Left Click deck tile to select loadout base");
+        }
+
+        if (currentScreenType is ScreenType.SandboxEnemySelect)
+        {
+            controls.Add("Left Click enemy tile to pick opponent");
+            controls.Add("Left Click START COMBAT to begin sandbox fight");
+        }
+
+        if (currentScreenType is ScreenType.SandboxPostCombat)
+        {
+            controls.Add("Left Click REMATCH for same setup");
+            controls.Add("Left Click CHANGE ENEMY or CHANGE DECK");
+        }
+
+        return controls;
     }
 }
 
