@@ -11,6 +11,7 @@ public sealed class InputHandler
     private KeyboardState _previousKeyboard;
 
     public Point MousePosition => _currentMouse.Position;
+    public int MouseWheelDelta => _currentMouse.ScrollWheelValue - _previousMouse.ScrollWheelValue;
 
     public void Update()
     {
@@ -24,6 +25,11 @@ public sealed class InputHandler
     public bool IsKeyPressed(Keys key)
     {
         return _currentKeyboard.IsKeyDown(key) && !_previousKeyboard.IsKeyDown(key);
+    }
+
+    public bool IsKeyDown(Keys key)
+    {
+        return _currentKeyboard.IsKeyDown(key);
     }
 
     public bool IsLeftClick(Rectangle region)
