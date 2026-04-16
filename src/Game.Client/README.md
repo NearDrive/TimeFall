@@ -12,6 +12,7 @@ This client now implements **Phase 6** of the visual roadmap: playtesting-orient
 - `CombatScreen` renders real combat state:
   - Player HP / Armor / Resources / deck counts.
   - One enemy panel per enemy with id, HP, Armor, Resources.
+  - Enemy panels are clickable target selectors for cards that require a target.
   - Hand cards as rectangles with card index, name, and cost from real card definitions.
   - Visible `End Turn` button (`click` and `E` dispatch `EndTurnAction`).
 - `MapScreen` now renders real map state:
@@ -53,7 +54,8 @@ This client now implements **Phase 6** of the visual roadmap: playtesting-orient
   - Mouse wheel or Up/Down arrows scroll the card grid viewport.
   - Click targets remain aligned to visible card rectangles after scroll.
 - Input behavior remains Phase 2 aligned:
-  - Rendered hand card rectangles are exactly the clickable `PlayCardAction(index)` regions.
+  - Rendered hand card rectangles are exactly the clickable `PlayCardAction(index, targetIndex?)` regions.
+  - Rendered enemy panels are exactly the clickable target selectors used to provide `targetIndex` for targeted attacks.
   - Rendered end-turn rectangle is exactly the clickable `EndTurnAction` region.
   - Rendered adjacent node rectangles are exactly the clickable `MoveToNodeAction(nodeId)` regions.
   - Rendered reward card rectangles are exactly the clickable `ChooseRewardCardAction(cardId)` regions.
@@ -77,7 +79,8 @@ Once the game window is open:
   - Click highlighted adjacent nodes to dispatch `MoveToNodeAction`.
   - If movement enters combat in the real session state, the client auto-switches to **Combat**.
 - In **Combat**:
-  - Click hand cards to dispatch `PlayCardAction`.
+  - Click an enemy panel to select target for target-required attacks.
+  - Click hand cards to dispatch `PlayCardAction` (selected target is used when required).
   - Click `End Turn` (or press `E`) to dispatch `EndTurnAction`.
   - When combat ends in the real session state, the client auto-switches to **Reward**.
 - In **Reward**:
