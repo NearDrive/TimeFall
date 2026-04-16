@@ -12,13 +12,18 @@ public sealed class CombatScreen : IScreen
 {
     private static readonly Rectangle PlayerPanelRegion = new(20, 20, 420, 180);
     private static readonly Rectangle EnemyAreaRegion = new(470, 20, 700, 130);
+    private const int EnemyPanelWidth = 340;
+    private const int EnemyPanelHeight = 130;
+    private const int EnemyPanelGap = 16;
 
     private readonly IGameSession _session;
     private readonly InputHandler _input;
     private readonly IClientActionDispatcher _dispatcher;
     private readonly List<Rectangle> _cardRegions = new();
+    private readonly List<Rectangle> _enemyRegions = new();
     private readonly Rectangle _endTurnRegion = new(950, 610, 220, 70);
     private Rectangle? _lastPlayedCardRegion;
+    private int? _selectedEnemyIndex;
 
     public CombatScreen(IGameSession session, InputHandler input, IClientActionDispatcher dispatcher)
     {
@@ -31,14 +36,27 @@ public sealed class CombatScreen : IScreen
     {
         _ = time;
         BuildCardRegions();
+        BuildEnemyRegions();
+        NormalizeSelectedEnemy();
+
+        for (var enemyIndex = 0; enemyIndex < _enemyRegions.Count; enemyIndex++)
+        {
+            if (_input.IsLeftClick(_enemyRegions[enemyIndex]))
+            {
+                _selectedEnemyIndex = enemyIndex;
+                return;
+            }
+        }
 
         for (var index = 0; index < _cardRegions.Count; index++)
         {
             if (_input.IsLeftClick(_cardRegions[index]))
             {
                 _lastPlayedCardRegion = _cardRegions[index];
-                _dispatcher.Dispatch(new PlayCardAction(index));
+                _dispatcher.Dispatch(new PlayCardAction(index, ResolveTargetIndex(index)));
                 BuildCardRegions();
+                BuildEnemyRegions();
+                NormalizeSelectedEnemy();
                 return;
             }
         }
@@ -74,6 +92,7 @@ public sealed class CombatScreen : IScreen
         DrawEnemyPanels(spriteBatch, pixel, combat.Enemies);
         DrawHand(spriteBatch, pixel, combat.Player.Deck.Hand);
         DrawPlaybackVisuals(spriteBatch, pixel, combat.Player.Deck.Hand);
+        DrawTargetSelection(spriteBatch, pixel, combat.Enemies.Count);
 
         spriteBatch.Draw(pixel, _endTurnRegion, Color.DarkOrange);
         DebugTextRenderer.DrawText(spriteBatch, pixel, "END TURN (E)", new Vector2(_endTurnRegion.X + 14, _endTurnRegion.Y + 22), Color.Black);
@@ -96,14 +115,11 @@ public sealed class CombatScreen : IScreen
     {
         const int startX = 470;
         const int startY = 20;
-        const int panelWidth = 340;
-        const int panelHeight = 130;
-        const int gap = 16;
 
         for (var index = 0; index < enemies.Count; index++)
         {
             var enemy = enemies[index];
-            var panel = new Rectangle(startX + ((panelWidth + gap) * index), startY, panelWidth, panelHeight);
+            var panel = new Rectangle(startX + ((EnemyPanelWidth + EnemyPanelGap) * index), startY, EnemyPanelWidth, EnemyPanelHeight);
             spriteBatch.Draw(pixel, panel, new Color(77, 39, 39));
 
             DebugTextRenderer.DrawText(spriteBatch, pixel, $"ENEMY {index + 1}: {enemy.EntityId}", new Vector2(panel.X + 12, panel.Y + 10), Color.White);
@@ -153,6 +169,106 @@ public sealed class CombatScreen : IScreen
             var x = 20 + (index * 150);
             _cardRegions.Add(new Rectangle(x, 440, 140, 150));
         }
+    }
+
+    private void BuildEnemyRegions()
+    {
+        _enemyRegions.Clear();
+
+        if (!IsCombatPhase(_session.State.Phase) || _session.State.Combat is null)
+        {
+            return;
+        }
+
+        const int startX = 470;
+        const int startY = 20;
+        for (var index = 0; index < _session.State.Combat.Enemies.Count; index++)
+        {
+            var x = startX + ((EnemyPanelWidth + EnemyPanelGap) * index);
+            _enemyRegions.Add(new Rectangle(x, startY, EnemyPanelWidth, EnemyPanelHeight));
+        }
+    }
+
+    private void NormalizeSelectedEnemy()
+    {
+        if (!IsCombatPhase(_session.State.Phase) || _session.State.Combat is null)
+        {
+            _selectedEnemyIndex = null;
+            return;
+        }
+
+        if (_selectedEnemyIndex is null)
+        {
+            return;
+        }
+
+        var selectedEnemy = _selectedEnemyIndex.Value;
+        var enemies = _session.State.Combat.Enemies;
+        if (selectedEnemy < 0 || selectedEnemy >= enemies.Count || enemies[selectedEnemy].HP <= 0)
+        {
+            _selectedEnemyIndex = FindFirstLivingEnemyIndex(enemies);
+        }
+    }
+
+    private int? ResolveTargetIndex(int handIndex)
+    {
+        if (_session.State.Combat is not { } combat || handIndex < 0 || handIndex >= combat.Player.Deck.Hand.Count)
+        {
+            return null;
+        }
+
+        var card = combat.Player.Deck.Hand[handIndex];
+        if (!_session.State.CardDefinitions.TryGetValue(card.DefinitionId, out var definition))
+        {
+            return null;
+        }
+
+        if (!CardEffectResolver.RequiresEnemyTarget(definition))
+        {
+            return null;
+        }
+
+        if (_selectedEnemyIndex is { } selected && selected >= 0 && selected < combat.Enemies.Count && combat.Enemies[selected].HP > 0)
+        {
+            return selected;
+        }
+
+        return FindFirstLivingEnemyIndex(combat.Enemies);
+    }
+
+    private void DrawTargetSelection(SpriteBatch spriteBatch, Texture2D pixel, int enemyCount)
+    {
+        if (enemyCount == 0)
+        {
+            return;
+        }
+
+        for (var index = 0; index < enemyCount && index < _enemyRegions.Count; index++)
+        {
+            if (_selectedEnemyIndex == index)
+            {
+                DrawBorder(spriteBatch, pixel, _enemyRegions[index], 3, Color.Gold);
+            }
+        }
+
+        var targetText = _selectedEnemyIndex is { } selected
+            ? $"TARGET: ENEMY {selected + 1}"
+            : "TARGET: AUTO";
+        DebugTextRenderer.DrawText(spriteBatch, pixel, targetText, new Vector2(470, 160), Color.Gold);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "CLICK ENEMY PANEL TO SELECT TARGET", new Vector2(470, 184), Color.LightGray);
+    }
+
+    private static int? FindFirstLivingEnemyIndex(IReadOnlyList<CombatEntity> enemies)
+    {
+        for (var index = 0; index < enemies.Count; index++)
+        {
+            if (enemies[index].HP > 0)
+            {
+                return index;
+            }
+        }
+
+        return null;
     }
 
     private static string FormatResources(IReadOnlyDictionary<ResourceType, int> resources)

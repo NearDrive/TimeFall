@@ -123,6 +123,7 @@ public static class DebugOverlayRenderer
         if (currentScreenType is ScreenType.Combat)
         {
             controls.Add("Left Click card to PlayCardAction(index)");
+            controls.Add("Left Click enemy panel to set target for attack cards");
             controls.Add("Left Click END TURN button to pass turn");
         }
 
