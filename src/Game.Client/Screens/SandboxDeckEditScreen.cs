@@ -25,6 +25,7 @@ public sealed class SandboxDeckEditScreen : IScreen
     private readonly Rectangle _clearRegion = new(960, 120, 260, 70);
     private readonly Rectangle _enemySelectRegion = new(960, 210, 260, 70);
     private readonly Rectangle _backDeckSelectRegion = new(960, 300, 260, 70);
+    private readonly Rectangle _hoverDetailsRegion = new(960, 390, 260, 300);
     private readonly Rectangle _scrollViewport = new(20, 130, 920, 570);
     private int _scrollOffset;
 
@@ -118,6 +119,7 @@ public sealed class SandboxDeckEditScreen : IScreen
         DrawButton(spriteBatch, pixel, _clearRegion, "CLEAR LOADOUT");
         DrawButton(spriteBatch, pixel, _enemySelectRegion, "NEXT: ENEMY");
         DrawButton(spriteBatch, pixel, _backDeckSelectRegion, "CHANGE DECK");
+        DrawHoveredCardDetails(spriteBatch, pixel);
 
         spriteBatch.End();
     }
@@ -194,6 +196,143 @@ public sealed class SandboxDeckEditScreen : IScreen
     }
 
     private Rectangle ShiftForScroll(Rectangle region) => new(region.X, region.Y - _scrollOffset, region.Width, region.Height);
+
+    private void DrawHoveredCardDetails(SpriteBatch spriteBatch, Texture2D pixel)
+    {
+        spriteBatch.Draw(pixel, _hoverDetailsRegion, new Color(24, 34, 52));
+
+        var hoveredCardId = GetHoveredCardId();
+        if (hoveredCardId is null || !_session.State.CardDefinitions.TryGetValue(hoveredCardId.Value, out var definition))
+        {
+            DebugTextRenderer.DrawText(spriteBatch, pixel, "HOVER A CARD FOR DETAILS", new Vector2(_hoverDetailsRegion.X + 10, _hoverDetailsRegion.Y + 12), Color.White, scale: 1);
+            return;
+        }
+
+        var lines = new List<string>
+        {
+            $"NAME: {definition.Name}",
+            $"ID: {definition.Id.Value}",
+            $"COST: {definition.Cost}",
+            $"PLAY COSTS: {FormatPlayCosts(definition)}",
+            $"RARITY: {FormatField(definition.Rarity)}",
+            $"AFFINITY: {FormatField(definition.DeckAffinity)}",
+            $"LABELS: {FormatLabels(definition)}",
+            "RULES:",
+            CardRulesTextFormatter.GetReadableRulesText(definition),
+        };
+
+        var wrapped = WrapLines(lines, maxChars: 41);
+        var maxLines = 30;
+        for (var lineIndex = 0; lineIndex < wrapped.Count && lineIndex < maxLines; lineIndex++)
+        {
+            DebugTextRenderer.DrawText(
+                spriteBatch,
+                pixel,
+                wrapped[lineIndex],
+                new Vector2(_hoverDetailsRegion.X + 10, _hoverDetailsRegion.Y + 12 + (lineIndex * 12)),
+                Color.White,
+                scale: 1);
+        }
+    }
+
+    private CardId? GetHoveredCardId()
+    {
+        foreach (var (cardId, region) in _cardRegions)
+        {
+            var shifted = ShiftForScroll(region);
+            if (shifted.Intersects(_scrollViewport) && shifted.Contains(_input.MousePosition))
+            {
+                return cardId;
+            }
+        }
+
+        return null;
+    }
+
+    private static string FormatPlayCosts(CardDefinition definition)
+    {
+        var costs = definition.PlayCostsOrDefault;
+        return string.Join(
+            ", ",
+            costs.Select(cost => cost switch
+            {
+                NoCost => "NONE",
+                RequireMomentumCost require => $"REQ MOM >= {require.Minimum}",
+                SpendMomentumCost spend => $"SPEND MOM {spend.Amount}",
+                SpendAllMomentumCost => "SPEND ALL MOM",
+                SpendUpToMomentumCost spendUpTo => $"SPEND UP TO {spendUpTo.Max}",
+                _ => "SPECIAL",
+            }));
+    }
+
+    private static string FormatLabels(CardDefinition definition)
+    {
+        return definition.LabelsOrEmpty.Count == 0
+            ? "-"
+            : string.Join(", ", definition.LabelsOrEmpty.OrderBy(label => label, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string FormatField(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
+
+    private static List<string> WrapLines(IEnumerable<string> lines, int maxChars)
+    {
+        var output = new List<string>();
+        foreach (var line in lines)
+        {
+            foreach (var wrapped in WrapSingleLine(line, maxChars))
+            {
+                output.Add(wrapped);
+            }
+        }
+
+        return output;
+    }
+
+    private static IEnumerable<string> WrapSingleLine(string text, int maxChars)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            yield return string.Empty;
+            yield break;
+        }
+
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var currentLine = string.Empty;
+        foreach (var word in words)
+        {
+            if (word.Length > maxChars)
+            {
+                if (!string.IsNullOrEmpty(currentLine))
+                {
+                    yield return currentLine;
+                    currentLine = string.Empty;
+                }
+
+                for (var index = 0; index < word.Length; index += maxChars)
+                {
+                    yield return word.Substring(index, Math.Min(maxChars, word.Length - index));
+                }
+
+                continue;
+            }
+
+            var candidate = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
+            if (candidate.Length <= maxChars)
+            {
+                currentLine = candidate;
+            }
+            else
+            {
+                yield return currentLine;
+                currentLine = word;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(currentLine))
+        {
+            yield return currentLine;
+        }
+    }
 
     private static void DrawButton(SpriteBatch spriteBatch, Texture2D pixel, Rectangle region, string label)
     {
