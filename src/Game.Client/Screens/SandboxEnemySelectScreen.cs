@@ -80,7 +80,7 @@ public sealed class SandboxEnemySelectScreen : IScreen
         _enemyRegions.Clear();
 
         var enemyIds = SandboxEnemyCatalog.GetEnemyIds(_session.State.EnemyDefinitions);
-        for (var index = 0; index < enemyIds.Length; index++)
+        for (var index = 0; index < enemyIds.Count; index++)
         {
             var x = 20 + (index % 3) * 300;
             var y = 110 + (index / 3) * 130;

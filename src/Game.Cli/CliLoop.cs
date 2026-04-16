@@ -268,7 +268,7 @@ internal sealed class CliLoop
                 if (command.Name == "select-enemy")
                 {
                     var enemyIds = SandboxEnemyCatalog.GetEnemyIds(state.EnemyDefinitions);
-                    if (index < 0 || index >= enemyIds.Length)
+                    if (index < 0 || index >= enemyIds.Count)
                     {
                         return null;
                     }
