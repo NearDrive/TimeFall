@@ -21,6 +21,7 @@ public sealed class CombatScreen : IScreen
     private readonly IClientActionDispatcher _dispatcher;
     private readonly List<Rectangle> _cardRegions = new();
     private readonly List<Rectangle> _enemyRegions = new();
+    private readonly HashSet<int> _selectedOverflowDiscardIndexes = new();
     private readonly Rectangle _endTurnRegion = new(950, 610, 220, 70);
     private Rectangle? _lastPlayedCardRegion;
     private int? _selectedEnemyIndex;
@@ -38,6 +39,12 @@ public sealed class CombatScreen : IScreen
         BuildCardRegions();
         BuildEnemyRegions();
         NormalizeSelectedEnemy();
+        NormalizeOverflowDiscardSelection();
+
+        if (TryHandleOverflowDiscardInput())
+        {
+            return;
+        }
 
         for (var enemyIndex = 0; enemyIndex < _enemyRegions.Count; enemyIndex++)
         {
@@ -98,6 +105,7 @@ public sealed class CombatScreen : IScreen
         DebugTextRenderer.DrawText(spriteBatch, pixel, "END TURN (E)", new Vector2(_endTurnRegion.X + 14, _endTurnRegion.Y + 22), Color.Black);
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"TURN: {combat.TurnOwner}", new Vector2(950, 575), Color.White);
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"MODE: {_session.State.Mode}", new Vector2(950, 545), Color.White);
+        DrawOverflowDiscardPrompt(spriteBatch, pixel, combat);
     }
 
     private static void DrawPlayerPanel(SpriteBatch spriteBatch, Texture2D pixel, CombatEntity player)
@@ -134,7 +142,13 @@ public sealed class CombatScreen : IScreen
         for (var index = 0; index < hand.Count && index < _cardRegions.Count; index++)
         {
             var cardRegion = _cardRegions[index];
-            spriteBatch.Draw(pixel, cardRegion, new Color(186, 193, 204));
+            var cardColor = new Color(186, 193, 204);
+            if (IsOverflowDiscardActive() && _selectedOverflowDiscardIndexes.Contains(index))
+            {
+                cardColor = new Color(214, 145, 86);
+            }
+
+            spriteBatch.Draw(pixel, cardRegion, cardColor);
 
             var card = hand[index];
             var definition = TryGetCardDefinition(card.DefinitionId);
@@ -208,6 +222,18 @@ public sealed class CombatScreen : IScreen
         {
             _selectedEnemyIndex = FindFirstLivingEnemyIndex(enemies);
         }
+    }
+
+    private void NormalizeOverflowDiscardSelection()
+    {
+        if (_session.State.Combat is not { } combat || !combat.NeedsOverflowDiscard)
+        {
+            _selectedOverflowDiscardIndexes.Clear();
+            return;
+        }
+
+        var handCount = combat.Player.Deck.Hand.Count;
+        _selectedOverflowDiscardIndexes.RemoveWhere(index => index < 0 || index >= handCount);
     }
 
     private int? ResolveTargetIndex(int handIndex)
@@ -284,6 +310,59 @@ public sealed class CombatScreen : IScreen
     private static bool IsCombatPhase(GamePhase phase)
     {
         return phase is GamePhase.Combat or GamePhase.SandboxCombat;
+    }
+
+    private bool TryHandleOverflowDiscardInput()
+    {
+        if (_session.State.Combat is not { NeedsOverflowDiscard: true } combat)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < _cardRegions.Count; index++)
+        {
+            if (!_input.IsLeftClick(_cardRegions[index]))
+            {
+                continue;
+            }
+
+            if (!_selectedOverflowDiscardIndexes.Add(index))
+            {
+                _selectedOverflowDiscardIndexes.Remove(index);
+            }
+
+            if (_selectedOverflowDiscardIndexes.Count == combat.RequiredOverflowDiscardCount)
+            {
+                var indexes = _selectedOverflowDiscardIndexes.OrderBy(i => i).ToArray();
+                _dispatcher.Dispatch(new DiscardOverflowAction(indexes));
+                _selectedOverflowDiscardIndexes.Clear();
+            }
+
+            return true;
+        }
+
+        return true;
+    }
+
+    private bool IsOverflowDiscardActive()
+    {
+        return _session.State.Combat is { NeedsOverflowDiscard: true };
+    }
+
+    private void DrawOverflowDiscardPrompt(SpriteBatch spriteBatch, Texture2D pixel, CombatState combat)
+    {
+        if (!combat.NeedsOverflowDiscard)
+        {
+            return;
+        }
+
+        var selected = _selectedOverflowDiscardIndexes.Count;
+        var required = combat.RequiredOverflowDiscardCount;
+        var remaining = Math.Max(0, required - selected);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "DISCARD REQUIRED", new Vector2(20, 408), Color.OrangeRed);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"Select {required} card(s): {selected}/{required}", new Vector2(180, 408), Color.OrangeRed);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"Remaining: {remaining}", new Vector2(470, 408), Color.OrangeRed);
+        DebugTextRenderer.DrawText(spriteBatch, pixel, "Click selected card again to unselect.", new Vector2(620, 408), Color.LightGray);
     }
 
     private void DrawPlaybackVisuals(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand)
