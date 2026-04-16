@@ -12,4 +12,5 @@ public sealed record CombatEntity(
     int Bleed = 0,
     int ReflectNextEnemyAttackDamage = 0,
     int Weak = 0,
-    int Vulnerable = 0);
+    int Vulnerable = 0,
+    bool IsImmortal = false);

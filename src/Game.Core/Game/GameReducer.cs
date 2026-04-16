@@ -461,7 +461,7 @@ public static class GameReducer
             return (state, Array.Empty<GameEvent>());
         }
 
-        if (!state.EnemyDefinitions.ContainsKey(action.EnemyId))
+        if (!SandboxEnemyCatalog.IsSandboxEnemyId(action.EnemyId, state.EnemyDefinitions))
         {
             return (state, Array.Empty<GameEvent>());
         }
@@ -1192,7 +1192,8 @@ public static class GameReducer
                 Hand: ImmutableList<CardInstance>.Empty,
                 DiscardPile: ImmutableList<CardInstance>.Empty,
                 BurnPile: ImmutableList<CardInstance>.Empty,
-                ReshuffleCount: 0)), nextRng);
+                ReshuffleCount: 0),
+            IsImmortal: string.Equals(blueprint.EntityId, SandboxEnemyCatalog.InfiniteHpEnemyId, StringComparison.Ordinal)), nextRng);
     }
 
     private static (GameState NewState, IReadOnlyList<GameEvent> Events) ResolveCombatPhase(GameState state, IReadOnlyList<GameEvent> events)
@@ -1357,7 +1358,7 @@ public static class GameReducer
         }
 
         if (sandbox.SelectedEnemyId is null ||
-            !state.EnemyDefinitions.TryGetValue(sandbox.SelectedEnemyId, out var enemy))
+            !SandboxEnemyCatalog.IsSandboxEnemyId(sandbox.SelectedEnemyId, state.EnemyDefinitions))
         {
             return false;
         }
@@ -1394,7 +1395,7 @@ public static class GameReducer
             Armor: 0,
             Resources: deck.StartingResources,
             DrawPile: loadout);
-        var enemyBlueprint = EnemyEncounterFactory.CreateBlueprint(enemy).Enemies[0];
+        var enemyBlueprint = SandboxEnemyCatalog.CreateEnemyBlueprint(sandbox.SelectedEnemyId, state.EnemyDefinitions);
         blueprint = new CombatBlueprint(player, enemyBlueprint);
         return true;
     }

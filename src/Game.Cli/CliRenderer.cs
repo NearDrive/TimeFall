@@ -408,7 +408,7 @@ internal static class CliRenderer
 
     public static void RenderSandboxEnemies(GameState state)
     {
-        var enemyIds = state.EnemyDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray();
+        var enemyIds = SandboxEnemyCatalog.GetEnemyIds(state.EnemyDefinitions);
         if (enemyIds.Length == 0)
         {
             Console.WriteLine("No enemies available.");

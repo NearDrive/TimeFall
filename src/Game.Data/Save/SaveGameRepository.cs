@@ -142,7 +142,8 @@ public sealed class SaveGameRepository
             entity.Bleed,
             entity.ReflectNextEnemyAttackDamage,
             entity.Weak,
-            entity.Vulnerable);
+            entity.Vulnerable,
+            entity.IsImmortal);
     }
 
     private static GameState FromDto(SaveGameDto dto, GameContentBundle content)
@@ -231,6 +232,7 @@ public sealed class SaveGameRepository
             dto.Bleed,
             dto.ReflectNextEnemyAttackDamage,
             dto.Weak,
-            dto.Vulnerable);
+            dto.Vulnerable,
+            dto.IsImmortal);
     }
 }
