@@ -11,6 +11,7 @@ namespace Game.Client.Screens;
 public sealed class CombatScreen : IScreen
 {
     private static readonly Rectangle PlayerPanelRegion = new(20, 20, 420, 180);
+    private static readonly Rectangle CardInfoRegion = new(20, 220, 420, 180);
     private static readonly Rectangle EnemyAreaRegion = new(470, 20, 700, 130);
     private const int EnemyPanelWidth = 340;
     private const int EnemyPanelHeight = 130;
@@ -98,6 +99,7 @@ public sealed class CombatScreen : IScreen
         DrawPlayerPanel(spriteBatch, pixel, combat.Player);
         DrawEnemyPanels(spriteBatch, pixel, combat.Enemies);
         DrawHand(spriteBatch, pixel, combat.Player.Deck.Hand);
+        DrawCardInfoPanel(spriteBatch, pixel, combat.Player.Deck.Hand);
         DrawPlaybackVisuals(spriteBatch, pixel, combat.Player.Deck.Hand);
         DrawTargetSelection(spriteBatch, pixel, combat.Enemies.Count);
 
@@ -166,6 +168,59 @@ public sealed class CombatScreen : IScreen
         return _session.State.CardDefinitions.TryGetValue(cardId, out var definition)
             ? definition
             : null;
+    }
+
+    private void DrawCardInfoPanel(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<CardInstance> hand)
+    {
+        spriteBatch.Draw(pixel, CardInfoRegion, new Color(24, 34, 52));
+
+        var focusedCardIndex = GetFocusedCardIndex();
+        if (focusedCardIndex is null || focusedCardIndex.Value < 0 || focusedCardIndex.Value >= hand.Count)
+        {
+            DebugTextRenderer.DrawText(spriteBatch, pixel, "HOVER A CARD FOR DETAILS", new Vector2(CardInfoRegion.X + 10, CardInfoRegion.Y + 12), Color.White, scale: 1);
+            return;
+        }
+
+        var cardIndex = focusedCardIndex.Value;
+        var card = hand[cardIndex];
+        var definition = TryGetCardDefinition(card.DefinitionId);
+
+        var lines = new List<string>
+        {
+            $"CARD [{cardIndex}]",
+            $"NAME: {definition?.Name ?? card.DefinitionId.Value}",
+            $"ID: {card.DefinitionId.Value}",
+            $"COST: {definition?.Cost ?? 0}",
+            $"PLAY COSTS: {(definition is null ? "UNKNOWN" : FormatPlayCosts(definition))}",
+            "RULES:",
+            definition is null ? "No definition available." : CardRulesTextFormatter.GetReadableRulesText(definition),
+        };
+
+        var wrapped = WrapLines(lines, maxChars: 41);
+        var maxLines = 14;
+        for (var lineIndex = 0; lineIndex < wrapped.Count && lineIndex < maxLines; lineIndex++)
+        {
+            DebugTextRenderer.DrawText(
+                spriteBatch,
+                pixel,
+                wrapped[lineIndex],
+                new Vector2(CardInfoRegion.X + 10, CardInfoRegion.Y + 12 + (lineIndex * 12)),
+                Color.White,
+                scale: 1);
+        }
+    }
+
+    private int? GetFocusedCardIndex()
+    {
+        for (var index = 0; index < _cardRegions.Count; index++)
+        {
+            if (_cardRegions[index].Contains(_input.MousePosition))
+            {
+                return index;
+            }
+        }
+
+        return null;
     }
 
     private void BuildCardRegions()
@@ -305,6 +360,82 @@ public sealed class CombatScreen : IScreen
         }
 
         return string.Join(", ", resources.OrderBy(entry => entry.Key).Select(entry => $"{entry.Key}:{entry.Value}"));
+    }
+
+    private static string FormatPlayCosts(CardDefinition definition)
+    {
+        var costs = definition.PlayCostsOrDefault;
+        return string.Join(
+            ", ",
+            costs.Select(cost => cost switch
+            {
+                NoCost => "NONE",
+                RequireMomentumCost require => $"REQ MOM >= {require.Minimum}",
+                SpendMomentumCost spend => $"SPEND MOM {spend.Amount}",
+                SpendAllMomentumCost => "SPEND ALL MOM",
+                SpendUpToMomentumCost spendUpTo => $"SPEND UP TO {spendUpTo.Max}",
+                _ => "SPECIAL",
+            }));
+    }
+
+    private static List<string> WrapLines(IEnumerable<string> lines, int maxChars)
+    {
+        var output = new List<string>();
+        foreach (var line in lines)
+        {
+            foreach (var wrapped in WrapSingleLine(line, maxChars))
+            {
+                output.Add(wrapped);
+            }
+        }
+
+        return output;
+    }
+
+    private static IEnumerable<string> WrapSingleLine(string text, int maxChars)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            yield return string.Empty;
+            yield break;
+        }
+
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var currentLine = string.Empty;
+        foreach (var word in words)
+        {
+            if (word.Length > maxChars)
+            {
+                if (!string.IsNullOrEmpty(currentLine))
+                {
+                    yield return currentLine;
+                    currentLine = string.Empty;
+                }
+
+                for (var index = 0; index < word.Length; index += maxChars)
+                {
+                    yield return word.Substring(index, Math.Min(maxChars, word.Length - index));
+                }
+
+                continue;
+            }
+
+            var candidate = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
+            if (candidate.Length <= maxChars)
+            {
+                currentLine = candidate;
+            }
+            else
+            {
+                yield return currentLine;
+                currentLine = word;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(currentLine))
+        {
+            yield return currentLine;
+        }
     }
 
     private static bool IsCombatPhase(GamePhase phase)
