@@ -100,6 +100,20 @@ public sealed class SandboxReducerTests
     }
 
     [Fact]
+    public void SandboxCanStartInfiniteHpEnemyCombat()
+    {
+        var editState = SelectSandboxDeck(EnterSandbox(455));
+        var enemySelect = GameReducer.Reduce(editState, new OpenSandboxEnemySelectAction()).NewState;
+        var withEnemy = GameReducer.Reduce(enemySelect, new SelectSandboxEnemyAction(SandboxEnemyCatalog.InfiniteHpEnemyId)).NewState;
+
+        var started = GameReducer.Reduce(withEnemy, new StartSandboxCombatAction()).NewState;
+
+        Assert.Equal(GamePhase.SandboxCombat, started.Phase);
+        Assert.NotNull(started.Combat);
+        Assert.Contains(started.Combat!.Enemies, enemy => enemy.EntityId == SandboxEnemyCatalog.InfiniteHpEnemyId && enemy.IsImmortal);
+    }
+
+    [Fact]
     public void SandboxRepeatCombat_IsDeterministicForSameSeedAndActions()
     {
         var first = BuildRepeatedSandboxCombatState(505);

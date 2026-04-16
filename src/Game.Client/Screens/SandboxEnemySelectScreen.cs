@@ -66,8 +66,7 @@ public sealed class SandboxEnemySelectScreen : IScreen
             var selected = string.Equals(enemyId, selectedEnemyId, StringComparison.Ordinal);
             spriteBatch.Draw(pixel, region, selected ? Color.Gold : new Color(164, 137, 137));
 
-            var enemy = _session.State.EnemyDefinitions[enemyId];
-            DrawEnemyCard(spriteBatch, pixel, enemy, region);
+            DrawEnemyCard(spriteBatch, pixel, ResolveEnemyDefinition(enemyId), region);
         }
 
         DrawButton(spriteBatch, pixel, _startCombatRegion, "START COMBAT");
@@ -80,8 +79,8 @@ public sealed class SandboxEnemySelectScreen : IScreen
     {
         _enemyRegions.Clear();
 
-        var enemyIds = _session.State.EnemyDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray();
-        for (var index = 0; index < enemyIds.Length; index++)
+        var enemyIds = SandboxEnemyCatalog.GetEnemyIds(_session.State.EnemyDefinitions);
+        for (var index = 0; index < enemyIds.Count; index++)
         {
             var x = 20 + (index % 3) * 300;
             var y = 110 + (index / 3) * 130;
@@ -93,8 +92,35 @@ public sealed class SandboxEnemySelectScreen : IScreen
     {
         DebugTextRenderer.DrawText(spriteBatch, pixel, enemy.Name, new Vector2(region.X + 8, region.Y + 8), Color.Black);
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"ID: {enemy.Id}", new Vector2(region.X + 8, region.Y + 33), Color.Black);
-        DebugTextRenderer.DrawText(spriteBatch, pixel, $"HP: {enemy.Hp}", new Vector2(region.X + 8, region.Y + 58), Color.Black);
+        var hpLabel = enemy.Hp == int.MaxValue ? "∞" : enemy.Hp.ToString();
+        DebugTextRenderer.DrawText(spriteBatch, pixel, $"HP: {hpLabel}", new Vector2(region.X + 8, region.Y + 58), Color.Black);
         DebugTextRenderer.DrawText(spriteBatch, pixel, $"TIER: {enemy.Tier}", new Vector2(region.X + 8, region.Y + 83), Color.Black);
+    }
+
+    private EnemyDefinition ResolveEnemyDefinition(string enemyId)
+    {
+        if (_session.State.EnemyDefinitions.TryGetValue(enemyId, out var enemyDefinition))
+        {
+            return enemyDefinition;
+        }
+
+        if (string.Equals(enemyId, SandboxEnemyCatalog.InfiniteHpEnemyId, StringComparison.Ordinal))
+        {
+            return new EnemyDefinition(
+                Id: SandboxEnemyCatalog.InfiniteHpEnemyId,
+                Name: "Training Dummy (Infinite HP)",
+                Zone: 0,
+                Tier: "Sandbox",
+                Category: "Special",
+                Role: "Dummy",
+                Hp: int.MaxValue,
+                StartingArmor: 0,
+                Deck: [],
+                Tags: ["sandbox"],
+                Notes: "Only available in sandbox mode.");
+        }
+
+        throw new InvalidOperationException($"Unknown sandbox enemy '{enemyId}'.");
     }
 
     private static void DrawButton(SpriteBatch spriteBatch, Texture2D pixel, Rectangle region, string label)

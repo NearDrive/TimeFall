@@ -78,7 +78,8 @@ public sealed record CombatEntityDto(
     int Bleed,
     int ReflectNextEnemyAttackDamage,
     int Weak,
-    int Vulnerable);
+    int Vulnerable,
+    bool IsImmortal = false);
 
 public sealed record DeckStateDto(
     IReadOnlyList<string> DrawPile,

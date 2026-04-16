@@ -135,6 +135,17 @@ public class DamageSystemTests
         Assert.Equal(new ArmorChanged(10, 5), events[1]);
     }
 
+    [Fact]
+    public void ApplyHit_ImmortalTarget_NeverLosesHpOrDies()
+    {
+        var target = CreateTarget(hp: int.MaxValue, armor: 0) with { EntityId = "immortal", IsImmortal = true };
+
+        var (updated, events) = DamageSystem.ApplyHit(target, incomingDamage: int.MaxValue);
+
+        Assert.Equal(int.MaxValue, updated.HP);
+        Assert.DoesNotContain(events, evt => evt is EntityDied);
+    }
+
     private static CombatEntity CreateTarget(int hp, int armor, int weak = 0, int vulnerable = 0)
     {
         return new CombatEntity(

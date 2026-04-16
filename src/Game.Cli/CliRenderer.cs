@@ -408,8 +408,8 @@ internal static class CliRenderer
 
     public static void RenderSandboxEnemies(GameState state)
     {
-        var enemyIds = state.EnemyDefinitions.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray();
-        if (enemyIds.Length == 0)
+        var enemyIds = SandboxEnemyCatalog.GetEnemyIds(state.EnemyDefinitions);
+        if (enemyIds.Count == 0)
         {
             Console.WriteLine("No enemies available.");
             return;
@@ -417,7 +417,7 @@ internal static class CliRenderer
 
         var selectedEnemyId = state.Sandbox?.SelectedEnemyId;
         Console.WriteLine("Sandbox enemies:");
-        for (var i = 0; i < enemyIds.Length; i++)
+        for (var i = 0; i < enemyIds.Count; i++)
         {
             var marker = enemyIds[i] == selectedEnemyId ? "*" : " ";
             Console.WriteLine($"[{i}] {marker} {enemyIds[i]}");
