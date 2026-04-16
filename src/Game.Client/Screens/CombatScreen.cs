@@ -191,7 +191,7 @@ public sealed class CombatScreen : IScreen
             $"NAME: {definition?.Name ?? card.DefinitionId.Value}",
             $"ID: {card.DefinitionId.Value}",
             $"COST: {definition?.Cost ?? 0}",
-            $"PLAY COSTS: {definition is null ? "UNKNOWN" : FormatPlayCosts(definition)}",
+            $"PLAY COSTS: {(definition is null ? "UNKNOWN" : FormatPlayCosts(definition))}",
             "RULES:",
             definition is null ? "No definition available." : CardRulesTextFormatter.GetReadableRulesText(definition),
         };
